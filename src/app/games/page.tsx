@@ -27,16 +27,16 @@ function startOfDay(d: Date) {
 }
 
 /**
- * Returns [start, end) for the next/previous weekend window: Saturday 00:00 -> Monday 00:00
- * offsetWeeks = 0 => upcoming weekend (next Sat/Sun)
+ * Weekend window: Saturday 00:00 -> Monday 00:00
+ * offsetWeeks = 0 => upcoming weekend
  * offsetWeeks = -1 => last weekend
  */
 function weekendWindow(now: Date, offsetWeeks: 0 | -1) {
   const today = startOfDay(now);
-
-  // JS: Sun=0 ... Sat=6
+  // JS getDay(): Sun=0 ... Sat=6
   const day = today.getDay();
   const daysUntilSat = (6 - day + 7) % 7; // 0 if Saturday
+
   const upcomingSat = new Date(today);
   upcomingSat.setDate(upcomingSat.getDate() + daysUntilSat);
 
@@ -69,6 +69,7 @@ export default function GamesPage() {
       setLoading(true);
       setError(null);
 
+      // Teams map
       const { data: teams, error: teamsError } = await supabase
         .from("teams")
         .select("team_id, team_name");
@@ -85,6 +86,7 @@ export default function GamesPage() {
       (teams ?? []).forEach((t: TeamRow) => (map[t.team_id] = t.team_name));
       setTeamsById(map);
 
+      // Games
       const { data: gamesData, error: gamesError } = await supabase
         .from("games")
         .select(
@@ -144,7 +146,14 @@ export default function GamesPage() {
     );
 
     const fmt = (d: Date) =>
-      d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+      d.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+
+    const windowLabel = (start: Date, end: Date) =>
+      `${fmt(start)} — ${fmt(new Date(end.getTime() - 1))}`;
 
     return {
       upcomingWknd,
@@ -153,7 +162,7 @@ export default function GamesPage() {
       finishedLastWeekend,
       allUpcoming,
       allFinished,
-      fmt,
+      windowLabel,
     };
   }, [games]);
 
@@ -163,7 +172,9 @@ export default function GamesPage() {
 
     const dateText = g.tipoff ? new Date(g.tipoff).toLocaleString() : "TBD";
     const scoreText =
-      g.home_score != null && g.away_score != null ? `${g.home_score} - ${g.away_score}` : "—";
+      g.home_score != null && g.away_score != null
+        ? `${g.home_score} - ${g.away_score}`
+        : "—";
 
     return (
       <Link
@@ -184,8 +195,6 @@ export default function GamesPage() {
           </div>
           <div className="font-bold">{scoreText}</div>
         </div>
-
-        <div className="mt-1 text-xs text-gray-500">game_id: {g.game_id}</div>
       </Link>
     );
   };
@@ -209,13 +218,13 @@ export default function GamesPage() {
   }
 
   const {
-    upcomingWknd,
-    lastWknd,
     upcomingWeekend,
     finishedLastWeekend,
     allUpcoming,
     allFinished,
-    fmt,
+    windowLabel,
+    upcomingWknd,
+    lastWknd,
   } = computed;
 
   return (
@@ -228,7 +237,7 @@ export default function GamesPage() {
           <div>
             <h2 className="text-2xl font-semibold">Upcoming weekend</h2>
             <div className="text-sm text-gray-600 mt-1">
-              {fmt(upcomingWknd.start)} — {fmt(new Date(upcomingWknd.end.getTime() - 1))}
+              {windowLabel(upcomingWknd.start, upcomingWknd.end)}
             </div>
           </div>
           <div className="text-sm text-gray-600">
@@ -243,7 +252,6 @@ export default function GamesPage() {
           )}
         </div>
 
-        {/* All upcoming */}
         <details className="mt-5">
           <summary className="cursor-pointer text-sm font-semibold text-gray-700">
             Show all upcoming ({allUpcoming.length})
@@ -261,22 +269,24 @@ export default function GamesPage() {
           <div>
             <h2 className="text-2xl font-semibold">Finished last weekend</h2>
             <div className="text-sm text-gray-600 mt-1">
-              {fmt(lastWknd.start)} — {fmt(new Date(lastWknd.end.getTime() - 1))}
+              {windowLabel(lastWknd.start, lastWknd.end)}
             </div>
           </div>
           <div className="text-sm text-gray-600">
-            Showing: <span className="font-semibold">{finishedLastWeekend.length}</span>
+            Showing:{" "}
+            <span className="font-semibold">{finishedLastWeekend.length}</span>
           </div>
         </div>
 
         <div className="space-y-3 mt-4">
           {finishedLastWeekend.map(card)}
           {finishedLastWeekend.length === 0 && (
-            <div className="text-gray-600">No finished games found for last weekend.</div>
+            <div className="text-gray-600">
+              No finished games found for last weekend.
+            </div>
           )}
         </div>
 
-        {/* All finished */}
         <details className="mt-5">
           <summary className="cursor-pointer text-sm font-semibold text-gray-700">
             Show all finished ({allFinished.length})
