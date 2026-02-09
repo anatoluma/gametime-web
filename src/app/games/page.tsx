@@ -167,8 +167,8 @@ export default function GamesPage() {
   }, [games]);
 
   const card = (g: GameRow) => {
-    const homeName = teamsById[g.home_team_id] ?? g.home_team_id;
-    const awayName = teamsById[g.away_team_id] ?? g.away_team_id;
+    const homeName = teamsById[g.home_team_id] ?? "Unknown team";
+    const awayName = teamsById[g.away_team_id] ?? "Unknown team";
 
     const dateText = g.tipoff ? new Date(g.tipoff).toLocaleString() : "TBD";
     const scoreText =

@@ -24,3 +24,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+/* Table headers must stay readable even with mobile browser dark-mode overrides */
+thead {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+thead th {
+  color: #000000 !important;
+}
+
+/* Keep body cells readable on your dark theme */
+tbody td {
+  color: #ffffff;
+}

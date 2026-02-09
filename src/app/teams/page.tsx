@@ -2,10 +2,12 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 
 export default async function TeamsPage() {
-  const { data, error } = await supabase
+  const { data: teams, error } = await supabase
     .from("teams")
     .select("team_id, team_name, city, coach")
-    .order("team_name", { ascending: true });
+    .eq("is_active", true)
+    .order("team_name");
+
 
   if (error) {
     return <pre className="p-6">{JSON.stringify(error, null, 2)}</pre>;
