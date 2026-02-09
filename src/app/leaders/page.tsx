@@ -41,7 +41,6 @@ export default function LeadersPage() {
       setLoading(true);
       setError(null);
 
-      // teams map
       const { data: teamsData, error: teamsError } = await supabase
         .from("teams")
         .select("team_id, team_name");
@@ -58,7 +57,6 @@ export default function LeadersPage() {
       (teamsData ?? []).forEach((t: Team) => (tmap[t.team_id] = t.team_name));
       setTeamsById(tmap);
 
-      // player_game_stats
       const { data: pgs, error: pgsError } = await supabase
         .from("player_game_stats")
         .select("player_id, team_id, points");
@@ -71,7 +69,6 @@ export default function LeadersPage() {
         return;
       }
 
-      // aggregate stats
       const agg = new Map<
         string,
         { player_id: string; team_id: string; gp: number; pts: number }
@@ -83,9 +80,8 @@ export default function LeadersPage() {
         const pts = (r.points ?? 0) as number;
 
         const cur = agg.get(player_id);
-        if (!cur) {
-          agg.set(player_id, { player_id, team_id, gp: 1, pts });
-        } else {
+        if (!cur) agg.set(player_id, { player_id, team_id, gp: 1, pts });
+        else {
           cur.team_id = team_id;
           cur.gp += 1;
           cur.pts += pts;
@@ -99,7 +95,6 @@ export default function LeadersPage() {
         return;
       }
 
-      // load players for names
       const { data: playersData, error: playersError } = await supabase
         .from("players")
         .select("player_id, team_id, first_name, last_name, jersey_number")
@@ -203,55 +198,85 @@ export default function LeadersPage() {
         </div>
       </div>
 
-      {/* Mobile-first: allow horizontal scroll for table instead of clipping */}
-      <div className="mt-6 border rounded-lg bg-white">
-        <div className="w-full overflow-x-auto">
-          <table className="min-w-[720px] w-full text-left">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-3 w-16">#</th>
-                <th className="p-3">Player</th>
-                <th className="p-3">Team</th>
-                <th className="p-3 w-20 text-right">GP</th>
-                <th className="p-3 w-24 text-right">PTS</th>
-                <th className="p-3 w-24 text-right">PPG</th>
+      {/* MOBILE: cards (points always visible) */}
+      <div className="mt-6 space-y-3 sm:hidden">
+        {filteredSorted.map((r, idx) => (
+          <div key={r.player_id} className="border rounded-lg p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm text-gray-600">#{idx + 1}</div>
+                <div className="font-semibold truncate">
+                  <Link href={`/players/${r.player_id}`} className="hover:underline">
+                    {r.player_name}
+                  </Link>
+                </div>
+                <div className="text-sm text-gray-600 truncate">
+                  <Link href={`/teams/${r.team_id}`} className="hover:underline">
+                    {teamsById[r.team_id] ?? r.team_id}
+                  </Link>
+                </div>
+              </div>
+
+              <div className="text-right shrink-0">
+                <div className="text-sm text-gray-600">PTS</div>
+                <div className="text-xl font-bold leading-none">{r.pts}</div>
+                <div className="mt-2 text-xs text-gray-600">
+                  GP {r.gp} • PPG <span className="font-semibold">{r.ppg.toFixed(1)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {filteredSorted.length === 0 && (
+          <div className="border rounded-lg p-3 text-gray-600">
+            No data for selected filters.
+          </div>
+        )}
+      </div>
+
+      {/* DESKTOP: table */}
+      <div className="hidden sm:block border rounded-lg overflow-hidden mt-6">
+        <table className="w-full text-left">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-3 w-16">#</th>
+              <th className="p-3">Player</th>
+              <th className="p-3">Team</th>
+              <th className="p-3 w-20 text-right">GP</th>
+              <th className="p-3 w-24 text-right">PTS</th>
+              <th className="p-3 w-24 text-right">PPG</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredSorted.map((r, idx) => (
+              <tr key={r.player_id} className="border-t">
+                <td className="p-3">{idx + 1}</td>
+                <td className="p-3">
+                  <Link href={`/players/${r.player_id}`} className="hover:underline">
+                    {r.player_name}
+                  </Link>
+                </td>
+                <td className="p-3">
+                  <Link href={`/teams/${r.team_id}`} className="hover:underline">
+                    {teamsById[r.team_id] ?? r.team_id}
+                  </Link>
+                </td>
+                <td className="p-3 text-right">{r.gp}</td>
+                <td className="p-3 text-right font-semibold">{r.pts}</td>
+                <td className="p-3 text-right font-semibold">{r.ppg.toFixed(1)}</td>
               </tr>
-            </thead>
-            <tbody>
-              {filteredSorted.map((r, idx) => (
-                <tr key={r.player_id} className="border-t">
-                  <td className="p-3">{idx + 1}</td>
-                  <td className="p-3">
-                    <Link href={`/players/${r.player_id}`} className="hover:underline">
-                      {r.player_name}
-                    </Link>
-                  </td>
-                  <td className="p-3">
-                    <Link href={`/teams/${r.team_id}`} className="hover:underline">
-                      {teamsById[r.team_id] ?? r.team_id}
-                    </Link>
-                  </td>
-                  <td className="p-3 text-right">{r.gp}</td>
-                  <td className="p-3 text-right font-semibold">{r.pts}</td>
-                  <td className="p-3 text-right font-semibold">{r.ppg.toFixed(1)}</td>
-                </tr>
-              ))}
+            ))}
 
-              {filteredSorted.length === 0 && (
-                <tr className="border-t">
-                  <td className="p-3" colSpan={6}>
-                    No data for selected filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* tiny hint for mobile users */}
-        <div className="px-3 py-2 text-xs text-gray-500 sm:hidden">
-          Tip: swipe left/right on the table to see all columns.
-        </div>
+            {filteredSorted.length === 0 && (
+              <tr className="border-t">
+                <td className="p-3" colSpan={6}>
+                  No data for selected filters.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </main>
   );
