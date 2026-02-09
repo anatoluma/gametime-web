@@ -86,7 +86,6 @@ export default function LeadersPage() {
         if (!cur) {
           agg.set(player_id, { player_id, team_id, gp: 1, pts });
         } else {
-          // keep last seen team_id (fine for now; later we can do season/team split)
           cur.team_id = team_id;
           cur.gp += 1;
           cur.pts += pts;
@@ -157,7 +156,7 @@ export default function LeadersPage() {
 
   if (loading) {
     return (
-      <main className="p-8">
+      <main className="p-4 sm:p-8">
         <h1 className="text-3xl font-bold">Leaders</h1>
         <p className="mt-2 text-gray-600">Loading…</p>
       </main>
@@ -166,7 +165,7 @@ export default function LeadersPage() {
 
   if (error) {
     return (
-      <main className="p-8">
+      <main className="p-4 sm:p-8">
         <h1 className="text-3xl font-bold">Leaders</h1>
         <pre className="mt-4 text-sm">{JSON.stringify(error, null, 2)}</pre>
       </main>
@@ -174,15 +173,15 @@ export default function LeadersPage() {
   }
 
   return (
-    <main className="p-8">
-      <div className="flex items-baseline justify-between gap-4 flex-wrap">
+    <main className="p-4 sm:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-4">
         <h1 className="text-3xl font-bold">Leaders</h1>
 
-        <div className="flex gap-3 items-center">
-          <label className="text-sm text-gray-600">
-            Min games:
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <label className="text-sm text-gray-600 flex items-center justify-between sm:justify-start gap-2">
+            <span>Min games:</span>
             <input
-              className="ml-2 border rounded px-2 py-1 w-16"
+              className="border rounded px-2 py-1 w-20"
               type="number"
               min={1}
               value={minGames}
@@ -190,10 +189,10 @@ export default function LeadersPage() {
             />
           </label>
 
-          <label className="text-sm text-gray-600">
-            Sort:
+          <label className="text-sm text-gray-600 flex items-center justify-between sm:justify-start gap-2">
+            <span>Sort:</span>
             <select
-              className="ml-2 border rounded px-2 py-1"
+              className="border rounded px-2 py-1"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
             >
@@ -204,47 +203,55 @@ export default function LeadersPage() {
         </div>
       </div>
 
-      <div className="border rounded-lg overflow-hidden mt-6">
-        <table className="w-full text-left">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3 w-16">#</th>
-              <th className="p-3">Player</th>
-              <th className="p-3">Team</th>
-              <th className="p-3 w-20 text-right">GP</th>
-              <th className="p-3 w-24 text-right">PTS</th>
-              <th className="p-3 w-24 text-right">PPG</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredSorted.map((r, idx) => (
-              <tr key={r.player_id} className="border-t">
-                <td className="p-3">{idx + 1}</td>
-                <td className="p-3">
-                  <Link href={`/players/${r.player_id}`} className="hover:underline">
-                    {r.player_name}
-                  </Link>
-                </td>
-                <td className="p-3">
-                  <Link href={`/teams/${r.team_id}`} className="hover:underline">
-                    {teamsById[r.team_id] ?? r.team_id}
-                  </Link>
-                </td>
-                <td className="p-3 text-right">{r.gp}</td>
-                <td className="p-3 text-right font-semibold">{r.pts}</td>
-                <td className="p-3 text-right font-semibold">{r.ppg.toFixed(1)}</td>
+      {/* Mobile-first: allow horizontal scroll for table instead of clipping */}
+      <div className="mt-6 border rounded-lg bg-white">
+        <div className="w-full overflow-x-auto">
+          <table className="min-w-[720px] w-full text-left">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 w-16">#</th>
+                <th className="p-3">Player</th>
+                <th className="p-3">Team</th>
+                <th className="p-3 w-20 text-right">GP</th>
+                <th className="p-3 w-24 text-right">PTS</th>
+                <th className="p-3 w-24 text-right">PPG</th>
               </tr>
-            ))}
+            </thead>
+            <tbody>
+              {filteredSorted.map((r, idx) => (
+                <tr key={r.player_id} className="border-t">
+                  <td className="p-3">{idx + 1}</td>
+                  <td className="p-3">
+                    <Link href={`/players/${r.player_id}`} className="hover:underline">
+                      {r.player_name}
+                    </Link>
+                  </td>
+                  <td className="p-3">
+                    <Link href={`/teams/${r.team_id}`} className="hover:underline">
+                      {teamsById[r.team_id] ?? r.team_id}
+                    </Link>
+                  </td>
+                  <td className="p-3 text-right">{r.gp}</td>
+                  <td className="p-3 text-right font-semibold">{r.pts}</td>
+                  <td className="p-3 text-right font-semibold">{r.ppg.toFixed(1)}</td>
+                </tr>
+              ))}
 
-            {filteredSorted.length === 0 && (
-              <tr className="border-t">
-                <td className="p-3" colSpan={6}>
-                  No data for selected filters.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              {filteredSorted.length === 0 && (
+                <tr className="border-t">
+                  <td className="p-3" colSpan={6}>
+                    No data for selected filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* tiny hint for mobile users */}
+        <div className="px-3 py-2 text-xs text-gray-500 sm:hidden">
+          Tip: swipe left/right on the table to see all columns.
+        </div>
       </div>
     </main>
   );
