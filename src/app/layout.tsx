@@ -22,7 +22,7 @@ function NavButton(props: NavButtonProps) {
   return (
     <Link
       href={props.href}
-      className="px-4 py-2 rounded-lg font-semibold text-sm sm:text-base
+      className="shrink-0 px-3 sm:px-4 py-2 rounded-lg font-semibold text-sm sm:text-base
                  bg-white text-black border border-black
                  active:scale-[0.98] transition"
     >
@@ -30,17 +30,18 @@ function NavButton(props: NavButtonProps) {
     </Link>
   );
 }
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="min-h-screen bg-black">
         <header className="sticky top-0 z-50 bg-white text-black border-b border-black">
-          <nav className="max-w-3xl mx-auto px-3 py-3 flex flex-wrap gap-2 justify-center">
-            <NavButton href="/teams" label="Teams" />
-            <NavButton href="/games" label="Games" />
-            <NavButton href="/leaders" label="Leaders" />
-            <NavButton href="/standings" label="Standings" />
+          <nav className="max-w-3xl mx-auto px-3 py-3 flex gap-2 overflow-x-auto justify-start sm:justify-center">
+            <div className="flex gap-2 mx-auto sm:mx-0">
+              <NavButton href="/teams" label="Teams" />
+              <NavButton href="/games" label="Games" />
+              <NavButton href="/leaders" label="Leaders" />
+              <NavButton href="/standings" label="Standings" />
+            </div>
           </nav>
         </header>
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 
 type TeamRow = {
+  team_id: string;
   name: string;
   gp: number;
   w: number;
@@ -39,6 +40,7 @@ export default async function StandingsPage() {
 
   for (const t of teams ?? []) {
     table[t.team_id] = {
+      team_id: t.team_id,
       name: t.team_name,
       gp: 0,
       w: 0,
@@ -109,8 +111,8 @@ export default async function StandingsPage() {
         </Link>
       </div>
 
-      <div className="overflow-x-auto border rounded-lg">
-        <table className="min-w-[720px] w-full text-left border-collapse">
+      <div className="border rounded-lg overflow-x-auto lg:overflow-x-visible">
+        <table className="w-full min-w-[720px] lg:min-w-0 ...">
           <thead className="sticky top-0">
             <tr className="border-b">
               <th className="py-3 px-3">#</th>
@@ -129,7 +131,14 @@ export default async function StandingsPage() {
             {sorted.map((t, idx) => (
               <tr key={t.name} className="border-b">
                 <td className="py-3 px-3">{idx + 1}</td>
-                <td className="py-3 px-3 font-medium">{t.name}</td>
+                <td className="py-3 px-3 font-medium">
+                  <Link
+                    href={`/teams/${t.team_id}`}
+                    className="hover:underline underline-offset-2"
+                  >
+                    {t.name}
+                  </Link>
+                </td>
                 <td className="py-3 px-3">{t.gp}</td>
                 <td className="py-3 px-3">{t.w}</td>
                 <td className="py-3 px-3">{t.l}</td>
