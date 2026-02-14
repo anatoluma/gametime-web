@@ -63,7 +63,10 @@ export default function LeadersPage() {
       const stats = (data ?? []) as any as StatRow[];
 
       // Aggregate
-      const map = new Map<string, { gp: number; pts: number; name: string; teamName: string }>();
+      const map = new Map<
+        string,
+        { gp: number; pts: number; name: string; teamName: string }
+      >();
 
       for (const r of stats) {
         const pid = r.player_id;
@@ -74,7 +77,9 @@ export default function LeadersPage() {
         const name = `${first} ${last}`.trim() || pid;
 
         const teamName =
-          (r.players?.teams?.team_name ?? "").trim() || (r.players?.team_id ?? "").trim() || "—";
+          (r.players?.teams?.team_name ?? "").trim() ||
+          (r.players?.team_id ?? "").trim() ||
+          "—";
 
         const cur = map.get(pid);
         if (!cur) {
@@ -82,7 +87,6 @@ export default function LeadersPage() {
         } else {
           cur.gp += 1;
           cur.pts += pts;
-          // Keep first seen name/teamName; good enough for MVP stage
         }
       }
 
@@ -113,28 +117,30 @@ export default function LeadersPage() {
 
   if (loading) {
     return (
-      <main className="py-6">
+      <main className="py-6 text-black">
         <h1 className="text-3xl font-bold">Leaders</h1>
-        <p className="mt-2 text-gray-300">Loading…</p>
+        <p className="mt-2 text-black/60">Loading…</p>
       </main>
     );
   }
 
   if (error) {
     return (
-      <main className="py-6">
+      <main className="py-6 text-black">
         <h1 className="text-3xl font-bold">Leaders</h1>
-        <pre className="mt-4 text-sm">{JSON.stringify(error, null, 2)}</pre>
+        <pre className="mt-4 text-sm text-black/80 overflow-x-auto">
+          {JSON.stringify(error, null, 2)}
+        </pre>
       </main>
     );
   }
 
   return (
-    <main className="py-6">
+    <main className="py-6 text-black">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h1 className="text-3xl font-bold">Leaders</h1>
-        <div className="text-sm text-gray-300">
-          Sorted by <span className="font-semibold text-white">PPG</span>
+        <div className="text-sm text-black/60">
+          Sorted by <span className="font-semibold text-black">PPG</span>
         </div>
       </div>
 
@@ -143,30 +149,36 @@ export default function LeadersPage() {
           <Link
             key={p.player_id}
             href={`/players/${p.player_id}`}
-            className="block border border-white/30 rounded-2xl p-4 hover:bg-white/5 transition"
+            className="block border border-black/20 rounded-2xl p-4 hover:bg-black/5 transition"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-white/60 font-semibold">#{idx + 1}</div>
+                <div className="text-black/60 font-semibold">#{idx + 1}</div>
                 <div className="text-xl font-bold">{p.name}</div>
-                <div className="text-white/60 uppercase tracking-wide">{p.teamName}</div>
+                <div className="text-black/60 uppercase tracking-wide">
+                  {p.teamName}
+                </div>
               </div>
 
               <div className="text-right">
-                <div className="text-white/60 font-semibold">PPG</div>
-                <div className="text-3xl font-extrabold">{p.ppg.toFixed(1)}</div>
+                <div className="inline-block text-xs font-bold px-2 py-1 border border-black/20 rounded bg-black/5">
+                  PPG
+                </div>
+                <div className="text-3xl font-extrabold mt-1">
+                  {p.ppg.toFixed(1)}
+                </div>
               </div>
             </div>
 
-            <div className="mt-2 text-sm text-white/60">
-              GP <span className="text-white font-semibold">{p.gp}</span>
+            <div className="mt-2 text-sm text-black/60">
+              GP <span className="text-black font-semibold">{p.gp}</span>
               {" • "}
-              PTS <span className="text-white font-semibold">{p.pts}</span>
+              PTS <span className="text-black font-semibold">{p.pts}</span>
             </div>
           </Link>
         ))}
 
-        {top.length === 0 && <div className="text-gray-300">No data yet.</div>}
+        {top.length === 0 && <div className="text-black/60">No data yet.</div>}
       </div>
     </main>
   );

@@ -262,11 +262,11 @@ export default function GamePage() {
     <main className="p-8">
       <h1 className="text-3xl font-bold">
         <Link href={`/teams/${game.home_team_id}`} className="hover:underline">
-          {homeTeam?.team_name ?? game.home_team_id}
+          {homeTeam?.team_name ?? "Unknown team"}
         </Link>{" "}
         vs{" "}
         <Link href={`/teams/${game.away_team_id}`} className="hover:underline">
-          {awayTeam?.team_name ?? game.away_team_id}
+          {awayTeam?.team_name ?? "Unknown team"}
         </Link>
       </h1>
 

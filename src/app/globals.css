@@ -4,7 +4,13 @@
   --background: #ffffff;
   --foreground: #171717;
 }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+html, body {
+  height: 100%;
+}
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -27,7 +33,7 @@ body {
 /* Table headers must stay readable even with mobile browser dark-mode overrides */
 thead {
   background: #ffffff !important;
-  color: #000000 !important;
+  color: #ffffff !important;
 }
 
 thead th {
@@ -36,5 +42,5 @@ thead th {
 
 /* Keep body cells readable on your dark theme */
 tbody td {
-  color: #ffffff;
+  color: #000000;
 }
