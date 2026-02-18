@@ -59,7 +59,7 @@ export default function LeadersPage() {
         return;
       }
 
-      const stats = (data ?? []) as StatRow[];
+      const stats = (data ?? []) as unknown as StatRow[];
       const map = new Map<
         string,
         { gp: number; pts: number; name: string; teamName: string }
