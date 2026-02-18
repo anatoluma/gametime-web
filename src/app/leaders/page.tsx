@@ -28,15 +28,14 @@ export default function LeadersPage() {
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
-
+  const [sortMode, setSortMode] = useState<"PTS" | "PPG">("PTS");
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       setLoading(true);
       setError(null);
-
-      // Fetch all player-game rows with player + team name
+      
       const { data, error } = await supabase
         .from("player_game_stats")
         .select(
@@ -60,9 +59,7 @@ export default function LeadersPage() {
         return;
       }
 
-      const stats = (data ?? []) as any as StatRow[];
-
-      // Aggregate
+      const stats = (data ?? []) as StatRow[];
       const map = new Map<
         string,
         { gp: number; pts: number; name: string; teamName: string }
@@ -100,9 +97,6 @@ export default function LeadersPage() {
           ppg: v.gp > 0 ? v.pts / v.gp : 0,
         }))
         .filter((x) => x.gp > 0)
-        // Default + only sort: PPG
-        .sort((a, b) => b.ppg - a.ppg || b.gp - a.gp || b.pts - a.pts);
-
       setRows(leaders);
       setLoading(false);
     }
@@ -113,7 +107,20 @@ export default function LeadersPage() {
     };
   }, []);
 
-  const top = useMemo(() => rows.slice(0, 50), [rows]);
+  const sorted = useMemo(() => {
+  const arr = [...rows];
+
+  if (sortMode === "PPG") {
+    arr.sort((a, b) => b.ppg - a.ppg || b.gp - a.gp || b.pts - a.pts);
+  } else {
+    // PTS
+    arr.sort((a, b) => b.pts - a.pts || b.gp - a.gp || b.ppg - a.ppg);
+  }
+
+  return arr;
+}, [rows, sortMode]);
+
+const top = useMemo(() => sorted.slice(0, 50), [sorted]);
 
   if (loading) {
     return (
@@ -139,8 +146,32 @@ export default function LeadersPage() {
     <main className="py-6 text-black">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <h1 className="text-3xl font-bold">Leaders</h1>
-        <div className="text-sm text-black/60">
-          Sorted by <span className="font-semibold text-black">PPG</span>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-black/60">Sorted by</span>
+
+          <button
+            type="button"
+            onClick={() => setSortMode("PTS")}
+            className={`px-2 py-1 rounded border text-xs font-bold transition ${
+              sortMode === "PTS"
+                ? "bg-black text-white border-black"
+                : "bg-white text-black border-black/20 hover:bg-black/5"
+            }`}
+          >
+            PTS
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSortMode("PPG")}
+            className={`px-2 py-1 rounded border text-xs font-bold transition ${
+              sortMode === "PPG"
+                ? "bg-black text-white border-black"
+                : "bg-white text-black border-black/20 hover:bg-black/5"
+            }`}
+          >
+            PPG
+          </button>
         </div>
       </div>
 
@@ -151,7 +182,7 @@ export default function LeadersPage() {
             href={`/players/${p.player_id}`}
             className="block border border-black/20 rounded-2xl p-4 hover:bg-black/5 transition"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-black/60 font-semibold">#{idx + 1}</div>
                 <div className="text-xl font-bold">{p.name}</div>
@@ -160,21 +191,33 @@ export default function LeadersPage() {
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className="inline-block text-xs font-bold px-2 py-1 border border-black/20 rounded bg-black/5">
-                  PPG
+             <div className="grid grid-cols-3 gap-4 w-[210px] sm:w-[240px]">
+                {/* PTS */}
+                <div>
+                  <div className="inline-block text-xs font-bold px-2 py-1 border border-black/20 rounded bg-black/5">
+                    PTS
+                  </div>
+                  <div className="text-2xl font-extrabold mt-1">{p.pts}</div>
                 </div>
-                <div className="text-3xl font-extrabold mt-1">
-                  {p.ppg.toFixed(1)}
+
+                {/* GP */}
+                <div>
+                  <div className="inline-block text-xs font-bold px-2 py-1 border border-black/20 rounded bg-black/5">
+                    GP
+                  </div>
+                  <div className="text-2xl font-extrabold mt-1">{p.gp}</div>
+                </div>
+
+                {/* PPG */}
+                <div>
+                  <div className="inline-block text-xs font-bold px-2 py-1 border border-black/20 rounded bg-black/5">
+                    PPG
+                  </div>
+                  <div className="text-2xl font-extrabold mt-1">{p.ppg.toFixed(1)}</div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-2 text-sm text-black/60">
-              GP <span className="text-black font-semibold">{p.gp}</span>
-              {" • "}
-              PTS <span className="text-black font-semibold">{p.pts}</span>
-            </div>
           </Link>
         ))}
 
