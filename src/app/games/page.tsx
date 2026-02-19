@@ -26,16 +26,10 @@ function startOfDay(d: Date) {
   return x;
 }
 
-/**
- * Weekend window: Saturday 00:00 -> Monday 00:00
- * offsetWeeks = 0 => upcoming weekend
- * offsetWeeks = -1 => last weekend
- */
 function weekendWindow(now: Date, offsetWeeks: 0 | -1) {
   const today = startOfDay(now);
-  // JS getDay(): Sun=0 ... Sat=6
   const day = today.getDay();
-  const daysUntilSat = (6 - day + 7) % 7; // 0 if Saturday
+  const daysUntilSat = (6 - day + 7) % 7; 
 
   const upcomingSat = new Date(today);
   upcomingSat.setDate(upcomingSat.getDate() + daysUntilSat);
@@ -45,7 +39,7 @@ function weekendWindow(now: Date, offsetWeeks: 0 | -1) {
 
   const start = startOfDay(targetSat);
   const end = new Date(start);
-  end.setDate(end.getDate() + 2); // Monday 00:00
+  end.setDate(end.getDate() + 2); 
 
   return { start, end };
 }
@@ -64,52 +58,27 @@ export default function GamesPage() {
 
   useEffect(() => {
     let cancelled = false;
-
     async function load() {
       setLoading(true);
-      setError(null);
-
-      // Teams map
-      const { data: teams, error: teamsError } = await supabase
-        .from("teams")
-        .select("team_id, team_name");
-
+      const { data: teams } = await supabase.from("teams").select("team_id, team_name");
       if (cancelled) return;
-
-      if (teamsError) {
-        setError(teamsError);
-        setLoading(false);
-        return;
-      }
-
       const map: Record<string, string> = {};
       (teams ?? []).forEach((t: TeamRow) => (map[t.team_id] = t.team_name));
       setTeamsById(map);
 
-      // Games
       const { data: gamesData, error: gamesError } = await supabase
         .from("games")
-        .select(
-          "game_id, season, tipoff, venue, home_team_id, away_team_id, home_score, away_score"
-        )
+        .select("*")
         .order("tipoff", { ascending: false });
 
       if (cancelled) return;
-
-      if (gamesError) {
-        setError(gamesError);
-        setLoading(false);
-        return;
-      }
+      if (gamesError) { setError(gamesError); setLoading(false); return; }
 
       setGames((gamesData ?? []) as GameRow[]);
       setLoading(false);
     }
-
     load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const computed = useMemo(() => {
@@ -117,184 +86,132 @@ export default function GamesPage() {
     const upcomingWknd = weekendWindow(now, 0);
     const lastWknd = weekendWindow(now, -1);
 
-    const isFinished = (g: GameRow) =>
-      g.home_score != null && g.away_score != null;
-    const isUpcoming = (g: GameRow) => !isFinished(g);
-
-    const allUpcoming = games
-      .filter(isUpcoming)
-      .sort((a, b) => {
-        const ta = a.tipoff ? new Date(a.tipoff).getTime() : Infinity;
-        const tb = b.tipoff ? new Date(b.tipoff).getTime() : Infinity;
-        return ta - tb; // soonest first
-      });
-
-    const allFinished = games
-      .filter(isFinished)
-      .sort((a, b) => {
-        const ta = a.tipoff ? new Date(a.tipoff).getTime() : -Infinity;
-        const tb = b.tipoff ? new Date(b.tipoff).getTime() : -Infinity;
-        return tb - ta; // newest first
-      });
-
-    const upcomingWeekend = allUpcoming.filter((g) =>
-      inRange(g.tipoff, upcomingWknd.start, upcomingWknd.end)
+    const isFinished = (g: GameRow) => g.home_score != null && g.away_score != null;
+    
+    const allUpcoming = games.filter(g => !isFinished(g)).sort((a, b) => 
+      (a.tipoff ? new Date(a.tipoff).getTime() : Infinity) - (b.tipoff ? new Date(b.tipoff).getTime() : Infinity)
     );
 
-    const finishedLastWeekend = allFinished.filter((g) =>
-      inRange(g.tipoff, lastWknd.start, lastWknd.end)
+    const allFinished = games.filter(isFinished).sort((a, b) => 
+      (b.tipoff ? new Date(b.tipoff).getTime() : -Infinity) - (a.tipoff ? new Date(a.tipoff).getTime() : -Infinity)
     );
 
-    const fmt = (d: Date) =>
-      d.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-
-    const windowLabel = (start: Date, end: Date) =>
-      `${fmt(start)} — ${fmt(new Date(end.getTime() - 1))}`;
+    const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const windowLabel = (s: Date, e: Date) => `${fmt(s)} — ${fmt(new Date(e.getTime() - 1))}`;
 
     return {
-      upcomingWknd,
-      lastWknd,
-      upcomingWeekend,
-      finishedLastWeekend,
+      upcomingWeekend: allUpcoming.filter(g => inRange(g.tipoff, upcomingWknd.start, upcomingWknd.end)),
+      finishedLastWeekend: allFinished.filter(g => inRange(g.tipoff, lastWknd.start, lastWknd.end)),
       allUpcoming,
       allFinished,
       windowLabel,
+      upcomingWknd,
+      lastWknd,
     };
   }, [games]);
 
-  const card = (g: GameRow) => {
-    const homeName = teamsById[g.home_team_id] ?? "Unknown team";
-    const awayName = teamsById[g.away_team_id] ?? "Unknown team";
-
-    const dateText = g.tipoff ? new Date(g.tipoff).toLocaleString() : "TBD";
-    const scoreText =
-      g.home_score != null && g.away_score != null
-        ? `${g.home_score} - ${g.away_score}`
-        : "—";
+  const GameCard = ({ g }: { g: GameRow }) => {
+    const isFinished = g.home_score != null && g.away_score != null;
+    const dateObj = g.tipoff ? new Date(g.tipoff) : null;
+    const timeText = dateObj ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "TBD";
+    const dateText = dateObj ? dateObj.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : "";
 
     return (
-      <Link
-        key={g.game_id}
-        href={`/games/${g.game_id}`}
-        className="block border rounded-lg p-4 hover:bg-gray-50"
-      >
-        <div className="text-sm text-gray-600">
-          {g.season ?? ""}
-          {g.season ? " • " : ""}
-          {dateText}
-          {g.venue ? ` • ${g.venue}` : ""}
-        </div>
-
-        <div className="mt-2 flex items-center justify-between gap-4">
-          <div className="font-semibold">
-            {homeName} <span className="text-gray-500">vs</span> {awayName}
+      <Link href={`/games/${g.game_id}`} className="group block bg-white border rounded-xl shadow-sm hover:shadow-md hover:border-orange-500 transition-all overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b text-[10px] font-bold uppercase tracking-wider text-gray-500">
+          <div className="flex items-center gap-2">
+            <span>{dateText}</span>
+            <span>•</span>
+            <span className="text-gray-900">{timeText}</span>
           </div>
-          <div className="font-bold">{scoreText}</div>
+          <span className={isFinished ? "text-green-600" : "text-orange-600"}>
+            {isFinished ? "● Finished" : "○ Upcoming"}
+          </span>
+        </div>
+        
+        <div className="p-4 flex items-center justify-between gap-4">
+          <div className="flex-1 flex flex-col items-center text-center gap-1">
+            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center font-black text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
+              {g.home_team_id.substring(0, 3)}
+            </div>
+            <span className="text-sm font-bold text-gray-900 line-clamp-1">{teamsById[g.home_team_id] || g.home_team_id}</span>
+          </div>
+
+          <div className="flex flex-col items-center gap-1">
+            {isFinished ? (
+              <div className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                <span>{g.home_score}</span>
+                <span className="text-gray-300 text-sm">-</span>
+                <span>{g.away_score}</span>
+              </div>
+            ) : (
+              <div className="px-3 py-1 bg-gray-100 rounded text-xs font-bold text-gray-500 uppercase">VS</div>
+            )}
+            <div className="text-[10px] text-gray-400 font-medium">{g.venue || "No Venue"}</div>
+          </div>
+
+          <div className="flex-1 flex flex-col items-center text-center gap-1">
+            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center font-black text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
+              {g.away_team_id.substring(0, 3)}
+            </div>
+            <span className="text-sm font-bold text-gray-900 line-clamp-1">{teamsById[g.away_team_id] || g.away_team_id}</span>
+          </div>
         </div>
       </Link>
     );
   };
 
-  if (loading) {
-    return (
-      <main className="p-8">
-        <h1 className="text-3xl font-bold">Games</h1>
-        <p className="mt-2 text-gray-600">Loading…</p>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="p-8">
-        <h1 className="text-3xl font-bold">Games</h1>
-        <pre className="mt-4 text-sm">{JSON.stringify(error, null, 2)}</pre>
-      </main>
-    );
-  }
-
-  const {
-    upcomingWeekend,
-    finishedLastWeekend,
-    allUpcoming,
-    allFinished,
-    windowLabel,
-    upcomingWknd,
-    lastWknd,
-  } = computed;
+  if (loading) return <main className="p-8 max-w-2xl mx-auto font-bold text-2xl">Updating Schedule...</main>;
 
   return (
-    <main className="p-8">
-      <h1 className="text-3xl font-bold">Games</h1>
+    <main className="p-6 max-w-2xl mx-auto bg-gray-50 min-h-screen">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-4xl font-black italic tracking-tighter text-gray-900 uppercase">Schedule</h1>
+        <div className="w-12 h-1 bg-orange-600"></div>
+      </div>
 
-      {/* Upcoming Weekend */}
-      <section className="mt-8">
-        <div className="flex items-baseline justify-between gap-4 flex-wrap">
+      {/* Section: Upcoming */}
+      <section className="mb-12">
+        <div className="flex justify-between items-end mb-4">
           <div>
-            <h2 className="text-2xl font-semibold">Upcoming weekend</h2>
-            <div className="text-sm text-gray-600 mt-1">
-              {windowLabel(upcomingWknd.start, upcomingWknd.end)}
-            </div>
+            <h2 className="text-lg font-black uppercase text-gray-900 tracking-tight">Upcoming Matches</h2>
+            <p className="text-xs font-bold text-orange-600 uppercase">{computed.windowLabel(computed.upcomingWknd.start, computed.upcomingWknd.end)}</p>
           </div>
-          <div className="text-sm text-gray-600">
-            Showing: <span className="font-semibold">{upcomingWeekend.length}</span>
-          </div>
+          <span className="text-[10px] font-bold bg-gray-200 px-2 py-1 rounded">{computed.upcomingWeekend.length} Games</span>
         </div>
 
-        <div className="space-y-3 mt-4">
-          {upcomingWeekend.map(card)}
-          {upcomingWeekend.length === 0 && (
-            <div className="text-gray-600">No upcoming weekend games found.</div>
-          )}
+        <div className="grid gap-4">
+          {computed.upcomingWeekend.map(g => <GameCard key={g.game_id} g={g} />)}
+          {computed.upcomingWeekend.length === 0 && <p className="text-gray-400 text-sm italic">No games scheduled for this weekend.</p>}
         </div>
 
-        <details className="mt-5">
-          <summary className="cursor-pointer text-sm font-semibold text-gray-700">
-            Show all upcoming ({allUpcoming.length})
+        <details className="mt-4 group">
+          <summary className="cursor-pointer text-xs font-bold text-gray-500 hover:text-orange-600 list-none flex items-center gap-2">
+            <span className="group-open:rotate-90 transition-transform">▶</span> Show Season Schedule ({computed.allUpcoming.length})
           </summary>
-          <div className="space-y-3 mt-3">{allUpcoming.map(card)}</div>
-          {allUpcoming.length === 0 && (
-            <div className="text-gray-600 mt-3">No upcoming games.</div>
-          )}
+          <div className="grid gap-4 mt-4">{computed.allUpcoming.map(g => <GameCard key={g.game_id} g={g} />)}</div>
         </details>
       </section>
 
-      {/* Finished Last Weekend */}
-      <section className="mt-12">
-        <div className="flex items-baseline justify-between gap-4 flex-wrap">
+      {/* Section: Finished */}
+      <section>
+        <div className="flex justify-between items-end mb-4">
           <div>
-            <h2 className="text-2xl font-semibold">Finished last weekend</h2>
-            <div className="text-sm text-gray-600 mt-1">
-              {windowLabel(lastWknd.start, lastWknd.end)}
-            </div>
-          </div>
-          <div className="text-sm text-gray-600">
-            Showing:{" "}
-            <span className="font-semibold">{finishedLastWeekend.length}</span>
+            <h2 className="text-lg font-black uppercase text-gray-900 tracking-tight">Recent Results</h2>
+            <p className="text-xs font-bold text-gray-500 uppercase">{computed.windowLabel(computed.lastWknd.start, computed.lastWknd.end)}</p>
           </div>
         </div>
 
-        <div className="space-y-3 mt-4">
-          {finishedLastWeekend.map(card)}
-          {finishedLastWeekend.length === 0 && (
-            <div className="text-gray-600">
-              No finished games found for last weekend.
-            </div>
-          )}
+        <div className="grid gap-4">
+          {computed.finishedLastWeekend.map(g => <GameCard key={g.game_id} g={g} />)}
+          {computed.finishedLastWeekend.length === 0 && <p className="text-gray-400 text-sm italic">No results found for last weekend.</p>}
         </div>
 
-        <details className="mt-5">
-          <summary className="cursor-pointer text-sm font-semibold text-gray-700">
-            Show all finished ({allFinished.length})
+        <details className="mt-4 group">
+          <summary className="cursor-pointer text-xs font-bold text-gray-500 hover:text-orange-600 list-none flex items-center gap-2">
+            <span className="group-open:rotate-90 transition-transform">▶</span> Show All Past Results ({computed.allFinished.length})
           </summary>
-          <div className="space-y-3 mt-3">{allFinished.map(card)}</div>
-          {allFinished.length === 0 && (
-            <div className="text-gray-600 mt-3">No finished games.</div>
-          )}
+          <div className="grid gap-4 mt-4">{computed.allFinished.map(g => <GameCard key={g.game_id} g={g} />)}</div>
         </details>
       </section>
     </main>
