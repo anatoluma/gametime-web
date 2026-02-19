@@ -84,6 +84,7 @@ export default function PlayerPage() {
       if (!cancelled) setTeam((teamData as Team) ?? null);
 
       // 3) Player game stats
+      // Note: If you get an error here, check if your table is named 'playerstats' or 'player_game_stats'
       const { data: statsData, error: statsError } = await supabase
         .from("player_game_stats")
         .select("game_id, points")
@@ -134,36 +135,19 @@ export default function PlayerPage() {
     };
   }, [playerId]);
 
-  if (!playerId) {
-    return (
-      <main className="p-8">
-        <h1 className="text-2xl font-bold">Bad route</h1>
-      </main>
-    );
-  }
-
-  if (loading) {
-    return (
-      <main className="p-8">
-        <h1 className="text-2xl font-bold">Loading…</h1>
-      </main>
-    );
-  }
-
-  if (error || !player) {
-    return (
-      <main className="p-8">
-        <h1 className="text-2xl font-bold">Error</h1>
-        <pre className="mt-4 text-sm">{JSON.stringify(error, null, 2)}</pre>
-      </main>
-    );
-  }
+  if (!playerId) return <main className="p-8"><h1 className="text-2xl font-bold">Bad route</h1></main>;
+  if (loading) return <main className="p-8"><h1 className="text-2xl font-bold">Loading Stats...</h1></main>;
+  if (error || !player) return (
+    <main className="p-8">
+      <h1 className="text-2xl font-bold">Error</h1>
+      <pre className="mt-4 text-sm bg-red-50 p-4 rounded">{JSON.stringify(error, null, 2)}</pre>
+    </main>
+  );
 
   const totalPoints = stats.reduce((sum, s) => sum + (s.points ?? 0), 0);
   const gamesPlayed = stats.length;
   const ppg = gamesPlayed > 0 ? (totalPoints / gamesPlayed).toFixed(1) : "0.0";
 
-  // sort by tipoff desc (unknown tipoff last)
   const rows = [...stats].sort((a, b) => {
     const da = gamesById[a.game_id]?.tipoff ? new Date(gamesById[a.game_id].tipoff!).getTime() : -Infinity;
     const db = gamesById[b.game_id]?.tipoff ? new Date(gamesById[b.game_id].tipoff!).getTime() : -Infinity;
@@ -171,72 +155,100 @@ export default function PlayerPage() {
   });
 
   return (
-    <main className="p-8">
-      <div className="flex items-baseline justify-between gap-4 flex-wrap">
+    <main className="p-6 max-w-4xl mx-auto">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between border-b pb-6 mb-8 gap-6">
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tight">
             {player.first_name} {player.last_name}
           </h1>
-          <div className="text-gray-600 mt-1">
-            #{player.jersey_number ?? "-"} •{" "}
-            <Link href={`/teams/${player.team_id}`} className="hover:underline">
+          <div className="flex items-center gap-2 mt-2 text-lg">
+            <span className="bg-orange-600 text-white px-2 py-0.5 rounded font-bold">#{player.jersey_number ?? "?"}</span>
+            <Link href={`/teams/${player.team_id}`} className="text-gray-600 hover:text-orange-600 font-medium underline decoration-orange-200 underline-offset-4">
               {team?.team_name ?? player.team_id}
             </Link>
           </div>
         </div>
 
-        <div className="text-right">
-          <div className="text-sm text-gray-600">Games</div>
-          <div className="text-2xl font-bold">{gamesPlayed}</div>
-        </div>
-
-        <div className="text-right">
-          <div className="text-sm text-gray-600">Total PTS</div>
-          <div className="text-2xl font-bold">{totalPoints}</div>
-        </div>
-
-        <div className="text-right">
-          <div className="text-sm text-gray-600">PPG</div>
-          <div className="text-2xl font-bold">{ppg}</div>
+        {/* Quick Stats Cards */}
+        <div className="flex gap-4">
+          <div className="bg-gray-50 p-4 rounded-xl border text-center min-w-[80px]">
+            <div className="text-xs uppercase text-gray-500 font-bold mb-1">GP</div>
+            <div className="text-2xl font-black">{gamesPlayed}</div>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-xl border text-center min-w-[80px]">
+            <div className="text-xs uppercase text-gray-500 font-bold mb-1">Total PTS</div>
+            <div className="text-2xl font-black">{totalPoints}</div>
+          </div>
+          <div className="bg-orange-50 p-4 rounded-xl border border-orange-200 text-center min-w-[80px]">
+            <div className="text-xs uppercase text-orange-600 font-bold mb-1">PPG</div>
+            <div className="text-2xl font-black text-orange-700">{ppg}</div>
+          </div>
         </div>
       </div>
 
-      <h2 className="text-2xl font-semibold mt-8 mb-4">Game log</h2>
+      <h2 className="text-2xl font-bold mb-4">Season Game Log</h2>
 
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3">Date</th>
-              <th className="p-3">Match</th>
-              <th className="p-3 w-24 text-right">PTS</th>
+      <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50 border-b">
+              <th className="p-4 text-xs font-bold uppercase text-gray-500">Date</th>
+              <th className="p-4 text-xs font-bold uppercase text-gray-500">Opponent</th>
+              <th className="p-4 text-xs font-bold uppercase text-gray-500">Result</th>
+              <th className="p-4 text-xs font-bold uppercase text-gray-500 text-right">PTS</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((s) => {
               const g = gamesById[s.game_id];
-              const dateText = g?.tipoff ? new Date(g.tipoff).toLocaleString() : "TBD";
-              const matchText = g
-                ? `${g.home_team_id} vs ${g.away_team_id}`
-                : s.game_id;
+              if (!g) return null;
+
+              const isHome = g.home_team_id === player.team_id;
+              const opponent = isHome ? g.away_team_id : g.home_team_id;
+              
+              // Determine Win/Loss
+              let resultChar = "";
+              let resultColor = "text-gray-400";
+              if (g.home_score !== null && g.away_score !== null) {
+                const playerTeamScore = isHome ? g.home_score : g.away_score;
+                const opponentScore = isHome ? g.away_score : g.home_score;
+                if (playerTeamScore > opponentScore) {
+                  resultChar = "W";
+                  resultColor = "text-green-600";
+                } else if (playerTeamScore < opponentScore) {
+                  resultChar = "L";
+                  resultColor = "text-red-600";
+                } else {
+                  resultChar = "T";
+                }
+              }
+
+              const dateObj = g.tipoff ? new Date(g.tipoff) : null;
+              const formattedDate = dateObj ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "TBD";
 
               return (
-                <tr key={s.game_id} className="border-t">
-                  <td className="p-3">{dateText}</td>
-                  <td className="p-3">
-                    <Link href={`/games/${s.game_id}`} className="hover:underline">
-                      {matchText}
+                <tr key={s.game_id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
+                  <td className="p-4 text-gray-600 font-medium">{formattedDate}</td>
+                  <td className="p-4 font-semibold text-gray-900">
+                    <span className="text-gray-400 mr-2 font-normal">{isHome ? "vs" : "@"}</span>
+                    <Link href={`/teams/${opponent}`} className="hover:text-orange-600">
+                      {opponent}
                     </Link>
                   </td>
-                  <td className="p-3 text-right font-semibold">{s.points ?? 0}</td>
+                  <td className="p-4">
+                    <span className={`font-black mr-2 ${resultColor}`}>{resultChar}</span>
+                    <span className="text-gray-600">{g.home_score}-{g.away_score}</span>
+                  </td>
+                  <td className="p-4 text-right font-black text-lg text-gray-900">{s.points ?? 0}</td>
                 </tr>
               );
             })}
 
             {rows.length === 0 && (
-              <tr className="border-t">
-                <td className="p-3" colSpan={3}>
-                  No games found for this player.
+              <tr>
+                <td className="p-8 text-center text-gray-400" colSpan={4}>
+                  No game data available for this player.
                 </td>
               </tr>
             )}
