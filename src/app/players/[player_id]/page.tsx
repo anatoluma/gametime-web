@@ -12,7 +12,7 @@ export default function PlayerPage() {
 
   return (
     <main className="p-4 max-w-2xl mx-auto bg-gray-50 min-h-screen">
-      {/* Header Section - Matches your current Pro look */}
+      {/* Header Section */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
         <div className="flex justify-between items-start mb-4">
           <div>
@@ -30,7 +30,6 @@ export default function PlayerPage() {
           </div>
         </div>
 
-        {/* GP and Total Points Row */}
         <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-gray-50">
           <div className="text-center">
             <div className="text-[10px] font-bold text-gray-400 uppercase">Games</div>
@@ -45,7 +44,7 @@ export default function PlayerPage() {
 
       <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 px-1">Game Log</h2>
 
-      {/* REPLACED TABLE WITH FLEX LIST */}
+      {/* REPLACED TABLE WITH FLEX LIST CARDS */}
       <div className="space-y-3">
         {rows.map((s) => {
           const g = gamesById[s.game_id];
@@ -75,7 +74,7 @@ export default function PlayerPage() {
                   <div className={`text-xl font-black ${resultColor} leading-none`}>{resultChar}</div>
                 </div>
                 
-                {/* Opponent & Score */}
+                {/* Opponent & Match Score */}
                 <div className="border-l pl-4">
                   <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
                     {isHome ? "vs" : "@"} {opponent}
@@ -84,7 +83,7 @@ export default function PlayerPage() {
                 </div>
               </div>
 
-              {/* Points - Pinned to the Right */}
+              {/* Individual Player Points - Pinned to the Right */}
               <div className="text-right">
                 <div className="text-[10px] font-black text-orange-400 uppercase leading-none mb-1">PTS</div>
                 <div className="text-2xl font-black text-gray-900 leading-none">{s.points ?? 0}</div>
@@ -92,6 +91,12 @@ export default function PlayerPage() {
             </div>
           );
         })}
+
+        {rows.length === 0 && (
+          <div className="text-center py-10 bg-white rounded-xl border border-dashed text-gray-400 text-sm font-medium">
+            No games played yet this season.
+          </div>
+        )}
       </div>
     </main>
   );
