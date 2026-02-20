@@ -53,11 +53,9 @@ export default function PlayerPage() {
 
     async function load() {
       if (!playerId) return;
-
       setLoading(true);
       setError(null);
 
-      // 1) Player
       const { data: playerData, error: playerError } = await supabase
         .from("players")
         .select("player_id, team_id, first_name, last_name, jersey_number")
@@ -65,7 +63,6 @@ export default function PlayerPage() {
         .maybeSingle();
 
       if (cancelled) return;
-
       if (playerError || !playerData) {
         setError(playerError ?? { message: "Player not found" });
         setLoading(false);
@@ -74,7 +71,6 @@ export default function PlayerPage() {
 
       setPlayer(playerData as Player);
 
-      // 2) Team name
       const { data: teamData } = await supabase
         .from("teams")
         .select("team_id, team_name")
@@ -83,15 +79,12 @@ export default function PlayerPage() {
 
       if (!cancelled) setTeam((teamData as Team) ?? null);
 
-      // 3) Player game stats
-      // Note: If you get an error here, check if your table is named 'playerstats' or 'player_game_stats'
       const { data: statsData, error: statsError } = await supabase
         .from("player_game_stats")
         .select("game_id, points")
         .eq("player_id", playerId);
 
       if (cancelled) return;
-
       if (statsError) {
         setError(statsError);
         setLoading(false);
@@ -101,7 +94,6 @@ export default function PlayerPage() {
       const statRows = (statsData ?? []) as StatRow[];
       setStats(statRows);
 
-      // 4) Load games referenced by these stats
       const gameIds = Array.from(new Set(statRows.map((s) => s.game_id)));
       if (gameIds.length === 0) {
         setGamesById({});
@@ -115,7 +107,6 @@ export default function PlayerPage() {
         .in("game_id", gameIds);
 
       if (cancelled) return;
-
       if (gamesError) {
         setError(gamesError);
         setLoading(false);
@@ -130,9 +121,7 @@ export default function PlayerPage() {
     }
 
     load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [playerId]);
 
   if (!playerId) return <main className="p-8"><h1 className="text-2xl font-bold">Bad route</h1></main>;
@@ -155,7 +144,7 @@ export default function PlayerPage() {
   });
 
   return (
-    <main className="p-6 max-w-4xl mx-auto">
+    <main className="p-4 md:p-8 max-w-4xl mx-auto bg-gray-50 min-h-screen">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b pb-6 mb-8 gap-6">
         <div>
@@ -172,88 +161,77 @@ export default function PlayerPage() {
 
         {/* Quick Stats Cards */}
         <div className="flex gap-4">
-          <div className="bg-gray-50 p-4 rounded-xl border text-center min-w-[80px]">
-            <div className="text-xs uppercase text-gray-500 font-bold mb-1">GP</div>
+          <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border text-center min-w-[80px] shadow-sm">
+            <div className="text-[10px] uppercase text-gray-400 font-bold mb-1">GP</div>
             <div className="text-2xl font-black">{gamesPlayed}</div>
           </div>
-          <div className="bg-gray-50 p-4 rounded-xl border text-center min-w-[80px]">
-            <div className="text-xs uppercase text-gray-500 font-bold mb-1">Total PTS</div>
+          <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border text-center min-w-[80px] shadow-sm">
+            <div className="text-[10px] uppercase text-gray-400 font-bold mb-1">Total PTS</div>
             <div className="text-2xl font-black">{totalPoints}</div>
           </div>
-          <div className="bg-orange-50 p-4 rounded-xl border border-orange-200 text-center min-w-[80px]">
-            <div className="text-xs uppercase text-orange-600 font-bold mb-1">PPG</div>
-            <div className="text-2xl font-black text-orange-700">{ppg}</div>
+          <div className="flex-1 md:flex-none bg-orange-600 p-4 rounded-xl text-center min-w-[80px] shadow-md">
+            <div className="text-[10px] uppercase text-orange-200 font-bold mb-1">PPG</div>
+            <div className="text-2xl font-black text-white">{ppg}</div>
           </div>
         </div>
       </div>
 
-      <h2 className="text-2xl font-bold mb-4">Season Game Log</h2>
+      <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 px-1">Season Game Log</h2>
 
-      <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="p-4 text-xs font-bold uppercase text-gray-500">Date</th>
-              <th className="p-4 text-xs font-bold uppercase text-gray-500">Opponent</th>
-              <th className="p-4 text-xs font-bold uppercase text-gray-500">Result</th>
-              <th className="p-4 text-xs font-bold uppercase text-gray-500 text-right">PTS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((s) => {
-              const g = gamesById[s.game_id];
-              if (!g) return null;
+      {/* NEW MOBILE-FRIENDLY LIST (REPLACES TABLE) */}
+      <div className="space-y-3">
+        {rows.map((s) => {
+          const g = gamesById[s.game_id];
+          if (!g) return null;
 
-              const isHome = g.home_team_id === player.team_id;
-              const opponent = isHome ? g.away_team_id : g.home_team_id;
-              
-              // Determine Win/Loss
-              let resultChar = "";
-              let resultColor = "text-gray-400";
-              if (g.home_score !== null && g.away_score !== null) {
-                const playerTeamScore = isHome ? g.home_score : g.away_score;
-                const opponentScore = isHome ? g.away_score : g.home_score;
-                if (playerTeamScore > opponentScore) {
-                  resultChar = "W";
-                  resultColor = "text-green-600";
-                } else if (playerTeamScore < opponentScore) {
-                  resultChar = "L";
-                  resultColor = "text-red-600";
-                } else {
-                  resultChar = "T";
-                }
-              }
+          const isHome = g.home_team_id === player.team_id;
+          const opponent = isHome ? g.away_team_id : g.home_team_id;
+          
+          let resultChar = "—";
+          let resultColor = "text-gray-300";
+          if (g.home_score !== null && g.away_score !== null) {
+            const playerTeamScore = isHome ? g.home_score : g.away_score;
+            const opponentScore = isHome ? g.away_score : g.home_score;
+            if (playerTeamScore > opponentScore) { resultChar = "W"; resultColor = "text-green-600"; }
+            else if (playerTeamScore < opponentScore) { resultChar = "L"; resultColor = "text-red-600"; }
+            else { resultChar = "T"; resultColor = "text-gray-500"; }
+          }
 
-              const dateObj = g.tipoff ? new Date(g.tipoff) : null;
-              const formattedDate = dateObj ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "TBD";
+          const dateObj = g.tipoff ? new Date(g.tipoff) : null;
+          const formattedDate = dateObj ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "TBD";
 
-              return (
-                <tr key={s.game_id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
-                  <td className="p-4 text-gray-600 font-medium">{formattedDate}</td>
-                  <td className="p-4 font-semibold text-gray-900">
-                    <span className="text-gray-400 mr-2 font-normal">{isHome ? "vs" : "@"}</span>
-                    <Link href={`/teams/${opponent}`} className="hover:text-orange-600">
-                      {opponent}
-                    </Link>
-                  </td>
-                  <td className="p-4">
-                    <span className={`font-black mr-2 ${resultColor}`}>{resultChar}</span>
-                    <span className="text-gray-600">{g.home_score}-{g.away_score}</span>
-                  </td>
-                  <td className="p-4 text-right font-black text-lg text-gray-900">{s.points ?? 0}</td>
-                </tr>
-              );
-            })}
+          return (
+            <div key={s.game_id} className="bg-white border rounded-xl p-4 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-4">
+                {/* Date & Result */}
+                <div className="text-center min-w-[45px]">
+                  <div className="text-[10px] font-black text-gray-300 uppercase leading-none mb-1">{formattedDate}</div>
+                  <div className={`text-xl font-black ${resultColor} leading-none`}>{resultChar}</div>
+                </div>
+                
+                {/* Opponent & Match Score */}
+                <div className="border-l pl-4">
+                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
+                    {isHome ? "vs" : "@"} <Link href={`/teams/${opponent}`} className="text-gray-900 hover:text-orange-600">{opponent}</Link>
+                  </div>
+                  <div className="text-xs font-bold text-gray-600">{g.home_score}-{g.away_score}</div>
+                </div>
+              </div>
 
-            {rows.length === 0 && (
-              <tr>
-                <td className="p-8 text-center text-gray-400" colSpan={4}>
-                  No game data available for this player.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              {/* Individual Player Points - Always fits on the right */}
+              <div className="text-right">
+                <div className="text-[10px] font-black text-orange-400 uppercase leading-none mb-1">PTS</div>
+                <div className="text-2xl font-black text-gray-900 leading-none">{s.points ?? 0}</div>
+              </div>
+            </div>
+          );
+        })}
+
+        {rows.length === 0 && (
+          <div className="text-center py-10 bg-white rounded-xl border border-dashed text-gray-400 text-sm font-medium">
+            No game data available for this player.
+          </div>
+        )}
       </div>
     </main>
   );
