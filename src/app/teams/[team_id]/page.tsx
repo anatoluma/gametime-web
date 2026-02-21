@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 
-// ... [Types remain the same as your snippet] ...
 type Team = { team_id: string; team_name: string; city: string | null; coach: string | null; };
 type Player = { player_id: string; first_name: string; last_name: string; jersey_number: number | null; };
 type Game = { game_id: string; season: string | null; tipoff: string | null; home_team_id: string; away_team_id: string; home_score: number | null; away_score: number | null; };
@@ -74,33 +73,31 @@ export default function TeamPage() {
     return () => { cancelled = true; };
   }, [teamId]);
 
-  if (loading) return <div className="p-20 text-center font-black uppercase italic text-gray-400">Loading Franchise...</div>;
-  if (!team) return <div className="p-20 text-center font-bold text-red-500">Team not found ({teamId})</div>;
+  if (loading) return <div className="p-20 text-center font-black uppercase italic text-gray-500 animate-pulse">Loading Franchise Data...</div>;
+  if (!team) return <div className="p-20 text-center font-bold text-red-600 uppercase tracking-widest">Team not found ({teamId})</div>;
 
   return (
-    <main className="max-w-6xl mx-auto p-4 md:p-12">
+    <main className="max-w-6xl mx-auto p-4 md:p-12 bg-white min-h-screen">
       {/* HEADER SECTION */}
-      <header className="mb-12 border-b-4 border-black pb-8">
+      <header className="mb-12 border-b-8 border-black pb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <div className="flex items-center gap-4 mb-2">
-               <span className="bg-orange-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Active</span>
-               <span className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">ID: {team.team_id}</span>
+            <div className="flex items-center gap-4 mb-3">
+               <span className="bg-orange-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-[0.2em]">Active Franchise</span>
+               <span className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">UID: {team.team_id}</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter leading-none">
+            <h1 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter leading-[0.85] text-black">
               {team.team_name}
             </h1>
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest mt-4">
-              {team.city ?? "Regional"} • Coach {team.coach ?? "TBD"}
+            <p className="text-sm font-black text-gray-500 uppercase tracking-[0.3em] mt-6">
+              {team.city ?? "Regional"} <span className="text-orange-600 mx-2">•</span> Head Coach {team.coach ?? "TBD"}
             </p>
           </div>
 
           {summary && (
-            <div className="flex gap-2">
-              <div className="bg-black text-white px-6 py-4 rounded-xl text-center min-w-[100px]">
-                <div className="text-[10px] font-black uppercase text-gray-500 tracking-widest mb-1">Record</div>
-                <div className="text-3xl font-black italic">{summary.wins}-{summary.losses}</div>
-              </div>
+            <div className="bg-black text-white p-6 rounded-2xl text-center min-w-[140px] shadow-xl rotate-1">
+              <div className="text-[10px] font-black uppercase text-orange-500 tracking-widest mb-1">Win/Loss</div>
+              <div className="text-4xl font-black italic tracking-tighter">{summary.wins}-{summary.losses}</div>
             </div>
           )}
         </div>
@@ -108,47 +105,50 @@ export default function TeamPage() {
 
       {/* STATS STRIP */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
           {[
             { label: "Games Played", val: summary.gamesPlayed },
             { label: "Points For", val: summary.pf },
             { label: "Points Against", val: summary.pa },
             { label: "Point Diff", val: summary.diff, color: summary.diff >= 0 ? 'text-green-600' : 'text-red-600' },
           ].map((stat, i) => (
-            <div key={i} className="border-2 border-gray-100 p-4 rounded-xl">
-              <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">{stat.label}</div>
-              <div className={`text-2xl font-black italic ${stat.color ?? 'text-black'}`}>{stat.val}</div>
+            <div key={i} className="bg-gray-50 border-2 border-gray-100 p-5 rounded-2xl">
+              <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">{stat.label}</div>
+              <div className={`text-3xl font-black italic tracking-tight ${stat.color ?? 'text-black'}`}>{stat.val}</div>
             </div>
           ))}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
         {/* RECENT GAMES */}
         <section>
-          <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-400 mb-6 italic">Recent Schedule</h2>
-          <div className="space-y-3">
+          <div className="flex items-center gap-4 mb-8">
+            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-black italic">Recent Schedule</h2>
+            <div className="h-px flex-1 bg-gray-200"></div>
+          </div>
+          <div className="space-y-4">
             {games.slice(0, 8).map((g) => {
               const isWin = (g.home_team_id === teamId ? g.home_score! > g.away_score! : g.away_score! > g.home_score!);
               const isPlayed = g.home_score !== null;
 
               return (
-                <Link key={g.game_id} href={`/games/${g.game_id}`} className="group flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-black transition-all">
+                <Link key={g.game_id} href={`/games/${g.game_id}`} className="group flex items-center justify-between p-5 border-2 border-gray-100 rounded-2xl hover:border-black hover:bg-gray-50 transition-all">
                   <div className="flex flex-col">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
                       {g.tipoff ? new Date(g.tipoff).toLocaleDateString() : "TBD"}
                     </span>
-                    <span className="font-black uppercase text-sm tracking-tight group-hover:text-orange-600">
+                    <span className="font-black uppercase text-sm tracking-tight text-black group-hover:text-orange-600">
                       {teamsById[g.home_team_id] ?? g.home_team_id} <span className="text-gray-300 mx-1">VS</span> {teamsById[g.away_team_id] ?? g.away_team_id}
                     </span>
                   </div>
                   <div className="flex items-center gap-4">
                     {isPlayed && (
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded ${isWin ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-md ${isWin ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
                         {isWin ? 'W' : 'L'}
                       </span>
                     )}
-                    <span className="text-lg font-black italic tabular-nums">
+                    <span className="text-xl font-black italic tabular-nums text-black">
                       {g.home_score ?? '--'} : {g.away_score ?? '--'}
                     </span>
                   </div>
@@ -160,27 +160,32 @@ export default function TeamPage() {
 
         {/* ROSTER */}
         <section>
-          <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-400 mb-6 italic">Active Roster</h2>
-          <div className="bg-white border-2 border-black rounded-2xl overflow-hidden shadow-[6px_6px_0px_0px_rgba(0,0,0,0.05)]">
+          <div className="flex items-center gap-4 mb-8">
+            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-black italic">Active Roster</h2>
+            <div className="h-px flex-1 bg-gray-200"></div>
+          </div>
+          <div className="bg-white border-4 border-black rounded-3xl overflow-hidden shadow-[12px_12px_0px_0px_rgba(0,0,0,0.05)]">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-gray-50 border-b border-black/5">
-                  <th className="p-4 text-[10px] font-black uppercase text-gray-400 w-16">#</th>
-                  <th className="p-4 text-[10px] font-black uppercase text-gray-400">Athlete</th>
-                  <th className="p-4 text-[10px] font-black uppercase text-gray-400 text-right">Profile</th>
+                <tr className="bg-black">
+                  <th className="p-5 text-[10px] font-black uppercase text-orange-500 tracking-widest w-20">#</th>
+                  <th className="p-5 text-[10px] font-black uppercase text-orange-500 tracking-widest">Athlete</th>
+                  <th className="p-5 text-[10px] font-black uppercase text-orange-500 tracking-widest text-right">Link</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-100">
                 {roster.map((p) => (
-                  <tr key={p.player_id} className="group hover:bg-orange-50/50 transition-colors">
-                    <td className="p-4 text-sm font-black text-gray-300 italic group-hover:text-orange-600">{p.jersey_number ?? "--"}</td>
-                    <td className="p-4">
-                      <Link href={`/players/${p.player_id}`} className="text-sm font-black uppercase tracking-tight text-gray-900 group-hover:underline">
+                  <tr key={p.player_id} className="group hover:bg-orange-50 transition-colors">
+                    <td className="p-5 text-sm font-black text-gray-400 italic group-hover:text-orange-600">{p.jersey_number ?? "--"}</td>
+                    <td className="p-5">
+                      <Link href={`/players/${p.player_id}`} className="text-sm font-black uppercase tracking-tight text-black group-hover:text-orange-600">
                         {p.first_name} {p.last_name}
                       </Link>
                     </td>
-                    <td className="p-4 text-right">
-                      <Link href={`/players/${p.player_id}`} className="text-[10px] font-black text-gray-400 uppercase group-hover:text-black">View →</Link>
+                    <td className="p-5 text-right">
+                      <Link href={`/players/${p.player_id}`} className="inline-block text-[10px] font-black bg-gray-100 group-hover:bg-black group-hover:text-white px-3 py-1 rounded-full uppercase transition-all">
+                        Profile
+                      </Link>
                     </td>
                   </tr>
                 ))}
