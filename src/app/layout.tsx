@@ -3,10 +3,11 @@ import "./globals.css";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
-  title: "GameTime Stats",
-  description: "Basketball stats",
-};
+export const metadata = {
+  title: 'Liga Basket Moldova | Stats & Scores',
+  description: 'The official stats database for the Moldovan Basketball League.',
+  metadataBase: new URL('https://ligabasket.md'), // Add this!
+}
 
 export const viewport = {
   width: "device-width",
@@ -35,7 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             {/* BRAND - Minimalized to save space */}
             <Link href="/" className="flex items-center gap-1.5 shrink-0 mr-2">
               <div className="bg-orange-600 text-black font-black italic px-1.5 py-0.5 rounded text-sm">
-                GT
+                LBM
               </div>
               <span className="font-black uppercase italic tracking-tighter text-base hidden xs:block">
                 STATS
@@ -58,7 +59,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </div>
 
         <footer className="max-w-5xl mx-auto py-6 text-center text-[9px] font-bold text-gray-400 uppercase tracking-widest bg-white border-x border-gray-200">
-          © 2026 GT Stats
+          © 2026 LBM Stats
         </footer>
       </body>
     </html>
