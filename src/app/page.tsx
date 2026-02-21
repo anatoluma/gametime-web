@@ -1,11 +1,18 @@
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 
+export const revalidate = 0;
+
+export const metadata = {
+  title: 'Liga Basket Moldova | Stats & Scores',
+  description: 'The official stats database for the Moldovan Basketball League.',
+  metadataBase: new URL('https://ligabasket.md'),
+}
+
 export default async function Home() {
-  // Fetch everything in parallel for maximum speed
   const [teamsRes, gamesRes, leadersRes] = await Promise.all([
-    supabase.from("teams").select("team_id, team_name").limit(12),
-    supabase.from("games").select("*").order("tipoff", { ascending: false }).limit(4),
+    supabase.from("teams").select("team_id, team_name").eq("is_active", true),
+    supabase.from("games").select("*").order("tipoff", { ascending: false }),
     supabase.from("player_game_stats").select(`
       points,
       players (first_name, last_name, team_id)
@@ -13,104 +20,113 @@ export default async function Home() {
   ]);
 
   const teams = teamsRes.data ?? [];
-  const recentGames = gamesRes.data ?? [];
+  const allGames = gamesRes.data ?? [];
+  const recentGames = allGames.slice(0, 4); // Just for the top strip
   const leaders = leadersRes.data ?? [];
+
+  // --- STANDINGS LOGIC (Extracted from your StandingsPage) ---
+  const table: Record<string, any> = {};
+  teams.forEach(t => {
+    table[t.team_id] = { name: t.team_name, w: 0, l: 0, pts: 0, diff: 0, pf: 0 };
+  });
+
+  allGames.forEach(g => {
+    if (g.home_score !== null && g.away_score !== null) {
+      const hs = Number(g.home_score);
+      const as = Number(g.away_score);
+      const home = table[g.home_team_id];
+      const away = table[g.away_team_id];
+      if (home && away) {
+        home.pf += hs; away.pf += as;
+        if (hs > as) { home.w += 1; away.l += 1; home.pts += 2; away.pts += 1; }
+        else { away.w += 1; home.l += 1; away.pts += 2; home.pts += 1; }
+        home.diff = home.pf - (home.pa || 0); // Simplified for home preview
+      }
+    }
+  });
+
+  const sortedStandings = Object.values(table)
+    .sort((a: any, b: any) => b.pts - a.pts || b.diff - a.diff)
+    .slice(0, 5); // Only show top 5 on Home Page
 
   return (
     <main className="min-h-screen bg-white text-black">
-      {/* 1. HERO SECTION: Force Black/Orange Contrast */}
-      <section className="bg-black text-white py-12 md:py-20 px-6 border-b-[12px] border-orange-600 relative overflow-hidden">
+      {/* 1. HERO SECTION */}
+      <section className="bg-black text-white py-10 md:py-16 px-6 border-b-[10px] border-orange-600 relative overflow-hidden">
         <div className="max-w-6xl mx-auto relative z-10">
-          <h1 className="text-6xl md:text-9xl font-black uppercase italic tracking-tighter leading-[0.8] mb-4">
-            LEAGUE <span className="text-orange-600">CENTRAL</span>
+          <h1 className="text-5xl md:text-8xl font-black uppercase italic tracking-tighter leading-none mb-2">
+            LIGA <span className="text-orange-600">BASKET</span>
           </h1>
-          <p className="text-sm md:text-lg font-black uppercase tracking-[0.4em] text-gray-400">
-            Official 2025/26 Season Hub • Chisinau, Moldova
+          <p className="text-[10px] md:text-xs font-black uppercase tracking-[0.5em] text-gray-500">
+            Official Data Hub • Chisinau, Moldova
           </p>
-        </div>
-        {/* Large Decorative Text */}
-        <div className="absolute top-0 right-0 text-[15rem] font-black italic text-white/[0.03] select-none pointer-events-none translate-x-1/4">
-          STATS
         </div>
       </section>
 
-      {/* 2. MAIN CONTENT GRID */}
-      <div className="max-w-6xl mx-auto p-4 md:p-12 grid grid-cols-1 lg:grid-cols-3 gap-12">
-        
-        {/* LEFT/MIDDLE: RECENT SCORES (Fixes 1000037210.jpg visibility) */}
-        <section className="lg:col-span-2">
-          <div className="flex items-center gap-4 mb-8">
-            <h2 className="text-xl font-black uppercase italic">Recent Results</h2>
-            <div className="h-1 flex-1 bg-black"></div>
-            <Link href="/games" className="text-[10px] font-black uppercase border-2 border-black px-4 py-1.5 hover:bg-black hover:text-white transition-all">
-              Full Schedule →
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* 2. COMPACT MATCH STRIP */}
+      <section className="bg-gray-100 border-b-2 border-black">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {recentGames.map((game) => (
-              <Link 
-                key={game.game_id} 
-                href={`/games/${game.game_id}`} 
-                className="group border-4 border-black p-6 rounded-3xl hover:bg-orange-50 transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]"
-              >
-                <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-2">
-                  <span className="bg-black text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">Final</span>
-                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                    {game.tipoff ? new Date(game.tipoff).toLocaleDateString() : "TBD"}
-                  </span>
+              <Link key={game.game_id} href={`/games/${game.game_id}`} className="bg-white border-2 border-black p-3 hover:bg-orange-50 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none">
+                <div className="flex justify-between items-center mb-1 border-b border-gray-50 pb-1">
+                  <span className="text-[8px] font-black uppercase text-orange-600 italic">{game.home_score !== null ? 'Final' : 'Upcoming'}</span>
+                  <span className="text-[8px] font-bold text-gray-400">{new Date(game.tipoff).toLocaleDateString('ro-MD', {day: 'numeric', month: 'short'})}</span>
                 </div>
-                
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="font-black uppercase text-xl text-black group-hover:text-orange-600">{game.home_team_id}</span>
-                    <span className="text-3xl font-black italic text-black">{game.home_score ?? 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-black uppercase text-xl text-black group-hover:text-orange-600">{game.away_team_id}</span>
-                    <span className="text-3xl font-black italic text-black">{game.away_score ?? 0}</span>
-                  </div>
-                </div>
+                <div className="flex justify-between text-[11px] font-black uppercase"><span>{game.home_team_id}</span><span>{game.home_score ?? 0}</span></div>
+                <div className="flex justify-between text-[11px] font-black uppercase"><span>{game.away_team_id}</span><span>{game.away_score ?? 0}</span></div>
               </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* 3. MAIN CONTENT GRID */}
+      <div className="max-w-6xl mx-auto p-4 md:p-10 grid grid-cols-1 lg:grid-cols-3 gap-12">
+        
+        {/* LEFT: MINI STANDINGS (Replaces Maintenance Section) */}
+        <section className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-black uppercase italic">League Standings</h2>
+            <Link href="/standings" className="text-[10px] font-bold border-b-2 border-black">Full Table →</Link>
+          </div>
+          <div className="border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)]">
+            <table className="w-full text-left bg-white">
+              <thead className="bg-gray-900 text-white text-[9px] uppercase tracking-widest">
+                <tr>
+                  <th className="p-3">Team</th>
+                  <th className="p-3 text-center">W-L</th>
+                  <th className="p-3 text-center">PTS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {sortedStandings.map((team: any, i) => (
+                  <tr key={i} className="hover:bg-orange-50 transition-colors">
+                    <td className="p-3 font-black uppercase text-xs">
+                      <span className="text-gray-300 mr-2"># {i+1}</span> {team.name}
+                    </td>
+                    <td className="p-3 text-center text-xs font-bold">{team.w}-{team.l}</td>
+                    <td className="p-3 text-center font-black text-orange-600">{team.pts}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
 
-        {/* RIGHT: SIDEBAR (Leaders & Directory) */}
-        <aside className="space-y-12">
-          {/* TOP SCORERS BOX (Fixes 1000037209.jpg visibility) */}
+        {/* RIGHT: SIDEBAR (Top Scorers & Teams) */}
+        <aside className="space-y-10">
           <section>
-            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-orange-600 mb-6">Top Scorers</h2>
-            <div className="bg-white border-4 border-black rounded-3xl overflow-hidden">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-orange-600 mb-4">Top Scorers</h2>
+            <div className="bg-white border-2 border-black rounded-2xl overflow-hidden">
               {leaders.map((stat: any, i) => (
-                <div key={i} className="flex items-center justify-between p-4 border-b-2 border-gray-100 last:border-0 hover:bg-orange-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-black italic text-gray-300">#{i+1}</span>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-black uppercase text-black leading-none">
-                        {stat.players?.first_name} {stat.players?.last_name}
-                      </span>
-                      <span className="text-[10px] font-bold text-gray-500 uppercase">{stat.players?.team_id}</span>
-                    </div>
+                <div key={i} className="flex items-center justify-between p-3 border-b border-gray-100 last:border-0 hover:bg-orange-50">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black uppercase">{stat.players?.last_name}</span>
+                    <span className="text-[8px] font-bold text-gray-400 uppercase">{stat.players?.team_id}</span>
                   </div>
-                  <span className="text-xl font-black italic text-black">{stat.points}</span>
+                  <span className="text-sm font-black italic">{stat.points}</span>
                 </div>
-              ))}
-            </div>
-          </section>
-
-          {/* QUICK DIRECTORY (Improved Grid) */}
-          <section>
-            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-black mb-6">Team Directory</h2>
-            <div className="grid grid-cols-2 gap-2">
-              {teams.map((t) => (
-                <Link 
-                  key={t.team_id} 
-                  href={`/teams/${t.team_id}`}
-                  className="p-3 border-2 border-black text-[10px] font-black uppercase text-center hover:bg-black hover:text-white transition-all rounded-xl"
-                >
-                  {t.team_name}
-                </Link>
               ))}
             </div>
           </section>

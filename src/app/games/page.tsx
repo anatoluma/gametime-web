@@ -83,30 +83,46 @@ export default function GamesPage() {
 
   const computed = useMemo(() => {
     const now = new Date();
-    const upcomingWknd = weekendWindow(now, 0);
-    const lastWknd = weekendWindow(now, -1);
+    
+    // helper to get the Monday of a given week
+    const getMonday = (d: Date) => {
+      const date = new Date(d);
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+      return startOfDay(new Date(date.setDate(diff)));
+    };
+
+    const thisMonday = getMonday(now);
+    const nextMonday = new Date(thisMonday);
+    nextMonday.setDate(thisMonday.getDate() + 7);
+    
+    const lastMonday = new Date(thisMonday);
+    lastMonday.setDate(thisMonday.getDate() - 7);
 
     const isFinished = (g: GameRow) => g.home_score != null && g.away_score != null;
     
-    const allUpcoming = games.filter(g => !isFinished(g)).sort((a, b) => 
-      (a.tipoff ? new Date(a.tipoff).getTime() : Infinity) - (b.tipoff ? new Date(b.tipoff).getTime() : Infinity)
-    );
+    // 1. Current Week Games (Today + Future this week)
+    const upcomingThisWeek = games.filter(g => 
+      inRange(g.tipoff, thisMonday, nextMonday) && !isFinished(g)
+    ).sort((a, b) => (a.tipoff ? new Date(a.tipoff).getTime() : 0) - (b.tipoff ? new Date(b.tipoff).getTime() : 0));
 
-    const allFinished = games.filter(isFinished).sort((a, b) => 
-      (b.tipoff ? new Date(b.tipoff).getTime() : -Infinity) - (a.tipoff ? new Date(a.tipoff).getTime() : -Infinity)
-    );
+    // 2. Today's Finished Games or Recent Results
+    const recentResults = games.filter(g => 
+      (inRange(g.tipoff, thisMonday, nextMonday) || inRange(g.tipoff, lastMonday, thisMonday)) && isFinished(g)
+    ).sort((a, b) => (b.tipoff ? new Date(b.tipoff).getTime() : 0) - (a.tipoff ? new Date(a.tipoff).getTime() : 0));
+
+    const allUpcoming = games.filter(g => !isFinished(g));
+    const allFinished = games.filter(isFinished);
 
     const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    const windowLabel = (s: Date, e: Date) => `${fmt(s)} — ${fmt(new Date(e.getTime() - 1))}`;
 
     return {
-      upcomingWeekend: allUpcoming.filter(g => inRange(g.tipoff, upcomingWknd.start, upcomingWknd.end)),
-      finishedLastWeekend: allFinished.filter(g => inRange(g.tipoff, lastWknd.start, lastWknd.end)),
+      upcomingThisWeek,
+      recentResults,
       allUpcoming,
       allFinished,
-      windowLabel,
-      upcomingWknd,
-      lastWknd,
+      thisWeekLabel: `${fmt(thisMonday)} — ${fmt(new Date(nextMonday.getTime() - 86400000))}`,
+      lastWeekLabel: `${fmt(lastMonday)} — ${fmt(new Date(thisMonday.getTime() - 86400000))}`,
     };
   }, [games]);
 
@@ -177,45 +193,31 @@ export default function GamesPage() {
       <section className="mb-10">
         <div className="flex justify-between items-end mb-4 px-1">
           <div>
-            <h2 className="text-sm font-black uppercase text-gray-900 tracking-tight">Upcoming Matches</h2>
-            <p className="text-[10px] font-bold text-orange-600 uppercase">{computed.windowLabel(computed.upcomingWknd.start, computed.upcomingWknd.end)}</p>
+            <h2 className="text-sm font-black uppercase text-gray-900 tracking-tight">This Week's Games</h2>
+            <p className="text-[10px] font-bold text-orange-600 uppercase">{computed.thisWeekLabel}</p>
           </div>
-          <span className="text-[9px] font-bold bg-white border px-2 py-1 rounded shadow-sm text-gray-500 uppercase">{computed.upcomingWeekend.length} Games</span>
         </div>
-
         <div className="grid gap-3">
-          {computed.upcomingWeekend.map(g => <GameCard key={g.game_id} g={g} />)}
-          {computed.upcomingWeekend.length === 0 && <p className="text-gray-400 text-xs italic p-4 bg-white rounded-lg border border-dashed text-center">No games scheduled for this weekend.</p>}
+          {computed.upcomingThisWeek.map(g => <GameCard key={g.game_id} g={g} />)}
+          {computed.upcomingThisWeek.length === 0 && (
+            <p className="text-gray-400 text-xs italic p-4 bg-white rounded-lg border border-dashed text-center">No more games scheduled for this week.</p>
+          )}
         </div>
-
-        <details className="mt-4 group">
-          <summary className="cursor-pointer text-[10px] font-bold text-gray-400 hover:text-orange-600 list-none flex items-center gap-1.5 uppercase tracking-wider">
-            <span className="group-open:rotate-90 transition-transform">▶</span> All Scheduled ({computed.allUpcoming.length})
-          </summary>
-          <div className="grid gap-3 mt-3">{computed.allUpcoming.map(g => <GameCard key={g.game_id} g={g} />)}</div>
-        </details>
+        {/* ... Keep your "All Scheduled" details tag here ... */}
       </section>
 
-      {/* Section: Finished */}
+      {/* Section: Recent Results */}
       <section>
         <div className="flex justify-between items-end mb-4 px-1">
           <div>
             <h2 className="text-sm font-black uppercase text-gray-900 tracking-tight">Recent Results</h2>
-            <p className="text-[10px] font-bold text-gray-500 uppercase">{computed.windowLabel(computed.lastWknd.start, computed.lastWknd.end)}</p>
+            <p className="text-[10px] font-bold text-gray-500 uppercase">Latest scores from this & last week</p>
           </div>
         </div>
-
         <div className="grid gap-3">
-          {computed.finishedLastWeekend.map(g => <GameCard key={g.game_id} g={g} />)}
-          {computed.finishedLastWeekend.length === 0 && <p className="text-gray-400 text-xs italic p-4 bg-white rounded-lg border border-dashed text-center">No results found for last weekend.</p>}
+          {computed.recentResults.slice(0, 6).map(g => <GameCard key={g.game_id} g={g} />)}
         </div>
-
-        <details className="mt-4 group">
-          <summary className="cursor-pointer text-[10px] font-bold text-gray-400 hover:text-orange-600 list-none flex items-center gap-1.5 uppercase tracking-wider">
-            <span className="group-open:rotate-90 transition-transform">▶</span> All Past Results ({computed.allFinished.length})
-          </summary>
-          <div className="grid gap-3 mt-3">{computed.allFinished.map(g => <GameCard key={g.game_id} g={g} />)}</div>
-        </details>
+        {/* ... Keep your "All Past Results" details tag here ... */}
       </section>
     </main>
   );
