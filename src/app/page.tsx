@@ -24,30 +24,61 @@ export default async function Home() {
   const recentGames = allGames.slice(0, 4); // Just for the top strip
   const leaders = leadersRes.data ?? [];
 
-  // --- STANDINGS LOGIC (Extracted from your StandingsPage) ---
+// --- STANDINGS LOGIC (Synced with Standings Page) ---
   const table: Record<string, any> = {};
+  
+  // Initialize all teams
   teams.forEach(t => {
-    table[t.team_id] = { name: t.team_name, w: 0, l: 0, pts: 0, diff: 0, pf: 0 };
+    table[t.team_id] = { 
+      name: t.team_name, 
+      w: 0, 
+      l: 0, 
+      pts: 0, 
+      pf: 0, 
+      pa: 0, 
+      diff: 0 
+    };
   });
 
+  // Calculate stats from all games
   allGames.forEach(g => {
     if (g.home_score !== null && g.away_score !== null) {
       const hs = Number(g.home_score);
       const as = Number(g.away_score);
       const home = table[g.home_team_id];
       const away = table[g.away_team_id];
+      
       if (home && away) {
-        home.pf += hs; away.pf += as;
-        if (hs > as) { home.w += 1; away.l += 1; home.pts += 2; away.pts += 1; }
-        else { away.w += 1; home.l += 1; away.pts += 2; home.pts += 1; }
-        home.diff = home.pf - (home.pa || 0); // Simplified for home preview
+        home.pf += hs; 
+        home.pa += as;
+        away.pf += as; 
+        away.pa += hs;
+
+        if (hs > as) {
+          home.w += 1; away.l += 1;
+          home.pts += 2; away.pts += 1;
+        } else {
+          away.w += 1; home.l += 1;
+          away.pts += 2; home.pts += 1;
+        }
       }
     }
   });
 
+  // Calculate final Differential for everyone
+  Object.keys(table).forEach(k => {
+    table[k].diff = table[k].pf - table[k].pa;
+  });
+
+  // SORTING: Exact same logic as Standings Page
   const sortedStandings = Object.values(table)
-    .sort((a: any, b: any) => b.pts - a.pts || b.diff - a.diff)
-    .slice(0, 5); // Only show top 5 on Home Page
+    .sort((a: any, b: any) => {
+      if (b.pts !== a.pts) return b.pts - a.pts;
+      if (b.diff !== a.diff) return b.diff - a.diff;
+      if (b.pf !== a.pf) return b.pf - a.pf;
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, 5); // Keep only top 5 for preview
 
   return (
     <main className="min-h-screen bg-white text-black">
