@@ -77,7 +77,7 @@ export default function TeamPage() {
   if (!team) return <div className="p-20 text-center font-bold text-red-600 uppercase tracking-widest">Team not found ({teamId})</div>;
 
   return (
-    <main className="max-w-6xl mx-auto p-4 md:p-12 bg-white min-h-screen">
+    <main className="max-w-6xl mx-auto p-4 md:p-12 bg-white min-h-screen text-black">
       {/* HEADER SECTION */}
       <header className="mb-12 border-b-8 border-black pb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -133,22 +133,32 @@ export default function TeamPage() {
               const isPlayed = g.home_score !== null;
 
               return (
-                <Link key={g.game_id} href={`/games/${g.game_id}`} className="group flex items-center justify-between p-5 border-2 border-gray-100 rounded-2xl hover:border-black hover:bg-gray-50 transition-all">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                <Link key={g.game_id} href={`/games/${g.game_id}`} className="group flex items-center justify-between p-4 md:p-5 border-2 border-gray-100 rounded-2xl hover:border-black hover:bg-gray-50 transition-all">
+                  {/* Left Column: Team Names */}
+                  <div className="flex flex-col flex-1">
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
                       {g.tipoff ? new Date(g.tipoff).toLocaleDateString() : "TBD"}
                     </span>
-                    <span className="font-black uppercase text-sm tracking-tight text-black group-hover:text-orange-600">
-                      {teamsById[g.home_team_id] ?? g.home_team_id} <span className="text-gray-300 mx-1">VS</span> {teamsById[g.away_team_id] ?? g.away_team_id}
-                    </span>
+                    {/* Responsive Stack: Rows on Mobile, Line on Desktop */}
+                    <div className="flex flex-col md:flex-row md:items-center font-black uppercase text-[11px] md:text-sm tracking-tight text-black group-hover:text-orange-600">
+                      <span>{teamsById[g.home_team_id] ?? g.home_team_id}</span>
+                      <span className="text-gray-300 md:mx-2 text-[9px] md:text-xs">VS</span>
+                      <span>{teamsById[g.away_team_id] ?? g.away_team_id}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4">
+
+                  {/* Middle Column: W/L Indicator */}
+                  <div className="flex items-center justify-center w-12">
                     {isPlayed && (
-                      <span className={`text-[10px] font-black px-2 py-1 rounded-md ${isWin ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-md min-w-[24px] text-center ${isWin ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
                         {isWin ? 'W' : 'L'}
                       </span>
                     )}
-                    <span className="text-xl font-black italic tabular-nums text-black">
+                  </div>
+
+                  {/* Right Column: Score */}
+                  <div className="text-right min-w-[70px]">
+                    <span className="text-lg md:text-xl font-black italic tabular-nums text-black whitespace-nowrap">
                       {g.home_score ?? '--'} : {g.away_score ?? '--'}
                     </span>
                   </div>
@@ -183,7 +193,8 @@ export default function TeamPage() {
                       </Link>
                     </td>
                     <td className="p-5 text-right">
-                      <Link href={`/players/${p.player_id}`} className="inline-block text-[10px] font-black bg-gray-100 group-hover:bg-black group-hover:text-white px-3 py-1 rounded-full uppercase transition-all">
+                      {/* Fixed "Profile" Button Visibility: Switched to bg-gray-200 for high contrast */}
+                      <Link href={`/players/${p.player_id}`} className="inline-block text-[10px] font-black bg-gray-200 text-black group-hover:bg-black group-hover:text-white px-3 py-1.5 rounded-full uppercase transition-all shadow-sm">
                         Profile
                       </Link>
                     </td>
