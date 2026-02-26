@@ -159,17 +159,20 @@ export default function PlayerPage() {
           </div>
         </div>
 
-        {/* Quick Stats Cards */}
+        {/* Quick Stats Cards - Fixed Visibility */}
         <div className="flex gap-4">
-          <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border text-center min-w-[80px] shadow-sm">
+          <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border border-gray-200 text-center min-w-[80px] shadow-sm">
             <div className="text-[10px] uppercase text-gray-400 font-bold mb-1">GP</div>
-            <div className="text-2xl font-black">{gamesPlayed}</div>
+            {/* Explicit text-black ensures visibility in dark mode forced by browser */}
+            <div className="text-2xl font-black text-black">{gamesPlayed}</div>
           </div>
-          <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border text-center min-w-[80px] shadow-sm">
+          
+          <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border border-gray-200 text-center min-w-[80px] shadow-sm">
             <div className="text-[10px] uppercase text-gray-400 font-bold mb-1">Total PTS</div>
-            <div className="text-2xl font-black">{totalPoints}</div>
+            <div className="text-2xl font-black text-black">{totalPoints}</div>
           </div>
-          <div className="flex-1 md:flex-none bg-orange-600 p-4 rounded-xl text-center min-w-[80px] shadow-md">
+          
+          <div className="flex-1 md:flex-none bg-orange-600 p-4 rounded-xl text-center min-w-[80px] shadow-md border border-orange-700">
             <div className="text-[10px] uppercase text-orange-200 font-bold mb-1">PPG</div>
             <div className="text-2xl font-black text-white">{ppg}</div>
           </div>
