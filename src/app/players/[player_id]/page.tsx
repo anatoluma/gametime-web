@@ -125,11 +125,11 @@ export default function PlayerPage() {
   }, [playerId]);
 
   if (!playerId) return <main className="p-8"><h1 className="text-2xl font-bold">Bad route</h1></main>;
-  if (loading) return <main className="p-8"><h1 className="text-2xl font-bold">Loading Stats...</h1></main>;
+  if (loading) return <main className="p-8 text-black"><h1 className="text-2xl font-black italic uppercase animate-pulse">Loading Stats...</h1></main>;
   if (error || !player) return (
-    <main className="p-8">
+    <main className="p-8 text-black">
       <h1 className="text-2xl font-bold">Error</h1>
-      <pre className="mt-4 text-sm bg-red-50 p-4 rounded">{JSON.stringify(error, null, 2)}</pre>
+      <pre className="mt-4 text-sm bg-red-50 p-4 rounded text-red-600 border border-red-100">{JSON.stringify(error, null, 2)}</pre>
     </main>
   );
 
@@ -144,16 +144,16 @@ export default function PlayerPage() {
   });
 
   return (
-    <main className="p-4 md:p-8 max-w-4xl mx-auto bg-gray-50 min-h-screen">
+    <main className="p-4 md:p-8 max-w-4xl mx-auto bg-gray-50 min-h-screen text-black">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between border-b pb-6 mb-8 gap-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between border-b-4 border-black pb-6 mb-8 gap-6">
         <div>
-          <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tight">
+          <h1 className="text-4xl md:text-5xl font-black text-black uppercase italic tracking-tighter">
             {player.first_name} {player.last_name}
           </h1>
-          <div className="flex items-center gap-2 mt-2 text-lg">
-            <span className="bg-orange-600 text-white px-2 py-0.5 rounded font-bold">#{player.jersey_number ?? "?"}</span>
-            <Link href={`/teams/${player.team_id}`} className="text-gray-600 hover:text-orange-600 font-medium underline decoration-orange-200 underline-offset-4">
+          <div className="flex items-center gap-3 mt-4 text-lg">
+            <span className="bg-orange-600 text-white px-3 py-1 rounded-lg font-black italic">#{player.jersey_number ?? "?"}</span>
+            <Link href={`/teams/${player.team_id}`} className="text-black/60 hover:text-orange-600 font-black uppercase tracking-tight underline decoration-orange-600 decoration-2 underline-offset-4 transition-colors">
               {team?.team_name ?? player.team_id}
             </Link>
           </div>
@@ -161,27 +161,24 @@ export default function PlayerPage() {
 
         {/* Quick Stats Cards - Fixed Visibility */}
         <div className="flex gap-4">
-          <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border border-gray-200 text-center min-w-[80px] shadow-sm">
-            <div className="text-[10px] uppercase text-gray-400 font-bold mb-1">GP</div>
-            {/* Explicit text-black ensures visibility in dark mode forced by browser */}
+          <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border-2 border-black text-center min-w-[85px] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+            <div className="text-[10px] uppercase text-gray-400 font-black mb-1">GP</div>
             <div className="text-2xl font-black text-black">{gamesPlayed}</div>
           </div>
-          
-          <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border border-gray-200 text-center min-w-[80px] shadow-sm">
-            <div className="text-[10px] uppercase text-gray-400 font-bold mb-1">Total PTS</div>
+          <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border-2 border-black text-center min-w-[85px] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+            <div className="text-[10px] uppercase text-gray-400 font-black mb-1">Total PTS</div>
             <div className="text-2xl font-black text-black">{totalPoints}</div>
           </div>
-          
-          <div className="flex-1 md:flex-none bg-orange-600 p-4 rounded-xl text-center min-w-[80px] shadow-md border border-orange-700">
-            <div className="text-[10px] uppercase text-orange-200 font-bold mb-1">PPG</div>
-            <div className="text-2xl font-black text-white">{ppg}</div>
+          <div className="flex-1 md:flex-none bg-orange-600 p-4 rounded-xl border-2 border-black text-center min-w-[85px] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+            <div className="text-[10px] uppercase text-orange-200 font-black mb-1">PPG</div>
+            <div className="text-2xl font-black text-white italic">{ppg}</div>
           </div>
         </div>
       </div>
 
-      <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 px-1">Season Game Log</h2>
+      <h2 className="text-xs font-black text-gray-400 uppercase tracking-[0.4em] mb-4 px-1 italic">Season Game Log</h2>
 
-      {/* NEW MOBILE-FRIENDLY LIST (REPLACES TABLE) */}
+      {/* GAME LOG LIST */}
       <div className="space-y-3">
         {rows.map((s) => {
           const g = gamesById[s.game_id];
@@ -201,38 +198,43 @@ export default function PlayerPage() {
           }
 
           const dateObj = g.tipoff ? new Date(g.tipoff) : null;
-          const formattedDate = dateObj ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "TBD";
+          const formattedDate = dateObj ? dateObj.toLocaleDateString('ro-MD', { month: 'short', day: 'numeric' }) : "TBD";
 
           return (
-            <div key={s.game_id} className="bg-white border rounded-xl p-4 flex items-center justify-between shadow-sm">
+            /* CLICKABLE WRAPPER: Now links to the specific Game Page */
+            <Link 
+              key={s.game_id} 
+              href={`/games/${s.game_id}`} 
+              className="group bg-white border-2 border-black rounded-xl p-4 flex items-center justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] hover:bg-orange-50 hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all"
+            >
               <div className="flex items-center gap-4">
                 {/* Date & Result */}
                 <div className="text-center min-w-[45px]">
                   <div className="text-[10px] font-black text-gray-300 uppercase leading-none mb-1">{formattedDate}</div>
-                  <div className={`text-xl font-black ${resultColor} leading-none`}>{resultChar}</div>
+                  <div className={`text-xl font-black ${resultColor} leading-none italic`}>{resultChar}</div>
                 </div>
                 
                 {/* Opponent & Match Score */}
-                <div className="border-l pl-4">
-                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
-                    {isHome ? "vs" : "@"} <Link href={`/teams/${opponent}`} className="text-gray-900 hover:text-orange-600">{opponent}</Link>
+                <div className="border-l-2 border-gray-100 pl-4">
+                  <div className="text-[10px] font-black text-gray-400 uppercase tracking-tight mb-1">
+                    {isHome ? "vs" : "@"} <span className="text-black group-hover:text-orange-600 transition-colors">{opponent}</span>
                   </div>
-                  <div className="text-xs font-bold text-gray-600">{g.home_score}-{g.away_score}</div>
+                  <div className="text-xs font-black text-gray-600 italic tabular-nums">{g.home_score} : {g.away_score}</div>
                 </div>
               </div>
 
-              {/* Individual Player Points - Always fits on the right */}
+              {/* Individual Player Points */}
               <div className="text-right">
                 <div className="text-[10px] font-black text-orange-400 uppercase leading-none mb-1">PTS</div>
-                <div className="text-2xl font-black text-gray-900 leading-none">{s.points ?? 0}</div>
+                <div className="text-2xl font-black text-black italic leading-none">{s.points ?? 0}</div>
               </div>
-            </div>
+            </Link>
           );
         })}
 
         {rows.length === 0 && (
-          <div className="text-center py-10 bg-white rounded-xl border border-dashed text-gray-400 text-sm font-medium">
-            No game data available for this player.
+          <div className="text-center py-10 bg-white rounded-xl border-2 border-dashed border-gray-200 text-gray-400 text-xs font-black uppercase italic tracking-widest">
+            No game data available
           </div>
         )}
       </div>
