@@ -29,17 +29,15 @@ export default function LeadersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
   const [sortMode, setSortMode] = useState<"PTS" | "PPG">("PTS");
+
   useEffect(() => {
     let cancelled = false;
-
     async function load() {
       setLoading(true);
       setError(null);
-      
       const { data, error } = await supabase
         .from("player_game_stats")
-        .select(
-          `
+        .select(`
           player_id,
           points,
           players (
@@ -48,11 +46,9 @@ export default function LeadersPage() {
             team_id,
             teams ( team_name )
           )
-        `
-        );
+        `);
 
       if (cancelled) return;
-
       if (error) {
         setError(error);
         setLoading(false);
@@ -60,23 +56,15 @@ export default function LeadersPage() {
       }
 
       const stats = (data ?? []) as unknown as StatRow[];
-      const map = new Map<
-        string,
-        { gp: number; pts: number; name: string; teamName: string }
-      >();
+      const map = new Map<string, { gp: number; pts: number; name: string; teamName: string }>();
 
       for (const r of stats) {
         const pid = r.player_id;
         const pts = r.points ?? 0;
-
         const first = r.players?.first_name ?? "";
         const last = r.players?.last_name ?? "";
         const name = `${first} ${last}`.trim() || pid;
-
-        const teamName =
-          (r.players?.teams?.team_name ?? "").trim() ||
-          (r.players?.team_id ?? "").trim() ||
-          "—";
+        const teamName = (r.players?.teams?.team_name ?? "").trim() || (r.players?.team_id ?? "").trim() || "—";
 
         const cur = map.get(pid);
         if (!cur) {
@@ -96,132 +84,80 @@ export default function LeadersPage() {
           pts: v.pts,
           ppg: v.gp > 0 ? v.pts / v.gp : 0,
         }))
-        .filter((x) => x.gp > 0)
+        .filter((x) => x.gp > 0);
       setRows(leaders);
       setLoading(false);
     }
-
     load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const sorted = useMemo(() => {
-  const arr = [...rows];
+    const arr = [...rows];
+    if (sortMode === "PPG") {
+      arr.sort((a, b) => b.ppg - a.ppg || b.gp - a.gp || b.pts - a.pts);
+    } else {
+      arr.sort((a, b) => b.pts - a.pts || b.gp - a.gp || b.ppg - a.ppg);
+    }
+    return arr;
+  }, [rows, sortMode]);
 
-  if (sortMode === "PPG") {
-    arr.sort((a, b) => b.ppg - a.ppg || b.gp - a.gp || b.pts - a.pts);
-  } else {
-    // PTS
-    arr.sort((a, b) => b.pts - a.pts || b.gp - a.gp || b.ppg - a.ppg);
-  }
+  const top = useMemo(() => sorted.slice(0, 50), [sorted]);
 
-  return arr;
-}, [rows, sortMode]);
-
-const top = useMemo(() => sorted.slice(0, 50), [sorted]);
-
-  if (loading) {
-    return (
-      <main className="py-6 text-black">
-        <h1 className="text-3xl font-bold">Leaders</h1>
-        <p className="mt-2 text-black/60">Loading…</p>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="py-6 text-black">
-        <h1 className="text-3xl font-bold">Leaders</h1>
-        <pre className="mt-4 text-sm text-black/80 overflow-x-auto">
-          {JSON.stringify(error, null, 2)}
-        </pre>
-      </main>
-    );
-  }
+  if (loading) return <main className="py-6 text-black px-4 max-w-4xl mx-auto"><h1 className="text-3xl font-black italic uppercase">Leaders</h1><p className="mt-4 animate-pulse font-bold text-gray-400">LOADING STATS...</p></main>;
 
   return (
-    <main className="py-6 text-black">
-      <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <h1 className="text-3xl font-bold">Leaders</h1>
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-black/60">Sorted by</span>
-
-          <button
-            type="button"
-            onClick={() => setSortMode("PTS")}
-            className={`px-2 py-1 rounded border text-xs font-bold transition ${
-              sortMode === "PTS"
-                ? "bg-black text-white border-black"
-                : "bg-white text-black border-black/20 hover:bg-black/5"
-            }`}
-          >
-            PTS
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSortMode("PPG")}
-            className={`px-2 py-1 rounded border text-xs font-bold transition ${
-              sortMode === "PPG"
-                ? "bg-black text-white border-black"
-                : "bg-white text-black border-black/20 hover:bg-black/5"
-            }`}
-          >
-            PPG
-          </button>
+    <main className="py-6 text-black px-4 max-w-4xl mx-auto min-h-screen bg-white">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap mb-8 border-b-4 border-black pb-4">
+        <h1 className="text-4xl font-black italic uppercase tracking-tighter text-black">League Leaders</h1>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Sort By</span>
+          <button onClick={() => setSortMode("PTS")} className={`px-3 py-1 rounded-full text-[10px] font-black transition-all ${sortMode === "PTS" ? "bg-black text-white" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`}>PTS</button>
+          <button onClick={() => setSortMode("PPG")} className={`px-3 py-1 rounded-full text-[10px] font-black transition-all ${sortMode === "PPG" ? "bg-black text-white" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`}>PPG</button>
         </div>
       </div>
 
-      <div className="mt-6 space-y-4">
+      <div className="space-y-3">
         {top.map((p, idx) => (
           <Link
             key={p.player_id}
             href={`/players/${p.player_id}`}
-            className="block border border-black/20 rounded-2xl p-4 hover:bg-black/5 transition"
+            className="group block border-2 border-black/10 rounded-2xl p-4 hover:border-black hover:bg-orange-50 transition-all shadow-sm hover:shadow-none"
           >
             <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-black/60 font-semibold">#{idx + 1}</div>
-                <div className="text-xl font-bold">{p.name}</div>
-                <div className="text-black/60 uppercase tracking-wide">
+              {/* LEFT: PLAYER INFO (Fills remaining space) */}
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-black text-gray-300 italic mb-1 uppercase tracking-tighter">#{idx + 1}</div>
+                <div className="text-lg font-black uppercase italic tracking-tight truncate group-hover:text-orange-600 transition-colors text-black">
+                  {p.name}
+                </div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">
                   {p.teamName}
                 </div>
               </div>
 
-             <div className="grid grid-cols-3 gap-4 w-[210px] sm:w-[240px]">
-                {/* PTS */}
-                <div>
-                  <div className="inline-block text-xs font-bold px-2 py-1 border border-black/20 rounded bg-black/5">
-                    PTS
-                  </div>
-                  <div className="text-2xl font-extrabold mt-1">{p.pts}</div>
+              {/* RIGHT: ALIGNED STATS COLUMNS (Locked Width) */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 w-[160px] sm:w-[240px] shrink-0 border-l-2 border-gray-50 pl-2 sm:pl-4">
+                <div className="text-center">
+                  <div className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">PTS</div>
+                  <div className="text-lg sm:text-2xl font-black italic text-black tabular-nums leading-none mt-1">{p.pts}</div>
                 </div>
-
-                {/* GP */}
-                <div>
-                  <div className="inline-block text-xs font-bold px-2 py-1 border border-black/20 rounded bg-black/5">
-                    GP
-                  </div>
-                  <div className="text-2xl font-extrabold mt-1">{p.gp}</div>
+                <div className="text-center">
+                  <div className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">GP</div>
+                  <div className="text-lg sm:text-2xl font-black italic text-black tabular-nums leading-none mt-1">{p.gp}</div>
                 </div>
-
-                {/* PPG */}
-                <div>
-                  <div className="inline-block text-xs font-bold px-2 py-1 border border-black/20 rounded bg-black/5">
-                    PPG
+                <div className="text-center">
+                  <div className="text-[9px] font-black text-orange-600 uppercase tracking-tighter">PPG</div>
+                  <div className="text-lg sm:text-2xl font-black italic text-orange-600 tabular-nums leading-none mt-1">
+                    {p.ppg.toFixed(1)}
                   </div>
-                  <div className="text-2xl font-extrabold mt-1">{p.ppg.toFixed(1)}</div>
                 </div>
               </div>
             </div>
-
           </Link>
         ))}
 
-        {top.length === 0 && <div className="text-black/60">No data yet.</div>}
+        {top.length === 0 && <div className="text-center py-20 font-black text-gray-200 uppercase italic text-2xl">No data yet</div>}
       </div>
     </main>
   );
