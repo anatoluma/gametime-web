@@ -125,7 +125,7 @@ export default function LeadersPage() {
             className="group block border-2 border-black/10 rounded-2xl p-4 hover:border-black hover:bg-orange-50 transition-all shadow-sm hover:shadow-none"
           >
             <div className="flex items-center justify-between gap-4">
-              {/* LEFT: PLAYER INFO */}
+              {/* LEFT: PLAYER INFO (Fills remaining space) */}
               <div className="flex-1 min-w-0">
                 <div className="text-[10px] font-black text-gray-300 italic mb-1 uppercase tracking-tighter">Rank #{idx + 1}</div>
                 <div className="text-lg font-black uppercase italic tracking-tight truncate group-hover:text-orange-600 transition-colors">
@@ -136,8 +136,8 @@ export default function LeadersPage() {
                 </div>
               </div>
 
-              {/* RIGHT: ALIGNED STATS COLUMNS */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-4 w-[180px] sm:w-[240px] shrink-0 border-l-2 border-gray-50 pl-4">
+              {/* RIGHT: ALIGNED STATS COLUMNS (Fixed Width) */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 w-[160px] sm:w-[240px] shrink-0 border-l-2 border-gray-50 pl-4">
                 <div className="text-center">
                   <div className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">PTS</div>
                   <div className="text-xl font-black italic text-black tabular-nums">{p.pts}</div>
