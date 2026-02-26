@@ -104,55 +104,58 @@ export default function LeadersPage() {
 
   const top = useMemo(() => sorted.slice(0, 50), [sorted]);
 
-  if (loading) return <main className="py-6 text-black px-4 max-w-4xl mx-auto"><h1 className="text-3xl font-black italic uppercase">Leaders</h1><p className="mt-4 animate-pulse font-bold text-gray-400">LOADING STATS...</p></main>;
+  if (loading) return <main className="py-6 text-black px-2 max-w-4xl mx-auto"><h1 className="text-3xl font-black italic uppercase">Leaders</h1><p className="mt-4 animate-pulse font-bold text-gray-400">LOADING STATS...</p></main>;
 
   return (
-    <main className="py-6 text-black px-4 max-w-4xl mx-auto min-h-screen bg-white">
-      <div className="flex items-baseline justify-between gap-3 flex-wrap mb-8 border-b-4 border-black pb-4">
-        <h1 className="text-4xl font-black italic uppercase tracking-tighter text-black">League Leaders</h1>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Sort By</span>
-          <button onClick={() => setSortMode("PTS")} className={`px-3 py-1 rounded-full text-[10px] font-black transition-all ${sortMode === "PTS" ? "bg-black text-white" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`}>PTS</button>
-          <button onClick={() => setSortMode("PPG")} className={`px-3 py-1 rounded-full text-[10px] font-black transition-all ${sortMode === "PPG" ? "bg-black text-white" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`}>PPG</button>
+    <main className="py-4 text-black px-2 max-w-4xl mx-auto min-h-screen bg-white">
+      <div className="flex items-baseline justify-between gap-2 flex-wrap mb-6 border-b-4 border-black pb-4">
+        <h1 className="text-3xl font-black italic uppercase tracking-tighter text-black">League Leaders</h1>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Sort By</span>
+          <button onClick={() => setSortMode("PTS")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PTS" ? "bg-black text-white" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`}>PTS</button>
+          <button onClick={() => setSortMode("PPG")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PPG" ? "bg-black text-white" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`}>PPG</button>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {top.map((p, idx) => (
           <Link
             key={p.player_id}
             href={`/players/${p.player_id}`}
-            className="group block border-2 border-black/10 rounded-2xl p-4 hover:border-black hover:bg-orange-50 transition-all shadow-sm hover:shadow-none"
+            className="group block border-2 border-black/10 rounded-xl p-3 hover:border-black hover:bg-orange-50 transition-all shadow-sm"
           >
-            <div className="flex items-center justify-between gap-4">
-              {/* LEFT: PLAYER INFO (Fills remaining space) */}
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-black text-gray-300 italic mb-1 uppercase tracking-tighter">#{idx + 1}</div>
-                <div className="text-lg font-black uppercase italic tracking-tight truncate group-hover:text-orange-600 transition-colors text-black">
+            {/* GRID LAYOUT: Left side expands, Right side (Stats) is fixed */}
+            <div className="grid grid-cols-[1fr_auto] items-center gap-2">
+              
+              {/* LEFT: PLAYER INFO (Wrapped text) */}
+              <div className="min-w-0">
+                <div className="text-[9px] font-black text-gray-300 italic mb-0.5 uppercase tracking-tighter">#{idx + 1}</div>
+                <div className="text-base font-black uppercase italic tracking-tight leading-tight group-hover:text-orange-600 transition-colors text-black break-words">
                   {p.name}
                 </div>
-                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">
+                <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-tight break-words">
                   {p.teamName}
                 </div>
               </div>
 
-              {/* RIGHT: ALIGNED STATS COLUMNS (Locked Width) */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-4 w-[160px] sm:w-[240px] shrink-0 border-l-2 border-gray-50 pl-2 sm:pl-4">
-                <div className="text-center">
-                  <div className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">PTS</div>
-                  <div className="text-lg sm:text-2xl font-black italic text-black tabular-nums leading-none mt-1">{p.pts}</div>
+              {/* RIGHT: ALIGNED STATS COLUMNS (Fixed Width) */}
+              <div className="flex items-center border-l-2 border-gray-50 pl-2 gap-3 sm:gap-6">
+                <div className="text-center w-[35px] sm:w-[50px]">
+                  <div className="text-[8px] font-black text-gray-400 uppercase">PTS</div>
+                  <div className="text-base sm:text-xl font-black italic text-black tabular-nums">{p.pts}</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">GP</div>
-                  <div className="text-lg sm:text-2xl font-black italic text-black tabular-nums leading-none mt-1">{p.gp}</div>
+                <div className="text-center w-[25px] sm:w-[40px]">
+                  <div className="text-[8px] font-black text-gray-400 uppercase">GP</div>
+                  <div className="text-base sm:text-xl font-black italic text-black tabular-nums">{p.gp}</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-[9px] font-black text-orange-600 uppercase tracking-tighter">PPG</div>
-                  <div className="text-lg sm:text-2xl font-black italic text-orange-600 tabular-nums leading-none mt-1">
+                <div className="text-center w-[35px] sm:w-[50px]">
+                  <div className="text-[8px] font-black text-orange-600 uppercase">PPG</div>
+                  <div className="text-base sm:text-xl font-black italic text-orange-600 tabular-nums">
                     {p.ppg.toFixed(1)}
                   </div>
                 </div>
               </div>
+
             </div>
           </Link>
         ))}
