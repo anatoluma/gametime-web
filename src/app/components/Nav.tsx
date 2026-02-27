@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 // Using relative path to be 100% safe from alias errors
-import { useGlobalSearch } from "../hooks/use-global-search";
+import { useGlobalSearch } from "../../hooks/use-global-search";
 
 interface TeamResult { team_id: string; team_name: string; }
 interface PlayerResult { player_id: string; first_name: string; last_name: string; team_id: string; }
