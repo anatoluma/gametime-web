@@ -44,12 +44,12 @@ export default function Nav() {
           </span>
         </Link>
 
-        {/* SEARCH BAR */}
-        <div className="relative flex-1 max-w-md hidden md:block">
+        {/* SEARCH BAR - Now visible on all screen sizes */}
+        <div className="relative flex-1 max-w-md block"> 
           <input
             type="text"
-            placeholder="Search players or teams..."
-            className="w-full bg-white/10 border-2 border-white/20 rounded-full px-4 py-1 text-xs font-bold focus:border-orange-600 focus:outline-none transition-all placeholder:text-gray-500 text-white"
+            placeholder="Search..."
+            className="w-full bg-white/10 border-2 border-white/20 rounded-full px-4 py-1.5 text-[11px] font-bold focus:border-orange-600 focus:outline-none transition-all placeholder:text-gray-500 text-white"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
