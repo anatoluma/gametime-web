@@ -38,33 +38,29 @@ export default function AdminGameEntry() {
   };
 
   const handleSaveGame = async () => {
-    // Create a clean object for insertion
-    // We explicitly EXCLUDE game_id so the database can generate it
-    const gameToInsert = {
-      home_team_id: gameData.home_team_id,
-      away_team_id: gameData.away_team_id,
-      tipoff: new Date(gameData.tipoff).toISOString(),
-      venue: gameData.venue,
-      home_score: gameData.home_score,
-      away_score: gameData.away_score
-    };
-
+    // 1. Create the game record first
+    // IMPORTANT: Do NOT include game_id here. 
+    // Let the database generate it automatically.
     const { data: game, error: gError } = await supabase
       .from("games")
-      .insert([gameToInsert]) // Pass the clean object here
+      .insert([{
+        home_team_id: gameData.home_team_id,
+        away_team_id: gameData.away_team_id,
+        tipoff: new Date(gameData.tipoff).toISOString(),
+        venue: gameData.venue,
+        home_score: gameData.home_score,
+        away_score: gameData.away_score
+      }])
       .select()
       .single();
 
-    if (gError) {
-      console.error(gError);
-      return alert(`Game Error: ${gError.message}`);
-    }
+    if (gError) return alert(`Game Error: ${gError.message}`);
 
-    // Now proceed to stats using the newly generated game.game_id
+    // 2. Now use the NEWLY generated ID for the stats
     const allStats = [...homePlayers, ...awayPlayers]
       .filter(p => p.played)
       .map(p => ({
-        game_id: game.game_id, // This comes from the DB response
+        game_id: game.game_id, // This is the ID just created by Supabase
         player_id: p.player_id,
         points: p.points,
         team_id: p.team_id
@@ -75,7 +71,7 @@ export default function AdminGameEntry() {
     if (sError) {
       alert(`Stats Error: ${sError.message}`);
     } else {
-      alert("Game and Stats uploaded successfully!");
+      alert("Success! Game and Stats uploaded.");
       window.location.reload();
     }
   };
