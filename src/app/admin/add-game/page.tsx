@@ -72,38 +72,63 @@ export default function AdminGameEntry() {
       {/* STEP 1: GAME INFO */}
       {step === 1 && (
         <section className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Date & Time Picker */}
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">
+                Game Date & Time
+              </label>
+              <input 
+                type="datetime-local" 
+                className="w-full border-4 border-black p-3 font-black text-xl uppercase bg-white text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:shadow-none transition-all"
+                value={gameData.tipoff}
+                onChange={(e) => setGameData({...gameData, tipoff: e.target.value})}
+              />
+            </div>
+
             <div>
-              <label className="block text-xs font-black uppercase mb-1">Home Team</label>
+              <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">Home Team</label>
               <select 
-                className="w-full border-2 border-black p-2 font-bold"
+                className="w-full border-4 border-black p-3 font-bold bg-white text-black"
                 onChange={(e) => setGameData({...gameData, home_team_id: e.target.value})}
               >
-                <option value="">Select Team</option>
+                <option value="">Select Home</option>
                 {teams.map(t => <option key={t.team_id} value={t.team_id}>{t.team_name}</option>)}
               </select>
             </div>
+
             <div>
-              <label className="block text-xs font-black uppercase mb-1">Away Team</label>
+              <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">Away Team</label>
               <select 
-                className="w-full border-2 border-black p-2 font-bold"
+                className="w-full border-4 border-black p-3 font-bold bg-white text-black"
                 onChange={(e) => setGameData({...gameData, away_team_id: e.target.value})}
               >
-                <option value="">Select Team</option>
+                <option value="">Select Away</option>
                 {teams.map(t => <option key={t.team_id} value={t.team_id}>{t.team_name}</option>)}
               </select>
             </div>
+
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">Venue / Place</label>
+              <input 
+                type="text"
+                placeholder="e.g. Sala Polivalenta"
+                className="w-full border-4 border-black p-3 font-bold bg-white text-black"
+                value={gameData.venue}
+                onChange={(e) => setGameData({...gameData, venue: e.target.value})}
+              />
+            </div>
           </div>
+
           <button 
             onClick={loadRosters}
-            disabled={!gameData.home_team_id || !gameData.away_team_id}
-            className="w-full bg-black text-white font-black py-4 uppercase italic hover:bg-orange-600 disabled:bg-gray-200 transition-colors"
+            disabled={!gameData.home_team_id || !gameData.away_team_id || !gameData.tipoff}
+            className="w-full bg-black text-white font-black py-4 uppercase italic text-xl hover:bg-orange-600 disabled:bg-zinc-200 disabled:text-zinc-400 transition-all border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1"
           >
             Load Rosters & Continue
           </button>
         </section>
       )}
-
       {/* STEP 2: ROSTERS & STATS */}
       {step === 2 && (
         <section className="space-y-8">
