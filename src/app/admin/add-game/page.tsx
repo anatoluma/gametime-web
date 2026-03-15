@@ -38,20 +38,33 @@ export default function AdminGameEntry() {
   };
 
   const handleSaveGame = async () => {
-    // 1. Insert Game
+    // Create a clean object for insertion
+    // We explicitly EXCLUDE game_id so the database can generate it
+    const gameToInsert = {
+      home_team_id: gameData.home_team_id,
+      away_team_id: gameData.away_team_id,
+      tipoff: new Date(gameData.tipoff).toISOString(),
+      venue: gameData.venue,
+      home_score: gameData.home_score,
+      away_score: gameData.away_score
+    };
+
     const { data: game, error: gError } = await supabase
       .from("games")
-      .insert([gameData])
+      .insert([gameToInsert]) // Pass the clean object here
       .select()
       .single();
 
-    if (gError) return alert(gError.message);
+    if (gError) {
+      console.error(gError);
+      return alert(`Game Error: ${gError.message}`);
+    }
 
-    // 2. Insert Player Stats
+    // Now proceed to stats using the newly generated game.game_id
     const allStats = [...homePlayers, ...awayPlayers]
       .filter(p => p.played)
       .map(p => ({
-        game_id: game.game_id,
+        game_id: game.game_id, // This comes from the DB response
         player_id: p.player_id,
         points: p.points,
         team_id: p.team_id
@@ -59,7 +72,9 @@ export default function AdminGameEntry() {
 
     const { error: sError } = await supabase.from("player_game_stats").insert(allStats);
     
-    if (!sError) {
+    if (sError) {
+      alert(`Stats Error: ${sError.message}`);
+    } else {
       alert("Game and Stats uploaded successfully!");
       window.location.reload();
     }
