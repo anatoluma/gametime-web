@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 
 export default function AdminGameEntry() {
@@ -22,6 +23,8 @@ export default function AdminGameEntry() {
     away_score: 0
   });
 
+  const searchParams = useSearchParams();
+
   // 1. Load Teams + existing games on Mount
   useEffect(() => {
     async function init() {
@@ -33,9 +36,14 @@ export default function AdminGameEntry() {
         .select("game_id, home_team_id, away_team_id, tipoff, season, venue")
         .order("tipoff", { ascending: false });
       if (gamesData) setExistingGames(gamesData);
+
+      const editId = searchParams.get("edit");
+      if (editId) {
+        await loadExistingGame(editId);
+      }
     }
     init();
-  }, []);
+  }, [searchParams]);
 
   const teamsById = useMemo(() => {
     return Object.fromEntries(teams.map(t => [t.team_id, t.team_name]));
@@ -231,6 +239,9 @@ export default function AdminGameEntry() {
                 </button>
               )}
             </div>
+            <p className="text-[10px] text-zinc-500">
+              Tip: you can also open a game directly via <code className="bg-zinc-100 px-1 rounded">/admin/add-game?edit=&lt;GAME_ID&gt;</code>
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
