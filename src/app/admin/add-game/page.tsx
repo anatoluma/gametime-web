@@ -39,11 +39,14 @@ export default function AdminGameEntry() {
 
   const handleSaveGame = async () => {
     // 1. Create the game record first
-    // IMPORTANT: Do NOT include game_id here. 
-    // Let the database generate it automatically.
+    // NOTE: The games table requires a non-null `game_id`.
+    // Generate it here so we can use it for the stats too.
+    const newGameId = crypto.randomUUID();
+
     const { data: game, error: gError } = await supabase
       .from("games")
       .insert([{
+        game_id: newGameId,
         home_team_id: gameData.home_team_id,
         away_team_id: gameData.away_team_id,
         tipoff: new Date(gameData.tipoff).toISOString(),
@@ -55,12 +58,15 @@ export default function AdminGameEntry() {
       .single();
 
     if (gError) return alert(`Game Error: ${gError.message}`);
+    if (!game) return alert("Game Error: Failed to create game record.");
 
-    // 2. Now use the NEWLY generated ID for the stats
+    // 2. Now use the generated ID for the stats
+    const gameId = game.game_id ?? newGameId;
+
     const allStats = [...homePlayers, ...awayPlayers]
       .filter(p => p.played)
       .map(p => ({
-        game_id: game.game_id, // This is the ID just created by Supabase
+        game_id: gameId,
         player_id: p.player_id,
         points: p.points,
         team_id: p.team_id
