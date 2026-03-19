@@ -15,6 +15,7 @@ export default function AdminGameEntry() {
     away_team_id: "",
     tipoff: "",
     venue: "",
+    season: "",
     home_score: 0,
     away_score: 0
   });
@@ -37,11 +38,27 @@ export default function AdminGameEntry() {
     setStep(2);
   };
 
+  const computeSeasonFromTipoff = (tipoffIso: string) => {
+    if (!tipoffIso) return "";
+    const d = new Date(tipoffIso);
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1; // 1-based
+
+    // Season spans across calendar years (e.g., 2025/26)
+    // If month is Aug-Dec, we treat it as the start of a season.
+    // If month is Jan-Jul, treat it as the second half of the previous season.
+    const startYear = month >= 8 ? year : year - 1;
+    const endYearShort = String(startYear + 1).slice(-2);
+    return `${startYear}/${endYearShort}`;
+  };
+
   const handleSaveGame = async () => {
     // 1. Create the game record first
-    // NOTE: The games table requires a non-null `game_id`.
-    // Generate it here so we can use it for the stats too.
+    // NOTE: The games table requires non-null `game_id` and `season`.
+    // Generate a UUID so we can link player stats to it.
     const newGameId = crypto.randomUUID();
+
+    const season = gameData.season || computeSeasonFromTipoff(gameData.tipoff) || "2025/26";
 
     const { data: game, error: gError } = await supabase
       .from("games")
@@ -51,6 +68,7 @@ export default function AdminGameEntry() {
         away_team_id: gameData.away_team_id,
         tipoff: new Date(gameData.tipoff).toISOString(),
         venue: gameData.venue,
+        season,
         home_score: gameData.home_score,
         away_score: gameData.away_score
       }])
@@ -101,6 +119,18 @@ export default function AdminGameEntry() {
                 value={gameData.tipoff}
                 onChange={(e) => setGameData({...gameData, tipoff: e.target.value})}
               />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">Season</label>
+              <input
+                type="text"
+                className="w-full border-4 border-black p-3 font-bold bg-white text-black"
+                value={gameData.season || computeSeasonFromTipoff(gameData.tipoff)}
+                placeholder="e.g. 2025/26"
+                onChange={(e) => setGameData({...gameData, season: e.target.value})}
+              />
+              <p className="text-[10px] text-zinc-500 mt-1">If blank, season is computed from the game date.</p>
             </div>
 
             <div>
