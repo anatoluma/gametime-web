@@ -58,6 +58,10 @@ export default function AdminGameEntry() {
     // Generate a UUID so we can link player stats to it.
     const newGameId = crypto.randomUUID();
 
+    // Calculate final scores from player points (instead of relying on manual input)
+    const homeScore = homePlayers.filter(p => p.played).reduce((sum, p) => sum + (p.points || 0), 0);
+    const awayScore = awayPlayers.filter(p => p.played).reduce((sum, p) => sum + (p.points || 0), 0);
+
     const season = gameData.season || computeSeasonFromTipoff(gameData.tipoff) || "2025/26";
 
     const { data: game, error: gError } = await supabase
@@ -69,8 +73,8 @@ export default function AdminGameEntry() {
         tipoff: new Date(gameData.tipoff).toISOString(),
         venue: gameData.venue,
         season,
-        home_score: gameData.home_score,
-        away_score: gameData.away_score
+        home_score: homeScore,
+        away_score: awayScore
       }])
       .select()
       .single();
