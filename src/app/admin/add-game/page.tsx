@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 
-export default function AdminGameEntry() {
+export default function AdminGameEntry({ showEditDropdown = false }: { showEditDropdown?: boolean }) {
   const [step, setStep] = useState(1);
   const [teams, setTeams] = useState<any[]>([]);
   const [existingGames, setExistingGames] = useState<any[]>([]);
@@ -218,35 +218,41 @@ export default function AdminGameEntry() {
       {/* STEP 1: GAME INFO */}
       {step === 1 && (
         <section className="space-y-6">
-          <div className="flex flex-col gap-3">
-            <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">
-              Edit existing game
-            </label>
-            <div className="flex gap-2">
-              <select
-                className="flex-1 border-4 border-black p-3 font-bold bg-white text-black"
-                value={editingGameId ?? ""}
-                onChange={(e) => loadExistingGame(e.target.value)}
-              >
-                <option value="">+ New game</option>
-                {existingGames.map(g => (
-                  <option key={g.game_id} value={g.game_id}>{getGameLabel(g)}</option>
-                ))}
-              </select>
-              {editingGameId && (
-                <button
-                  type="button"
-                  onClick={resetToNewGame}
-                  className="px-4 py-3 border-4 border-black font-black uppercase bg-white hover:bg-zinc-100"
+          {showEditDropdown ? (
+            <div className="flex flex-col gap-3">
+              <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">
+                Edit existing game
+              </label>
+              <div className="flex gap-2">
+                <select
+                  className="flex-1 border-4 border-black p-3 font-bold bg-white text-black"
+                  value={editingGameId ?? ""}
+                  onChange={(e) => loadExistingGame(e.target.value)}
                 >
-                  New
-                </button>
-              )}
+                  <option value="">+ New game</option>
+                  {existingGames.map(g => (
+                    <option key={g.game_id} value={g.game_id}>{getGameLabel(g)}</option>
+                  ))}
+                </select>
+                {editingGameId && (
+                  <button
+                    type="button"
+                    onClick={resetToNewGame}
+                    className="px-4 py-3 border-4 border-black font-black uppercase bg-white hover:bg-zinc-100"
+                  >
+                    New
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-zinc-500">
+                Tip: you can also open a game directly via <code className="bg-zinc-100 px-1 rounded">/admin/edit-game?edit=&lt;GAME_ID&gt;</code>
+              </p>
             </div>
-            <p className="text-[10px] text-zinc-500">
-              Tip: you can also open a game directly via <code className="bg-zinc-100 px-1 rounded">/admin/add-game?edit=&lt;GAME_ID&gt;</code>
-            </p>
-          </div>
+          ) : (
+            <div className="rounded border border-orange-300 bg-orange-50 p-4 text-sm font-bold text-orange-800">
+              Want to edit an existing game? Use <code className="bg-white px-1 rounded">/admin/edit-game?edit=&lt;GAME_ID&gt;</code>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Date & Time Picker */}
