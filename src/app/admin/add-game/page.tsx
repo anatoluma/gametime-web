@@ -309,7 +309,7 @@ export default function AdminGameEntry() {
           </div>
 
           <button 
-            onClick={loadRosters}
+            onClick={() => loadRosters()}
             disabled={!gameData.home_team_id || !gameData.away_team_id || !gameData.tipoff}
             className="w-full bg-black text-white font-black py-4 uppercase italic text-xl hover:bg-orange-600 disabled:bg-zinc-200 disabled:text-zinc-400 transition-all border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1"
           >
