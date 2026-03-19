@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase/client";
 
 export default function AdminGameEntry() {
   const [step, setStep] = useState(1);
   const [teams, setTeams] = useState<any[]>([]);
+  const [existingGames, setExistingGames] = useState<any[]>([]);
+  const [editingGameId, setEditingGameId] = useState<string | null>(null);
   const [homePlayers, setHomePlayers] = useState<any[]>([]);
   const [awayPlayers, setAwayPlayers] = useState<any[]>([]);
   
@@ -20,21 +22,113 @@ export default function AdminGameEntry() {
     away_score: 0
   });
 
-  // 1. Load Teams on Mount
+  // 1. Load Teams + existing games on Mount
   useEffect(() => {
-    async function getTeams() {
-      const { data } = await supabase.from("teams").select("*").order("team_name");
-      if (data) setTeams(data);
+    async function init() {
+      const { data: teamsData } = await supabase.from("teams").select("*").order("team_name");
+      if (teamsData) setTeams(teamsData);
+
+      const { data: gamesData } = await supabase
+        .from("games")
+        .select("game_id, home_team_id, away_team_id, tipoff, season, venue")
+        .order("tipoff", { ascending: false });
+      if (gamesData) setExistingGames(gamesData);
     }
-    getTeams();
+    init();
   }, []);
 
-  // 2. Load Players when teams are selected
-  const loadRosters = async () => {
-    const { data: home } = await supabase.from("players").select("*").eq("team_id", gameData.home_team_id);
-    const { data: away } = await supabase.from("players").select("*").eq("team_id", gameData.away_team_id);
-    setHomePlayers(home?.map(p => ({ ...p, played: false, points: 0 })) || []);
-    setAwayPlayers(away?.map(p => ({ ...p, played: false, points: 0 })) || []);
+  const teamsById = useMemo(() => {
+    return Object.fromEntries(teams.map(t => [t.team_id, t.team_name]));
+  }, [teams]);
+
+  const getGameLabel = (game: any) => {
+    const home = teamsById[game.home_team_id] ?? game.home_team_id;
+    const away = teamsById[game.away_team_id] ?? game.away_team_id;
+    const date = game.tipoff ? new Date(game.tipoff).toLocaleString() : "(no date)";
+    const season = game.season ? ` ${game.season}` : "";
+    return `${home} vs ${away} — ${date}${season}`;
+  };
+
+  const resetToNewGame = () => {
+    setEditingGameId(null);
+    setGameData({
+      home_team_id: "",
+      away_team_id: "",
+      tipoff: "",
+      venue: "",
+      season: "",
+      home_score: 0,
+      away_score: 0
+    });
+    setHomePlayers([]);
+    setAwayPlayers([]);
+    setStep(1);
+  };
+
+  const loadExistingGame = async (gameId: string) => {
+    if (!gameId) return resetToNewGame();
+    setEditingGameId(gameId);
+
+    const { data: game, error: gError } = await supabase
+      .from("games")
+      .select("*")
+      .eq("game_id", gameId)
+      .single();
+
+    if (gError || !game) {
+      alert("Could not load selected game.");
+      return;
+    }
+
+    setGameData({
+      home_team_id: game.home_team_id,
+      away_team_id: game.away_team_id,
+      tipoff: game.tipoff ?? "",
+      venue: game.venue ?? "",
+      season: game.season ?? "",
+      home_score: game.home_score ?? 0,
+      away_score: game.away_score ?? 0
+    });
+
+    const { data: stats } = await supabase
+      .from("player_game_stats")
+      .select("*")
+      .eq("game_id", gameId);
+
+    const statsMap = Object.fromEntries((stats ?? []).map((s: any) => [s.player_id, s]));
+
+    await loadRosters(game.home_team_id, game.away_team_id, statsMap);
+  };
+
+  const loadRosters = async (
+    homeTeamId?: string,
+    awayTeamId?: string,
+    statsByPlayerId?: Record<string, any>
+  ) => {
+    const homeId = homeTeamId ?? gameData.home_team_id;
+    const awayId = awayTeamId ?? gameData.away_team_id;
+
+    const { data: home } = await supabase.from("players").select("*").eq("team_id", homeId);
+    const { data: away } = await supabase.from("players").select("*").eq("team_id", awayId);
+
+    const mapStat = statsByPlayerId ?? {};
+
+    setHomePlayers(
+      home?.map(p => ({
+        ...p,
+        played: Boolean(mapStat[p.player_id]),
+        points: mapStat[p.player_id]?.points ?? 0
+      })) || []
+    );
+
+    setAwayPlayers(
+      away?.map(p => ({
+        ...p,
+        played: Boolean(mapStat[p.player_id]),
+        points: mapStat[p.player_id]?.points ?? 0
+      })) || []
+    );
+
     setStep(2);
   };
 
@@ -53,37 +147,38 @@ export default function AdminGameEntry() {
   };
 
   const handleSaveGame = async () => {
-    // 1. Create the game record first
-    // NOTE: The games table requires non-null `game_id` and `season`.
-    // Generate a UUID so we can link player stats to it.
-    const newGameId = crypto.randomUUID();
-
-    // Calculate final scores from player points (instead of relying on manual input)
+    // 1. Compute the final scores from player totals
     const homeScore = homePlayers.filter(p => p.played).reduce((sum, p) => sum + (p.points || 0), 0);
     const awayScore = awayPlayers.filter(p => p.played).reduce((sum, p) => sum + (p.points || 0), 0);
 
     const season = gameData.season || computeSeasonFromTipoff(gameData.tipoff) || "2025/26";
 
+    // 2. Prepare the game record data
+    const gamePayload = {
+      home_team_id: gameData.home_team_id,
+      away_team_id: gameData.away_team_id,
+      tipoff: new Date(gameData.tipoff).toISOString(),
+      venue: gameData.venue,
+      season,
+      home_score: homeScore,
+      away_score: awayScore
+    };
+
+    // 3. Either create a new record or update an existing one
+    const gameId = editingGameId ?? crypto.randomUUID();
     const { data: game, error: gError } = await supabase
       .from("games")
-      .insert([{
-        game_id: newGameId,
-        home_team_id: gameData.home_team_id,
-        away_team_id: gameData.away_team_id,
-        tipoff: new Date(gameData.tipoff).toISOString(),
-        venue: gameData.venue,
-        season,
-        home_score: homeScore,
-        away_score: awayScore
-      }])
+      .upsert({ ...gamePayload, game_id: gameId }, { onConflict: "game_id" })
       .select()
       .single();
 
     if (gError) return alert(`Game Error: ${gError.message}`);
     if (!game) return alert("Game Error: Failed to create game record.");
 
-    // 2. Now use the generated ID for the stats
-    const gameId = game.game_id ?? newGameId;
+    // 4. Replace any existing stats for this game (when editing)
+    if (editingGameId) {
+      await supabase.from("player_game_stats").delete().eq("game_id", gameId);
+    }
 
     const allStats = [...homePlayers, ...awayPlayers]
       .filter(p => p.played)
@@ -111,6 +206,33 @@ export default function AdminGameEntry() {
       {/* STEP 1: GAME INFO */}
       {step === 1 && (
         <section className="space-y-6">
+          <div className="flex flex-col gap-3">
+            <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">
+              Edit existing game
+            </label>
+            <div className="flex gap-2">
+              <select
+                className="flex-1 border-4 border-black p-3 font-bold bg-white text-black"
+                value={editingGameId ?? ""}
+                onChange={(e) => loadExistingGame(e.target.value)}
+              >
+                <option value="">+ New game</option>
+                {existingGames.map(g => (
+                  <option key={g.game_id} value={g.game_id}>{getGameLabel(g)}</option>
+                ))}
+              </select>
+              {editingGameId && (
+                <button
+                  type="button"
+                  onClick={resetToNewGame}
+                  className="px-4 py-3 border-4 border-black font-black uppercase bg-white hover:bg-zinc-100"
+                >
+                  New
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Date & Time Picker */}
             <div className="col-span-1 md:col-span-2">
@@ -183,6 +305,21 @@ export default function AdminGameEntry() {
       {/* STEP 2: ROSTERS & STATS */}
       {step === 2 && (
         <section className="space-y-8">
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="bg-white border-4 border-black text-black font-black py-3 px-6 uppercase italic hover:bg-zinc-100"
+            >
+              Back to Game Info
+            </button>
+            {editingGameId && (
+              <span className="text-sm font-black uppercase tracking-wide text-zinc-600">
+                Editing game: {editingGameId}
+              </span>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Home Stats */}
             <TeamStatEntry title="Home Roster" players={homePlayers} setPlayers={setHomePlayers} />
