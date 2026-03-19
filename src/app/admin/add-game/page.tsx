@@ -1,5 +1,7 @@
 import AdminGameEntry from "./AdminGameEntry";
 
+export const dynamic = 'force-dynamic';
+
 export default function Page({
   searchParams,
 }: {
