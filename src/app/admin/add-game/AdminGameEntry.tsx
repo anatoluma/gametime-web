@@ -31,10 +31,10 @@ export default function AdminGameEntry({
   // 1. Load Teams + existing games on Mount
   useEffect(() => {
     async function init() {
-      const { data: teamsData } = await supabase.from("teams").select("*").order("team_name");
+      const { data: teamsData } = await supabaseAdmin.from("teams").select("*").order("team_name");
       if (teamsData) setTeams(teamsData);
 
-      const { data: gamesData } = await supabase
+      const { data: gamesData } = await supabaseAdmin
         .from("games")
         .select("game_id, home_team_id, away_team_id, tipoff, season, venue")
         .order("tipoff", { ascending: false });
@@ -79,7 +79,7 @@ export default function AdminGameEntry({
     if (!gameId) return resetToNewGame();
     setEditingGameId(gameId);
 
-    const { data: game, error: gError } = await supabase
+    const { data: game, error: gError } = await supabaseAdmin
       .from("games")
       .select("*")
       .eq("game_id", gameId)
@@ -100,7 +100,7 @@ export default function AdminGameEntry({
       away_score: game.away_score ?? 0
     });
 
-    const { data: stats } = await supabase
+    const { data: stats } = await supabaseAdmin
       .from("player_game_stats")
       .select("*")
       .eq("game_id", gameId);
@@ -118,8 +118,8 @@ export default function AdminGameEntry({
     const homeId = homeTeamId ?? gameData.home_team_id;
     const awayId = awayTeamId ?? gameData.away_team_id;
 
-    const { data: home } = await supabase.from("players").select("*").eq("team_id", homeId);
-    const { data: away } = await supabase.from("players").select("*").eq("team_id", awayId);
+    const { data: home } = await supabaseAdmin.from("players").select("*").eq("team_id", homeId);
+    const { data: away } = await supabaseAdmin.from("players").select("*").eq("team_id", awayId);
 
     const mapStat = statsByPlayerId ?? {};
 
@@ -176,7 +176,7 @@ export default function AdminGameEntry({
 
     // 3. Either create a new record or update an existing one
     const gameId = editingGameId ?? crypto.randomUUID();
-    const { data: game, error: gError } = await supabase
+    const { data: game, error: gError } = await supabaseAdmin
       .from("games")
       .upsert({ ...gamePayload, game_id: gameId }, { onConflict: "game_id" })
       .select()
@@ -187,7 +187,7 @@ export default function AdminGameEntry({
 
     // 4. Replace any existing stats for this game (when editing)
     if (editingGameId) {
-      await supabase.from("player_game_stats").delete().eq("game_id", gameId);
+      await supabaseAdmin.from("player_game_stats").delete().eq("game_id", gameId);
     }
 
     const allStats = [...homePlayers, ...awayPlayers]
@@ -199,7 +199,7 @@ export default function AdminGameEntry({
         team_id: p.team_id
       }));
 
-    const { error: sError } = await supabase.from("player_game_stats").insert(allStats);
+    const { error: sError } = await supabaseAdmin.from("player_game_stats").insert(allStats);
     
     if (sError) {
       alert(`Stats Error: ${sError.message}`);
