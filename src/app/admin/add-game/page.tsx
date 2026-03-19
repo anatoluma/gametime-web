@@ -1,10 +1,15 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 
-export default function AdminGameEntry({ showEditDropdown = false }: { showEditDropdown?: boolean }) {
+export default function AdminGameEntry({
+  showEditDropdown = false,
+  initialEditId,
+}: {
+  showEditDropdown?: boolean;
+  initialEditId?: string;
+}) {
   const [step, setStep] = useState(1);
   const [teams, setTeams] = useState<any[]>([]);
   const [existingGames, setExistingGames] = useState<any[]>([]);
@@ -23,8 +28,6 @@ export default function AdminGameEntry({ showEditDropdown = false }: { showEditD
     away_score: 0
   });
 
-  const searchParams = useSearchParams();
-
   // 1. Load Teams + existing games on Mount
   useEffect(() => {
     async function init() {
@@ -37,13 +40,12 @@ export default function AdminGameEntry({ showEditDropdown = false }: { showEditD
         .order("tipoff", { ascending: false });
       if (gamesData) setExistingGames(gamesData);
 
-      const editId = searchParams.get("edit");
-      if (editId) {
-        await loadExistingGame(editId);
+      if (initialEditId) {
+        await loadExistingGame(initialEditId);
       }
     }
     init();
-  }, [searchParams]);
+  }, [initialEditId]);
 
   const teamsById = useMemo(() => {
     return Object.fromEntries(teams.map(t => [t.team_id, t.team_name]));
