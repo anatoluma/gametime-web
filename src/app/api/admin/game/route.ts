@@ -14,10 +14,14 @@ export async function GET(request: Request) {
     .from("games")
     .select("*")
     .eq("game_id", gameId)
-    .single();
+    .maybeSingle();
 
   if (gameError) {
     return NextResponse.json({ error: gameError.message }, { status: 500 });
+  }
+
+  if (!game) {
+    return NextResponse.json({ error: "Game not found" }, { status: 404 });
   }
 
   const { data: stats, error: statsError } = await supabaseAdmin
@@ -49,10 +53,14 @@ export async function POST(request: Request) {
     .from("games")
     .upsert({ ...gamePayload, game_id: gameId }, { onConflict: "game_id" })
     .select()
-    .single();
+    .maybeSingle();
 
   if (gameError) {
     return NextResponse.json({ error: gameError.message }, { status: 500 });
+  }
+
+  if (!game) {
+    return NextResponse.json({ error: "Failed to create/update game" }, { status: 500 });
   }
 
   if (editingGameId) {
