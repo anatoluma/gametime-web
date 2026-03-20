@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { supabaseAdmin } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 
 export default function AdminGameEntry({
   showEditDropdown = false,
@@ -31,10 +31,10 @@ export default function AdminGameEntry({
   // 1. Load Teams + existing games on Mount
   useEffect(() => {
     async function init() {
-      const { data: teamsData } = await supabaseAdmin.from("teams").select("*").order("team_name");
+      const { data: teamsData } = await supabase.from("teams").select("*").order("team_name");
       if (teamsData) setTeams(teamsData);
 
-      const { data: gamesData } = await supabaseAdmin
+      const { data: gamesData } = await supabase
         .from("games")
         .select("game_id, home_team_id, away_team_id, tipoff, season, venue")
         .order("tipoff", { ascending: false });
@@ -79,16 +79,15 @@ export default function AdminGameEntry({
     if (!gameId) return resetToNewGame();
     setEditingGameId(gameId);
 
-    const { data: game, error: gError } = await supabaseAdmin
-      .from("games")
-      .select("*")
-      .eq("game_id", gameId)
-      .single();
+    const resp = await fetch(`/api/admin/game?game_id=${encodeURIComponent(gameId)}`);
+    const data = await resp.json();
 
-    if (gError || !game) {
-      alert("Could not load selected game.");
+    if (!resp.ok || data.error) {
+      alert(`Could not load selected game: ${data?.error || resp.statusText}`);
       return;
     }
+
+    const { game, stats } = data;
 
     setGameData({
       home_team_id: game.home_team_id,
@@ -99,11 +98,6 @@ export default function AdminGameEntry({
       home_score: game.home_score ?? 0,
       away_score: game.away_score ?? 0
     });
-
-    const { data: stats } = await supabaseAdmin
-      .from("player_game_stats")
-      .select("*")
-      .eq("game_id", gameId);
 
     const statsMap = Object.fromEntries((stats ?? []).map((s: any) => [s.player_id, s]));
 
@@ -118,8 +112,8 @@ export default function AdminGameEntry({
     const homeId = homeTeamId ?? gameData.home_team_id;
     const awayId = awayTeamId ?? gameData.away_team_id;
 
-    const { data: home } = await supabaseAdmin.from("players").select("*").eq("team_id", homeId);
-    const { data: away } = await supabaseAdmin.from("players").select("*").eq("team_id", awayId);
+    const { data: home } = await supabase.from("players").select("*").eq("team_id", homeId);
+    const { data: away } = await supabase.from("players").select("*").eq("team_id", awayId);
 
     const mapStat = statsByPlayerId ?? {};
 
@@ -174,39 +168,28 @@ export default function AdminGameEntry({
       away_score: awayScore
     };
 
-    // 3. Either create a new record or update an existing one
     const gameId = editingGameId ?? crypto.randomUUID();
-    const { data: game, error: gError } = await supabaseAdmin
-      .from("games")
-      .upsert({ ...gamePayload, game_id: gameId }, { onConflict: "game_id" })
-      .select()
-      .single();
 
-    if (gError) return alert(`Game Error: ${gError.message}`);
-    if (!game) return alert("Game Error: Failed to create game record.");
+    const response = await fetch("/api/admin/game", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        gamePayload: { ...gamePayload, game_id: gameId },
+        homePlayers,
+        awayPlayers,
+        editingGameId,
+      }),
+    });
 
-    // 4. Replace any existing stats for this game (when editing)
-    if (editingGameId) {
-      await supabaseAdmin.from("player_game_stats").delete().eq("game_id", gameId);
+    const result = await response.json();
+
+    if (!response.ok || result.error) {
+      alert(`Game Error: ${result?.error || response.statusText}`);
+      return;
     }
 
-    const allStats = [...homePlayers, ...awayPlayers]
-      .filter(p => p.played)
-      .map(p => ({
-        game_id: gameId,
-        player_id: p.player_id,
-        points: p.points,
-        team_id: p.team_id
-      }));
-
-    const { error: sError } = await supabaseAdmin.from("player_game_stats").insert(allStats);
-    
-    if (sError) {
-      alert(`Stats Error: ${sError.message}`);
-    } else {
-      alert("Success! Game and Stats uploaded.");
-      window.location.reload();
-    }
+    alert("Success! Game and Stats uploaded.");
+    window.location.reload();
   };
 
   return (
