@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/client";
 
+// API route for admin game operations
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const gameId = url.searchParams.get("game_id");
