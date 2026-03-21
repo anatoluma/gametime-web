@@ -196,10 +196,6 @@ export default function AdminGameEntry({
     <main className="p-6 max-w-4xl mx-auto bg-white min-h-screen text-black">
       <h1 className="text-4xl font-black italic uppercase mb-8 border-b-4 border-black pb-2">Admin: Game Entry</h1>
 
-      <div className="mb-6 p-4 bg-orange-100 border-2 border-orange-500 text-black font-bold rounded">
-        🔧 <span className="uppercase">Edit mode:</span> Open <code className="bg-white px-1 rounded">/admin/edit-game?edit=&lt;GAME_ID&gt;</code> or pick a game in the dropdown below.
-      </div>
-
       {/* STEP 1: GAME INFO */}
       {step === 1 && (
         <section className="space-y-6">
@@ -233,11 +229,7 @@ export default function AdminGameEntry({
                 Tip: you can also open a game directly via <code className="bg-zinc-100 px-1 rounded">/admin/edit-game?edit=&lt;GAME_ID&gt;</code>
               </p>
             </div>
-          ) : (
-            <div className="rounded border border-orange-300 bg-orange-50 p-4 text-sm font-bold text-orange-800">
-              Want to edit an existing game? Use <code className="bg-white px-1 rounded">/admin/edit-game?edit=&lt;GAME_ID&gt;</code>
-            </div>
-          )}
+          ) : null}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Date & Time Picker */}
