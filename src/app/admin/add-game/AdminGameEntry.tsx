@@ -349,12 +349,15 @@ function TeamStatEntry({ title, players, setPlayers }: any) {
       <div className="space-y-2">
         {players.map((p: any) => (
           <div key={p.player_id} className="flex items-center gap-3">
-            <input 
-              type="checkbox" 
-              checked={p.played} 
+            <input
+              type="checkbox"
+              checked={p.played}
               onChange={(e) => updatePlayer(p.player_id, 'played', e.target.checked)}
               className="w-5 h-5 accent-orange-600"
             />
+            <span className="w-12 text-sm font-black">
+              #{p.jersey_number ?? p.number ?? p.shirt_number ?? "-"}
+            </span>
             <span className="flex-1 font-bold text-sm truncate">{p.first_name} {p.last_name}</span>
             {p.played && (
               <input
