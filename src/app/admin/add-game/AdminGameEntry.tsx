@@ -365,9 +365,10 @@ function TeamStatEntry({ title, players, setPlayers }: any) {
             />
             <span className="flex-1 font-bold text-sm truncate">{p.first_name} {p.last_name}</span>
             {p.played && (
-              <input 
-                type="number" 
+              <input
+                type="number"
                 placeholder="PTS"
+                value={p.points || ""}
                 className="w-16 border-2 border-black p-1 text-center font-black"
                 onChange={(e) => updatePlayer(p.player_id, 'points', parseInt(e.target.value) || 0)}
               />
