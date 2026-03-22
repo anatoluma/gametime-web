@@ -115,19 +115,25 @@ export default function AdminGameEntry({
     const mapStat = statsByPlayerId ?? {};
 
     setHomePlayers(
-      home?.map(p => ({
-        ...p,
-        played: Boolean(mapStat[p.player_id]),
-        points: mapStat[p.player_id]?.points ?? 0
-      })) || []
+      (home
+        ?.map(p => ({
+          ...p,
+          played: Boolean(mapStat[p.player_id]),
+          points: mapStat[p.player_id]?.points ?? 0
+        }))
+        .sort((a, b) => (a.jersey_number ?? a.number ?? 0) - (b.jersey_number ?? b.number ?? 0))
+      ) || []
     );
 
     setAwayPlayers(
-      away?.map(p => ({
-        ...p,
-        played: Boolean(mapStat[p.player_id]),
-        points: mapStat[p.player_id]?.points ?? 0
-      })) || []
+      (away
+        ?.map(p => ({
+          ...p,
+          played: Boolean(mapStat[p.player_id]),
+          points: mapStat[p.player_id]?.points ?? 0
+        }))
+        .sort((a, b) => (a.jersey_number ?? a.number ?? 0) - (b.jersey_number ?? b.number ?? 0))
+      ) || []
     );
 
     setStep(2);
