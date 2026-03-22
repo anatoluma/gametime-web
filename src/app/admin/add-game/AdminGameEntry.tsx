@@ -31,7 +31,7 @@ export default function AdminGameEntry({
   useEffect(() => {
     async function init() {
       const { data: teamsData } = await supabase.from("teams").select("*").order("team_name");
-      if (teamsData) setTeams(teamsData);
+      if (teamsData) setTeams(teamsData.filter(t => !["VET", "ALU"].includes(t.team_id)));
 
       const { data: gamesData } = await supabase
         .from("games")
