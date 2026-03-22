@@ -1,14 +1,46 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [step, setStep] = useState<'email' | 'otp'>('email')
-  const [token, setToken] = useState('')
+  const router = useRouter()
+
+  useEffect(() => {
+    // Handle magic link callback
+    const handleAuthCallback = async () => {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const accessToken = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
+
+      if (accessToken && refreshToken) {
+        setLoading(true)
+        try {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+
+          if (error) throw error
+
+          // Clear the hash and redirect to admin
+          window.history.replaceState(null, '', window.location.pathname)
+          router.push('/admin')
+        } catch (error: any) {
+          setMessage('Authentication failed: ' + error.message)
+        } finally {
+          setLoading(false)
+        }
+      }
+    }
+
+    handleAuthCallback()
+  }, [router])
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,33 +66,10 @@ export default function LoginPage() {
 
       if (error) throw error
 
-      setMessage('Check your email for the login code!')
+      setMessage('Check your email for the login link!')
       setStep('otp')
     } catch (error: any) {
       setMessage(error.message || 'An error occurred')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setMessage('')
-
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'email',
-      })
-
-      if (error) throw error
-
-      // Success - middleware will redirect to /admin
-      setMessage('Login successful! Redirecting...')
-    } catch (error: any) {
-      setMessage(error.message || 'Invalid code')
     } finally {
       setLoading(false)
     }
@@ -92,43 +101,19 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading ? 'Sending...' : 'Send Login Code'}
+            {loading ? 'Sending...' : 'Send Login Link'}
           </button>
         </form>
       ) : (
-        <form onSubmit={handleOtpSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="token" className="block text-sm font-medium mb-2">
-              Enter the 6-digit code from your email
-            </label>
-            <input
-              id="token"
-              type="text"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              required
-              maxLength={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg tracking-widest"
-              placeholder="123456"
-            />
-          </div>
-
+        <div className="space-y-4 text-center">
+          <p className="text-green-600">Login link sent! Check your email and click the link to sign in.</p>
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? 'Verifying...' : 'Verify Code'}
-          </button>
-
-          <button
-            type="button"
             onClick={() => setStep('email')}
             className="w-full text-gray-600 py-2 px-4 rounded-md hover:bg-gray-100"
           >
-            Back to Email
+            Send another link
           </button>
-        </form>
+        </div>
       )}
 
       {message && (
