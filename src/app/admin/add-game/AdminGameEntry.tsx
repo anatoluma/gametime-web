@@ -22,7 +22,6 @@ export default function AdminGameEntry({
     home_team_id: "",
     away_team_id: "",
     tipoff: "",
-    venue: "",
     season: "",
     home_score: 0,
     away_score: 0
@@ -65,7 +64,6 @@ export default function AdminGameEntry({
       home_team_id: "",
       away_team_id: "",
       tipoff: "",
-      venue: "",
       season: "",
       home_score: 0,
       away_score: 0
@@ -93,7 +91,6 @@ export default function AdminGameEntry({
       home_team_id: game.home_team_id,
       away_team_id: game.away_team_id,
       tipoff: game.tipoff ?? "",
-      venue: game.venue ?? "",
       season: game.season ?? "",
       home_score: game.home_score ?? 0,
       away_score: game.away_score ?? 0
@@ -150,6 +147,21 @@ export default function AdminGameEntry({
     return `${startYear}/${endYearShort}`;
   };
 
+  const getVenueFromHomeTeam = (homeTeamId: string) => {
+    switch ((homeTeamId || "").toUpperCase()) {
+      case "BRI":
+        return "Briceni";
+      case "HAI":
+        return "Blijnii Hutor";
+      case "MET":
+        return "Ribnita";
+      case "DRO":
+        return "Drochia";
+      default:
+        return "Edilitate";
+    }
+  };
+
   const handleSaveGame = async () => {
     // 1. Compute the final scores from player totals
     const homeScore = homePlayers.filter(p => p.played).reduce((sum, p) => sum + (p.points || 0), 0);
@@ -162,7 +174,7 @@ export default function AdminGameEntry({
       home_team_id: gameData.home_team_id,
       away_team_id: gameData.away_team_id,
       tipoff: new Date(gameData.tipoff).toISOString(),
-      venue: gameData.venue,
+      venue: getVenueFromHomeTeam(gameData.home_team_id),
       season,
       home_score: homeScore,
       away_score: awayScore
@@ -271,16 +283,6 @@ export default function AdminGameEntry({
               </select>
             </div>
 
-            <div className="col-span-1 md:col-span-2">
-              <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">Venue / Place</label>
-              <input 
-                type="text"
-                placeholder="e.g. Sala Polivalenta"
-                className="w-full border-4 border-black p-3 font-bold bg-white text-black"
-                value={gameData.venue}
-                onChange={(e) => setGameData({...gameData, venue: e.target.value})}
-              />
-            </div>
           </div>
 
           <button 
