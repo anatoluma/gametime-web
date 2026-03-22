@@ -241,20 +241,12 @@ export default function AdminGameEntry({
                 type="datetime-local" 
                 className="w-full border-4 border-black p-3 font-black text-xl uppercase bg-white text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:shadow-none transition-all"
                 value={gameData.tipoff}
-                onChange={(e) => setGameData({...gameData, tipoff: e.target.value})}
+                onChange={(e) => {
+                  const tipoffValue = e.target.value;
+                  const computedSeason = computeSeasonFromTipoff(tipoffValue);
+                  setGameData({...gameData, tipoff: tipoffValue, season: computedSeason});
+                }}
               />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">Season</label>
-              <input
-                type="text"
-                className="w-full border-4 border-black p-3 font-bold bg-white text-black"
-                value={gameData.season || computeSeasonFromTipoff(gameData.tipoff)}
-                placeholder="e.g. 2025/26"
-                onChange={(e) => setGameData({...gameData, season: e.target.value})}
-              />
-              <p className="text-[10px] text-zinc-500 mt-1">If blank, season is computed from the game date.</p>
             </div>
 
             <div>
