@@ -343,9 +343,19 @@ function TeamStatEntry({ title, players, setPlayers }: any) {
     setPlayers(players.map((p: any) => p.player_id === id ? { ...p, [field]: value } : p));
   };
 
+  const teamTotal = players
+    .filter((p: any) => p.played)
+    .reduce((sum: number, p: any) => sum + (p.points || 0), 0);
+
   return (
     <div className="border-2 border-black p-4 rounded-xl">
-      <h3 className="font-black uppercase italic mb-4 border-b-2 border-black pb-1">{title}</h3>
+      <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-black">
+        <h3 className="font-black uppercase italic">{title}</h3>
+        <div className="text-right">
+          <p className="text-[10px] font-black uppercase text-zinc-600">Team Total</p>
+          <p className="text-3xl font-black text-orange-600">{teamTotal}</p>
+        </div>
+      </div>
       <div className="space-y-2">
         {players.map((p: any) => (
           <div key={p.player_id} className="flex items-center gap-3">
