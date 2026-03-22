@@ -16,10 +16,13 @@ export default function LoginPage() {
     setMessage('')
 
     try {
+      const redirectTo = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/,'') + '/login'
+
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           shouldCreateUser: false, // Only allow existing users
+          emailRedirectTo: redirectTo || 'http://localhost:3000/login',
         },
       })
 
