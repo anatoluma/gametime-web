@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import AuthHashHandler from "./components/AuthHashHandler";
 
 export const metadata = {
   title: 'Liga Basket Moldova | Stats & Scores',
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="min-h-screen bg-gray-100 antialiased">
+        <AuthHashHandler />
         {/* COMPACT NAV */}
         <header className="sticky top-0 z-50 bg-black text-white border-b-2 border-orange-600 shadow-lg">
           <nav className="max-w-5xl mx-auto px-2 sm:px-6 h-14 flex items-center justify-between overflow-hidden">
