@@ -74,20 +74,20 @@ export default async function Home() {
   return (
     <main className="min-h-screen bg-white text-black">
       {/* HERO BANNER */}
-      <section className="bg-white py-4 md:py-6 px-3 md:px-6 border-b-2 border-gray-200">
-        <div className="max-w-6xl mx-auto overflow-hidden rounded-xl border border-gray-200">
+      <section className="bg-white py-4 md:py-6 px-3 sm:px-6 border-b-2 border-gray-200">
+        <div className="overflow-hidden rounded-xl border border-gray-200">
           <Image
             src={banner}
             alt="Liga Basket Moldova banner"
             priority
-            className="w-full h-auto block"
-            sizes="(max-width: 768px) 100vw, 1200px"
+            className="w-full h-[170px] sm:h-[220px] md:h-[280px] object-cover object-center block"
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 1200px, 1400px"
           />
         </div>
       </section>
 
-      <section className="bg-gray-100 border-b-2 border-black py-4">
-        <div className="max-w-6xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <section className="bg-gray-100 border-b-2 border-black py-4 px-3 sm:px-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {recentGames.map((game) => (
             <Link key={game.game_id} href={`/games/${game.game_id}`} className="bg-white border-2 border-black p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all">
               <div className="flex justify-between text-[11px] font-black uppercase"><span>{game.home_team_id}</span><span>{game.home_score ?? 0}</span></div>
@@ -98,7 +98,7 @@ export default async function Home() {
       </section>
 
       {/* 3. MAIN TABLES GRID */}
-      <div className="max-w-6xl mx-auto p-4 md:p-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+      <div className="px-3 sm:px-6 py-6 md:py-8 grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 items-start">
         
         {/* STANDINGS */}
         <section>
@@ -106,7 +106,7 @@ export default async function Home() {
             <h2 className="text-lg font-black uppercase italic">Standings</h2>
             <Link href="/standings" className="text-[10px] font-bold border-b-2 border-black text-black">Full Table ?</Link>
           </div>
-          <div className="border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)]">
+          <div className="border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] min-h-[360px]">
             <table className="w-full text-left bg-white">
               <thead className="bg-gray-900 text-white text-[9px] uppercase tracking-widest">
                 <tr>
@@ -138,7 +138,7 @@ export default async function Home() {
             <h2 className="text-lg font-black uppercase italic text-orange-600">Top Scorers</h2>
             <Link href="/leaders" className="text-[10px] font-bold border-b-2 border-black text-black">All Leaders ?</Link>
           </div>
-          <div className="bg-white border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)]">
+          <div className="bg-white border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] min-h-[360px]">
             <table className="w-full text-left bg-white">
               <thead className="bg-gray-900 text-white text-[9px] uppercase tracking-widest">
                 <tr>
