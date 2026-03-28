@@ -275,7 +275,7 @@ export default function AdminGameEntry({
                   value={editingGameId ?? ""}
                   onChange={(e) => loadExistingGame(e.target.value)}
                 >
-                  <option value="">+ New game</option>
+                  <option value="">Select game</option>
                   {existingGames.map(g => (
                     <option key={g.game_id} value={g.game_id}>{getGameLabel(g)}</option>
                   ))}
