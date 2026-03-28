@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-// Using a safe relative path to avoid alias issues
 import { useGlobalSearch } from "../../hooks/use-global-search";
 
 interface TeamResult { team_id: string; team_name: string; }
@@ -11,15 +10,33 @@ interface PlayerResult { player_id: string; first_name: string; last_name: strin
 
 export default function Nav() {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
   const { results, isSearching } = useGlobalSearch(query);
 
-  // Close search when the route changes
+  const shouldShowDropdown = isFocused && query.trim().length >= 2;
+  const hasResults = results.teams.length > 0 || results.players.length > 0;
+
   useEffect(() => {
-    setIsOpen(false);
     setQuery("");
+    setIsFocused(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(event.target as Node)) {
+        setIsFocused(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
 
   const navLinks = [
     { href: "/teams", label: "Teams" },
@@ -29,91 +46,142 @@ export default function Nav() {
   ];
 
   return (
-    <>
-      <header className="sticky top-0 z-50 bg-black text-white border-b-2 border-orange-600 shadow-lg">
-        <nav className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          
-          {/* LOGO */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="bg-orange-600 text-black font-black italic px-2 py-0.5 rounded rotate-2 text-sm">
+    <header className="sticky top-0 z-50 bg-black text-white border-b-2 border-orange-600 shadow-lg">
+      <nav className="max-w-5xl mx-auto px-3 sm:px-6 py-2">
+        <div className="flex items-center justify-between gap-3 h-10">
+          <Link href="/" className="flex items-center gap-1.5 shrink-0">
+            <div className="bg-orange-600 text-black font-black italic px-1.5 py-0.5 rounded text-sm">
               LBM
             </div>
-            <span className="font-black uppercase italic tracking-tighter text-xl hidden xs:block">
-              LIGA<span className="text-orange-600">BASKET</span>
+            <span className="font-black uppercase italic tracking-tighter text-base hidden xs:block">
+              STATS
             </span>
           </Link>
 
-          {/* NAV LINKS & SEARCH BUTTON */}
-          <div className="flex items-center gap-1 sm:gap-4">
-            <div className="flex items-center">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-colors ${
-                    pathname === link.href ? "text-orange-500" : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-
-            {/* SEARCH BUTTON - Forced Visibility */}
-            <button 
-              onClick={() => setIsOpen(true)}
-              className="ml-2 p-2 bg-zinc-900 border-2 border-zinc-800 rounded-lg hover:border-orange-600 transition-all text-orange-600 shrink-0"
-              aria-label="Open Search"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+          <div ref={containerRef} className="relative w-[180px] sm:w-[240px] md:w-[300px] shrink-0">
+            <label htmlFor="site-search" className="sr-only">
+              Search teams and players
+            </label>
+            <div className="relative">
+              <input
+                id="site-search"
+                ref={inputRef}
+                type="text"
+                value={query}
+                onFocus={() => setIsFocused(true)}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setIsFocused(false);
+                    inputRef.current?.blur();
+                  }
+                }}
+                placeholder="Search team or player"
+                className="w-full h-9 rounded-md bg-zinc-900 border border-zinc-700 px-9 pr-3 text-xs sm:text-sm text-white placeholder:text-zinc-400 focus:outline-none focus:border-orange-500"
+                aria-label="Search team or player"
+                aria-expanded={shouldShowDropdown}
+                aria-controls="site-search-results"
+              />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
               </svg>
-            </button>
-          </div>
-        </nav>
-      </header>
-
-      {/* SEARCH OVERLAY */}
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col items-center pt-20 px-4">
-          <div className="w-full max-w-2xl">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-orange-600 font-black italic uppercase tracking-tighter text-2xl">Search Database</h2>
-              <button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-white font-black text-sm uppercase tracking-widest">[ Close ]</button>
             </div>
 
-            <input
-              autoFocus
-              type="text"
-              placeholder="Search name or team..."
-              className="w-full bg-transparent border-b-4 border-orange-600 py-4 text-3xl md:text-5xl font-black uppercase italic outline-none placeholder:text-zinc-800 text-white"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+            {shouldShowDropdown && (
+              <div
+                id="site-search-results"
+                className="absolute top-full mt-2 w-full rounded-md border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden"
+              >
+                {isSearching && (
+                  <p className="px-3 py-2 text-xs text-zinc-400">Searching...</p>
+                )}
 
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-12 text-left">
-              <div>
-                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2 mb-4">Teams</h3>
-                {results.teams.map((t: TeamResult) => (
-                  <Link key={t.team_id} href={`/teams/${t.team_id}`} className="block text-xl font-black uppercase hover:text-orange-600 transition-colors mb-2">
-                    {t.team_name}
-                  </Link>
-                ))}
-              </div>
+                {!isSearching && !hasResults && (
+                  <p className="px-3 py-2 text-xs text-zinc-400">No teams or players found.</p>
+                )}
 
-              <div>
-                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2 mb-4">Players</h3>
-                {results.players.map((p: PlayerResult) => (
-                  <Link key={p.player_id} href={`/players/${p.player_id}`} className="flex justify-between items-center group mb-2">
-                    <span className="text-xl font-black uppercase group-hover:text-orange-600 transition-colors">{p.first_name} {p.last_name}</span>
-                    <span className="text-[10px] font-bold text-zinc-600">{p.team_id}</span>
-                  </Link>
-                ))}
+                {!isSearching && hasResults && (
+                  <>
+                    {results.teams.length > 0 && (
+                      <div className="border-b border-zinc-800">
+                        <p className="px-3 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                          Teams
+                        </p>
+                        {results.teams.map((t: TeamResult) => (
+                          <Link
+                            key={t.team_id}
+                            href={`/teams/${t.team_id}`}
+                            onClick={() => {
+                              setQuery("");
+                              setIsFocused(false);
+                            }}
+                            className="block px-3 py-2 text-sm font-semibold hover:bg-zinc-900 hover:text-orange-500 transition-colors"
+                          >
+                            {t.team_name}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+
+                    {results.players.length > 0 && (
+                      <div>
+                        <p className="px-3 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                          Players
+                        </p>
+                        {results.players.map((p: PlayerResult) => (
+                          <Link
+                            key={p.player_id}
+                            href={`/players/${p.player_id}`}
+                            onClick={() => {
+                              setQuery("");
+                              setIsFocused(false);
+                            }}
+                            className="flex items-center justify-between px-3 py-2 text-sm hover:bg-zinc-900 transition-colors"
+                          >
+                            <span className="font-semibold hover:text-orange-500 transition-colors">
+                              {p.first_name} {p.last_name}
+                            </span>
+                            <span className="text-[10px] font-bold text-zinc-500">
+                              {p.team_id}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-            </div>
+            )}
           </div>
         </div>
-      )}
-    </>
+
+        <div className="mt-1 flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-colors whitespace-nowrap ${
+                pathname === link.href ? "text-orange-500" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </nav>
+    </header>
   );
 }

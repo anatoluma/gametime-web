@@ -133,14 +133,14 @@ export default function GamesPage() {
     const dateText = dateObj ? dateObj.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : "";
 
     return (
-      <Link href={`/games/${g.game_id}`} className="group block bg-white border rounded-xl shadow-sm hover:shadow-md hover:border-orange-500 transition-all overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b text-[10px] font-bold uppercase tracking-wider text-gray-500">
+      <Link href={`/games/${g.game_id}`} className="group block bg-[var(--surface)] border border-[var(--border)] rounded-xl hover:border-[var(--accent)] transition-all overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2 bg-[var(--surface-muted)] border-b border-[var(--border)] text-[11px] font-medium tracking-wide text-[var(--text-muted)]">
           <div className="flex items-center gap-1.5">
             <span>{dateText}</span>
             <span>•</span>
-            <span className="text-gray-900">{timeText}</span>
+            <span className="text-[var(--foreground)]">{timeText}</span>
           </div>
-          <span className={isFinished ? "text-green-600" : "text-orange-600"}>
+          <span className={isFinished ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--accent)]"}>
             {isFinished ? "● Final" : "○ Scheduled"}
           </span>
         </div>
@@ -148,59 +148,59 @@ export default function GamesPage() {
         <div className="p-3 flex items-center justify-between gap-2">
           {/* Home Team */}
           <div className="flex-1 flex flex-col items-center text-center">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-black text-xs text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors mb-1">
+            <div className="w-10 h-10 rounded-full bg-[var(--surface-muted)] border border-[var(--border)] flex items-center justify-center font-semibold text-xs text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors mb-1">
               {g.home_team_id.substring(0, 3)}
             </div>
-            <span className="text-[11px] font-bold text-gray-900 leading-tight h-8 flex items-center">{teamsById[g.home_team_id] || g.home_team_id}</span>
+            <span className="text-[11px] font-medium leading-tight h-8 flex items-center">{teamsById[g.home_team_id] || g.home_team_id}</span>
           </div>
 
           {/* Center Score/VS Area */}
           <div className="flex flex-col items-center min-w-[60px]">
             {isFinished ? (
-              <div className="text-xl font-black text-gray-900 flex items-center gap-2">
+              <div className="text-xl font-semibold flex items-center gap-2">
                 <span>{g.home_score}</span>
-                <span className="text-gray-300 text-xs">-</span>
+                <span className="text-[var(--text-muted)] text-xs">-</span>
                 <span>{g.away_score}</span>
               </div>
             ) : (
-              <div className="px-2 py-0.5 bg-gray-100 rounded text-[9px] font-bold text-gray-500 uppercase tracking-widest">VS</div>
+              <div className="px-2 py-0.5 bg-[var(--surface-muted)] rounded text-[10px] font-medium text-[var(--text-muted)] tracking-wide">VS</div>
             )}
-            <div className="text-[9px] text-gray-400 font-medium mt-1 truncate max-w-[80px] text-center">{g.venue || "TBD"}</div>
+            <div className="text-[10px] text-[var(--text-muted)] font-medium mt-1 truncate max-w-[80px] text-center">{g.venue || "TBD"}</div>
           </div>
 
           {/* Away Team */}
           <div className="flex-1 flex flex-col items-center text-center">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-black text-xs text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors mb-1">
+            <div className="w-10 h-10 rounded-full bg-[var(--surface-muted)] border border-[var(--border)] flex items-center justify-center font-semibold text-xs text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors mb-1">
               {g.away_team_id.substring(0, 3)}
             </div>
-            <span className="text-[11px] font-bold text-gray-900 leading-tight h-8 flex items-center">{teamsById[g.away_team_id] || g.away_team_id}</span>
+            <span className="text-[11px] font-medium leading-tight h-8 flex items-center">{teamsById[g.away_team_id] || g.away_team_id}</span>
           </div>
         </div>
       </Link>
     );
   };
 
-  if (loading) return <main className="p-8 max-w-2xl mx-auto font-bold text-2xl">Updating Schedule...</main>;
+  if (loading) return <main className="p-8 max-w-2xl mx-auto font-semibold text-2xl">Updating Schedule...</main>;
 
   return (
-    <main className="p-4 max-w-2xl mx-auto bg-gray-50 min-h-screen pb-20">
+    <main className="p-4 max-w-2xl mx-auto bg-[var(--surface)] min-h-screen pb-20">
       <div className="flex items-center justify-between mb-6 pt-4">
-        <h1 className="text-3xl font-black italic tracking-tighter text-gray-900 uppercase">Schedule</h1>
-        <div className="w-10 h-1 bg-orange-600"></div>
+        <h1 className="text-3xl font-semibold tracking-tight">Schedule</h1>
+        <div className="w-10 h-1 bg-[var(--accent)]"></div>
       </div>
 
       {/* Section: Upcoming */}
       <section className="mb-10">
         <div className="flex justify-between items-end mb-4 px-1">
           <div>
-            <h2 className="text-sm font-black uppercase text-gray-900 tracking-tight">This Week's Games</h2>
-            <p className="text-[10px] font-bold text-orange-600 uppercase">{computed.thisWeekLabel}</p>
+            <h2 className="text-base font-semibold tracking-tight">This Week's Games</h2>
+            <p className="text-[11px] font-medium text-[var(--accent)]">{computed.thisWeekLabel}</p>
           </div>
         </div>
         <div className="grid gap-3">
           {computed.upcomingThisWeek.map(g => <GameCard key={g.game_id} g={g} />)}
           {computed.upcomingThisWeek.length === 0 && (
-            <p className="text-gray-400 text-xs italic p-4 bg-white rounded-lg border border-dashed text-center">No more games scheduled for this week.</p>
+            <p className="text-[var(--text-muted)] text-sm p-4 bg-[var(--surface-muted)] rounded-lg border border-dashed border-[var(--border)] text-center">No more games scheduled for this week.</p>
           )}
         </div>
         {/* ... Keep your "All Scheduled" details tag here ... */}
@@ -210,8 +210,8 @@ export default function GamesPage() {
       <section>
         <div className="flex justify-between items-end mb-4 px-1">
           <div>
-            <h2 className="text-sm font-black uppercase text-gray-900 tracking-tight">Recent Results</h2>
-            <p className="text-[10px] font-bold text-gray-500 uppercase">Latest scores from this & last week</p>
+            <h2 className="text-base font-semibold tracking-tight">Recent Results</h2>
+            <p className="text-[11px] font-medium text-[var(--text-muted)]">Latest scores from this and last week</p>
           </div>
         </div>
         <div className="grid gap-3">

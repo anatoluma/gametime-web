@@ -46,7 +46,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   if (checking) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-12">
-        <p className="text-sm text-gray-600">Checking admin access...</p>
+        <p className="text-sm text-[var(--text-muted)]">Checking admin access...</p>
       </main>
     );
   }

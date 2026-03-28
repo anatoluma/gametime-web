@@ -14,13 +14,13 @@ export default function AdminPage() {
   };
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12">
+    <main className="mx-auto max-w-3xl px-4 py-12 text-[var(--foreground)] bg-[var(--surface)] min-h-screen">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Admin</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Admin</h1>
         <button
           type="button"
           onClick={handleLogout}
-          className="text-sm text-gray-600 hover:text-gray-800 underline"
+          className="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] underline"
         >
           Logout
         </button>
@@ -29,14 +29,14 @@ export default function AdminPage() {
       <div className="space-y-4">
         <Link
           href="/admin/add-game"
-          className="block rounded-lg border border-gray-300 bg-white px-6 py-4 text-lg font-medium hover:bg-gray-50"
+          className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-4 text-lg font-medium hover:bg-[var(--surface-muted)]"
         >
           Add new game
         </Link>
 
         <Link
           href="/admin/edit-game"
-          className="block rounded-lg border border-gray-300 bg-white px-6 py-4 text-lg font-medium hover:bg-gray-50"
+          className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-4 text-lg font-medium hover:bg-[var(--surface-muted)]"
         >
           Edit existing game
         </Link>

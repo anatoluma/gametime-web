@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
+import Image from "next/image";
+import banner from "../banner.png";
 
 export const revalidate = 0;
 
@@ -71,12 +73,16 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-white text-black">
-      {/* HERO & STRIP SECTIONS */}
-      <section className="bg-black text-white py-10 md:py-16 px-6 border-b-[10px] border-orange-600">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-5xl md:text-8xl font-black uppercase italic tracking-tighter leading-none mb-2">
-            LIGA <span className="text-orange-600">BASKET</span>
-          </h1>
+      {/* HERO BANNER */}
+      <section className="bg-white py-4 md:py-6 px-3 md:px-6 border-b-2 border-gray-200">
+        <div className="max-w-6xl mx-auto overflow-hidden rounded-xl border border-gray-200">
+          <Image
+            src={banner}
+            alt="Liga Basket Moldova banner"
+            priority
+            className="w-full h-auto block"
+            sizes="(max-width: 768px) 100vw, 1200px"
+          />
         </div>
       </section>
 
@@ -98,7 +104,7 @@ export default async function Home() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-black uppercase italic">Standings</h2>
-            <Link href="/standings" className="text-[10px] font-bold border-b-2 border-black text-black">Full Table →</Link>
+            <Link href="/standings" className="text-[10px] font-bold border-b-2 border-black text-black">Full Table ?</Link>
           </div>
           <div className="border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)]">
             <table className="w-full text-left bg-white">
@@ -130,7 +136,7 @@ export default async function Home() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-black uppercase italic text-orange-600">Top Scorers</h2>
-            <Link href="/leaders" className="text-[10px] font-bold border-b-2 border-black text-black">All Leaders →</Link>
+            <Link href="/leaders" className="text-[10px] font-bold border-b-2 border-black text-black">All Leaders ?</Link>
           </div>
           <div className="bg-white border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)]">
             <table className="w-full text-left bg-white">
