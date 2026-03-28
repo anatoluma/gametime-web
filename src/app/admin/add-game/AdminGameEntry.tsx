@@ -338,7 +338,7 @@ export default function AdminGameEntry({
           <button 
             onClick={() => loadRosters()}
             disabled={!gameData.home_team_id || !gameData.away_team_id || !gameData.tipoff}
-            className="w-full rounded-lg bg-[var(--accent)] text-white font-semibold py-3.5 text-base hover:brightness-95 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:text-slate-500 transition-colors"
+            className="w-full rounded-lg bg-[var(--accent)] !text-white font-semibold py-3.5 text-base hover:brightness-95 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:text-slate-500 transition-colors"
           >
             Load Rosters & Continue
           </button>
@@ -387,7 +387,7 @@ export default function AdminGameEntry({
 
           <button 
             onClick={handleSaveGame}
-            className="w-full rounded-lg bg-[var(--accent-strong)] text-white font-semibold py-4 text-lg hover:brightness-95 transition-colors"
+            className="w-full rounded-lg bg-[var(--accent-strong)] !text-white font-semibold py-4 text-lg hover:brightness-95 transition-colors"
           >
             Finalize & Save Game
           </button>
@@ -504,7 +504,7 @@ function TeamStatEntry({ title, teamId, players, setPlayers, onCreatePlayer }: a
             type="button"
             onClick={handleCreatePlayerSubmit}
             disabled={isSavingPlayer}
-            className="rounded-md bg-[var(--accent)] text-white px-3 py-2 text-sm font-semibold hover:brightness-95 disabled:opacity-60"
+            className="rounded-md bg-[var(--accent)] !text-white px-3 py-2 text-sm font-semibold hover:brightness-95 disabled:opacity-60"
           >
             {isSavingPlayer ? "Adding..." : "Add To Roster"}
           </button>
