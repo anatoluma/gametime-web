@@ -290,9 +290,6 @@ export default function AdminGameEntry({
                   </button>
                 )}
               </div>
-              <p className="text-xs text-[var(--text-muted)]">
-                Tip: you can also open a game directly via <code className="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]">/admin/edit-game?edit=&lt;GAME_ID&gt;</code>
-              </p>
             </div>
           ) : null}
 
