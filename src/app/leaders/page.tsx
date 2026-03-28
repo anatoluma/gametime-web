@@ -112,8 +112,8 @@ export default function LeadersPage() {
         <h1 className="text-3xl font-black italic uppercase tracking-tighter text-black">League Leaders</h1>
         <div className="flex items-center gap-1.5">
           <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Sort By</span>
-          <button onClick={() => setSortMode("PTS")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PTS" ? "bg-black text-white" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`}>PTS</button>
-          <button onClick={() => setSortMode("PPG")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PPG" ? "bg-black text-white" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`}>PPG</button>
+          <button onClick={() => setSortMode("PTS")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PTS" ? "bg-black !text-white" : "bg-gray-100 !text-gray-500 hover:bg-gray-200"}`}>PTS</button>
+          <button onClick={() => setSortMode("PPG")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PPG" ? "bg-black !text-white" : "bg-gray-100 !text-gray-500 hover:bg-gray-200"}`}>PPG</button>
         </div>
       </div>
 
