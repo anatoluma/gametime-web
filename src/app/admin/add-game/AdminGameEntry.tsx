@@ -3,6 +3,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase/client";
 
+type NewPlayerInput = {
+  first_name: string;
+  last_name: string;
+  jersey_number: number | null;
+};
+
 export default function AdminGameEntry({
   showEditDropdown = false,
   initialEditId,
@@ -16,6 +22,12 @@ export default function AdminGameEntry({
   const [editingGameId, setEditingGameId] = useState<string | null>(null);
   const [homePlayers, setHomePlayers] = useState<any[]>([]);
   const [awayPlayers, setAwayPlayers] = useState<any[]>([]);
+
+  const sortRoster = (players: any[]) => {
+    return [...players].sort(
+      (a, b) => (a.jersey_number ?? a.number ?? 0) - (b.jersey_number ?? b.number ?? 0)
+    );
+  };
 
   // Form State
   const [gameData, setGameData] = useState({
@@ -115,25 +127,27 @@ export default function AdminGameEntry({
     const mapStat = statsByPlayerId ?? {};
 
     setHomePlayers(
-      (home
-        ?.map(p => ({
-          ...p,
-          played: Boolean(mapStat[p.player_id]),
-          points: mapStat[p.player_id]?.points ?? 0
-        }))
-        .sort((a, b) => (a.jersey_number ?? a.number ?? 0) - (b.jersey_number ?? b.number ?? 0))
-      ) || []
+      sortRoster(
+        (home
+          ?.map(p => ({
+            ...p,
+            played: Boolean(mapStat[p.player_id]),
+            points: mapStat[p.player_id]?.points ?? 0
+          }))
+        ) || []
+      )
     );
 
     setAwayPlayers(
-      (away
-        ?.map(p => ({
-          ...p,
-          played: Boolean(mapStat[p.player_id]),
-          points: mapStat[p.player_id]?.points ?? 0
-        }))
-        .sort((a, b) => (a.jersey_number ?? a.number ?? 0) - (b.jersey_number ?? b.number ?? 0))
-      ) || []
+      sortRoster(
+        (away
+          ?.map(p => ({
+            ...p,
+            played: Boolean(mapStat[p.player_id]),
+            points: mapStat[p.player_id]?.points ?? 0
+          }))
+        ) || []
+      )
     );
 
     setStep(2);
@@ -166,6 +180,37 @@ export default function AdminGameEntry({
       default:
         return "Edilitate";
     }
+  };
+
+  const handleCreatePlayer = async (
+    teamId: string,
+    payload: NewPlayerInput,
+    setPlayers: React.Dispatch<React.SetStateAction<any[]>>
+  ) => {
+    const response = await fetch("/api/admin/player", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ team_id: teamId, ...payload }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.error) {
+      throw new Error(result?.error || response.statusText || "Failed to create player");
+    }
+
+    const player = result.player;
+
+    setPlayers((prev: any[]) =>
+      sortRoster([
+        ...prev,
+        {
+          ...player,
+          played: true,
+          points: 0,
+        },
+      ])
+    );
   };
 
   const handleSaveGame = async () => {
@@ -211,20 +256,22 @@ export default function AdminGameEntry({
   };
 
   return (
-    <main className="p-6 max-w-4xl mx-auto bg-white min-h-screen text-black">
-      <h1 className="text-4xl font-black italic uppercase mb-8 border-b-4 border-black pb-2">Admin: Game Entry</h1>
+    <main className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto min-h-screen text-[var(--foreground)] bg-[var(--surface)]">
+      <h1 className="text-2xl sm:text-3xl font-semibold mb-8 pb-3 border-b border-[var(--border)]">
+        Admin: Game Entry
+      </h1>
 
       {/* STEP 1: GAME INFO */}
       {step === 1 && (
         <section className="space-y-6">
           {showEditDropdown ? (
-            <div className="flex flex-col gap-3">
-              <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">
+            <div className="flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+              <label className="block text-xs font-semibold mb-1 text-[var(--text-muted)] tracking-wide">
                 Edit existing game
               </label>
               <div className="flex gap-2">
                 <select
-                  className="flex-1 border-4 border-black p-3 font-bold bg-white text-black"
+                  className="flex-1 rounded-lg border border-[var(--border)] p-3 font-medium bg-[var(--surface)] text-[var(--foreground)]"
                   value={editingGameId ?? ""}
                   onChange={(e) => loadExistingGame(e.target.value)}
                 >
@@ -237,14 +284,14 @@ export default function AdminGameEntry({
                   <button
                     type="button"
                     onClick={resetToNewGame}
-                    className="px-4 py-3 border-4 border-black font-black uppercase bg-white hover:bg-zinc-100"
+                    className="px-4 py-3 rounded-lg border border-[var(--border)] font-semibold bg-[var(--surface)] hover:bg-slate-100 dark:hover:bg-slate-700"
                   >
                     New
                   </button>
                 )}
               </div>
-              <p className="text-[10px] text-zinc-500">
-                Tip: you can also open a game directly via <code className="bg-zinc-100 px-1 rounded">/admin/edit-game?edit=&lt;GAME_ID&gt;</code>
+              <p className="text-xs text-[var(--text-muted)]">
+                Tip: you can also open a game directly via <code className="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]">/admin/edit-game?edit=&lt;GAME_ID&gt;</code>
               </p>
             </div>
           ) : null}
@@ -252,12 +299,12 @@ export default function AdminGameEntry({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Date & Time Picker */}
             <div className="col-span-1 md:col-span-2">
-              <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">
+              <label className="block text-xs font-semibold mb-1 text-[var(--text-muted)] tracking-wide">
                 Game Date & Time
               </label>
               <input 
                 type="datetime-local" 
-                className="w-full border-4 border-black p-3 font-black text-xl uppercase bg-white text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:shadow-none transition-all"
+                className="w-full rounded-lg border border-[var(--border)] p-3 text-base font-medium bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 value={gameData.tipoff}
                 onChange={(e) => {
                   const tipoffValue = e.target.value;
@@ -268,9 +315,9 @@ export default function AdminGameEntry({
             </div>
 
             <div>
-              <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">Home Team</label>
+              <label className="block text-xs font-semibold mb-1 text-[var(--text-muted)] tracking-wide">Home Team</label>
               <select 
-                className="w-full border-4 border-black p-3 font-bold bg-white text-black"
+                className="w-full rounded-lg border border-[var(--border)] p-3 font-medium bg-[var(--surface)] text-[var(--foreground)]"
                 onChange={(e) => setGameData({...gameData, home_team_id: e.target.value})}
               >
                 <option value="">Select Home</option>
@@ -279,9 +326,9 @@ export default function AdminGameEntry({
             </div>
 
             <div>
-              <label className="block text-[10px] font-black uppercase mb-1 text-zinc-500 tracking-widest">Away Team</label>
+              <label className="block text-xs font-semibold mb-1 text-[var(--text-muted)] tracking-wide">Away Team</label>
               <select 
-                className="w-full border-4 border-black p-3 font-bold bg-white text-black"
+                className="w-full rounded-lg border border-[var(--border)] p-3 font-medium bg-[var(--surface)] text-[var(--foreground)]"
                 onChange={(e) => setGameData({...gameData, away_team_id: e.target.value})}
               >
                 <option value="">Select Away</option>
@@ -294,7 +341,7 @@ export default function AdminGameEntry({
           <button 
             onClick={() => loadRosters()}
             disabled={!gameData.home_team_id || !gameData.away_team_id || !gameData.tipoff}
-            className="w-full bg-black text-white font-black py-4 uppercase italic text-xl hover:bg-orange-600 disabled:bg-zinc-200 disabled:text-zinc-400 transition-all border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1"
+            className="w-full rounded-lg bg-[var(--accent)] text-white font-semibold py-3.5 text-base hover:brightness-95 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:text-slate-500 transition-colors"
           >
             Load Rosters & Continue
           </button>
@@ -307,12 +354,12 @@ export default function AdminGameEntry({
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="bg-white border-4 border-black text-black font-black py-3 px-6 uppercase italic hover:bg-zinc-100"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] font-medium py-2.5 px-4 hover:bg-slate-100 dark:hover:bg-slate-700"
             >
               Back to Game Info
             </button>
             {editingGameId && (
-              <span className="text-sm font-black uppercase tracking-wide text-zinc-600">
+              <span className="text-sm font-medium tracking-wide text-[var(--text-muted)]">
                 Editing game: {editingGameId}
               </span>
             )}
@@ -320,14 +367,30 @@ export default function AdminGameEntry({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Home Stats */}
-            <TeamStatEntry title="Home Roster" players={homePlayers} setPlayers={setHomePlayers} />
+            <TeamStatEntry
+              title="Home Roster"
+              teamId={gameData.home_team_id}
+              players={homePlayers}
+              setPlayers={setHomePlayers}
+              onCreatePlayer={(payload: NewPlayerInput) =>
+                handleCreatePlayer(gameData.home_team_id, payload, setHomePlayers)
+              }
+            />
             {/* Away Stats */}
-            <TeamStatEntry title="Away Roster" players={awayPlayers} setPlayers={setAwayPlayers} />
+            <TeamStatEntry
+              title="Away Roster"
+              teamId={gameData.away_team_id}
+              players={awayPlayers}
+              setPlayers={setAwayPlayers}
+              onCreatePlayer={(payload: NewPlayerInput) =>
+                handleCreatePlayer(gameData.away_team_id, payload, setAwayPlayers)
+              }
+            />
           </div>
 
           <button 
             onClick={handleSaveGame}
-            className="w-full bg-orange-600 text-white font-black py-6 uppercase italic text-2xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all"
+            className="w-full rounded-lg bg-[var(--accent-strong)] text-white font-semibold py-4 text-lg hover:brightness-95 transition-colors"
           >
             Finalize & Save Game
           </button>
@@ -338,9 +401,57 @@ export default function AdminGameEntry({
 }
 
 // Sub-component for Team Stats
-function TeamStatEntry({ title, players, setPlayers }: any) {
+function TeamStatEntry({ title, teamId, players, setPlayers, onCreatePlayer }: any) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [isSavingPlayer, setIsSavingPlayer] = useState(false);
+  const [newPlayer, setNewPlayer] = useState({
+    first_name: "",
+    last_name: "",
+    jersey_number: "",
+  });
+
   const updatePlayer = (id: string, field: string, value: any) => {
-    setPlayers(players.map((p: any) => p.player_id === id ? { ...p, [field]: value } : p));
+    setPlayers((prev: any[]) =>
+      prev.map((p: any) => (p.player_id === id ? { ...p, [field]: value } : p))
+    );
+  };
+
+  const handleCreatePlayerSubmit = async () => {
+    const firstName = newPlayer.first_name.trim();
+    const lastName = newPlayer.last_name.trim();
+
+    if (!teamId) {
+      alert("Team is missing. Go back and select teams again.");
+      return;
+    }
+
+    if (!firstName || !lastName) {
+      alert("Please provide both first and last name.");
+      return;
+    }
+
+    const jerseyNumber = newPlayer.jersey_number.trim();
+    const parsedJersey = jerseyNumber === "" ? null : Number(jerseyNumber);
+
+    if (jerseyNumber !== "" && Number.isNaN(parsedJersey)) {
+      alert("Jersey number must be a valid number.");
+      return;
+    }
+
+    setIsSavingPlayer(true);
+    try {
+      await onCreatePlayer({
+        first_name: firstName,
+        last_name: lastName,
+        jersey_number: parsedJersey,
+      });
+      setIsAdding(false);
+      setNewPlayer({ first_name: "", last_name: "", jersey_number: "" });
+    } catch (error: any) {
+      alert(`Could not create player: ${error?.message || "Unknown error"}`);
+    } finally {
+      setIsSavingPlayer(false);
+    }
   };
 
   const teamTotal = players
@@ -348,14 +459,61 @@ function TeamStatEntry({ title, players, setPlayers }: any) {
     .reduce((sum: number, p: any) => sum + (p.points || 0), 0);
 
   return (
-    <div className="border-2 border-black p-4 rounded-xl">
-      <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-black">
-        <h3 className="font-black uppercase italic">{title}</h3>
-        <div className="text-right">
-          <p className="text-[10px] font-black uppercase text-zinc-600">Team Total</p>
-          <p className="text-3xl font-black text-orange-600">{teamTotal}</p>
+    <div className="border border-[var(--border)] bg-[var(--surface-muted)] p-4 rounded-xl">
+      <div className="flex justify-between items-center mb-4 pb-2 border-b border-[var(--border)]">
+        <h3 className="font-semibold">{title}</h3>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsAdding((prev) => !prev)}
+            className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-semibold bg-[var(--surface)] hover:bg-slate-100 dark:hover:bg-slate-700"
+          >
+            {isAdding ? "Cancel" : "+ Add Player"}
+          </button>
+          <div className="text-right">
+            <p className="text-xs font-medium text-[var(--text-muted)]">Team Total</p>
+            <p className="text-3xl font-semibold text-[var(--accent-strong)]">{teamTotal}</p>
+          </div>
         </div>
       </div>
+
+      {isAdding && (
+        <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 space-y-3">
+          <p className="text-xs font-semibold text-[var(--text-muted)] tracking-wide">Create player for this team</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <input
+              type="text"
+              placeholder="First name"
+              value={newPlayer.first_name}
+              onChange={(e) => setNewPlayer((prev) => ({ ...prev, first_name: e.target.value }))}
+              className="rounded-md border border-[var(--border)] p-2 bg-[var(--surface)] text-[var(--foreground)]"
+            />
+            <input
+              type="text"
+              placeholder="Last name"
+              value={newPlayer.last_name}
+              onChange={(e) => setNewPlayer((prev) => ({ ...prev, last_name: e.target.value }))}
+              className="rounded-md border border-[var(--border)] p-2 bg-[var(--surface)] text-[var(--foreground)]"
+            />
+            <input
+              type="number"
+              placeholder="Jersey # (optional)"
+              value={newPlayer.jersey_number}
+              onChange={(e) => setNewPlayer((prev) => ({ ...prev, jersey_number: e.target.value }))}
+              className="rounded-md border border-[var(--border)] p-2 bg-[var(--surface)] text-[var(--foreground)]"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleCreatePlayerSubmit}
+            disabled={isSavingPlayer}
+            className="rounded-md bg-[var(--accent)] text-white px-3 py-2 text-sm font-semibold hover:brightness-95 disabled:opacity-60"
+          >
+            {isSavingPlayer ? "Adding..." : "Add To Roster"}
+          </button>
+        </div>
+      )}
+
       <div className="space-y-2">
         {players.map((p: any) => (
           <div key={p.player_id} className="flex items-center gap-3">
@@ -363,18 +521,18 @@ function TeamStatEntry({ title, players, setPlayers }: any) {
               type="checkbox"
               checked={p.played}
               onChange={(e) => updatePlayer(p.player_id, 'played', e.target.checked)}
-              className="w-5 h-5 accent-orange-600"
+              className="w-5 h-5 accent-[var(--accent)]"
             />
-            <span className="w-12 text-sm font-black">
+            <span className="w-12 text-sm font-semibold text-[var(--text-muted)]">
               #{p.jersey_number ?? p.number ?? p.shirt_number ?? "-"}
             </span>
-            <span className="flex-1 font-bold text-sm truncate">{p.first_name} {p.last_name}</span>
+            <span className="flex-1 font-medium text-sm truncate">{p.first_name} {p.last_name}</span>
             {p.played && (
               <input
                 type="number"
                 placeholder="PTS"
                 value={p.points || ""}
-                className="w-16 border-2 border-black p-1 text-center font-black"
+                className="w-16 rounded-md border border-[var(--border)] p-1 text-center font-semibold bg-[var(--surface)] text-[var(--foreground)]"
                 onChange={(e) => updatePlayer(p.player_id, 'points', parseInt(e.target.value) || 0)}
               />
             )}
