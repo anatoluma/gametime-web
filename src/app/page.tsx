@@ -104,7 +104,7 @@ export default async function Home() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-black uppercase italic">Standings</h2>
-            <Link href="/standings" className="text-[10px] font-bold border-b-2 border-black text-black">Full Table ?</Link>
+            <Link href="/standings" className="text-xs font-bold border-b-2 border-black text-black">Full Table</Link>
           </div>
           <div className="border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] min-h-[360px]">
             <table className="w-full text-left bg-white">
@@ -136,7 +136,7 @@ export default async function Home() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-black uppercase italic text-orange-600">Top Scorers</h2>
-            <Link href="/leaders" className="text-[10px] font-bold border-b-2 border-black text-black">All Leaders ?</Link>
+            <Link href="/leaders" className="text-xs font-bold border-b-2 border-black text-black">All Leaders</Link>
           </div>
           <div className="bg-white border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] min-h-[360px]">
             <table className="w-full text-left bg-white">
