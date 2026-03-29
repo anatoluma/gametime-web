@@ -17,8 +17,6 @@ type GameSharePanelProps = {
   awayScore: number | null;
 };
 
-type ShareFormat = "story" | "feed";
-
 type ShareCardProps = {
   season: string | null;
   dateLabel: string;
@@ -33,10 +31,7 @@ type ShareCardProps = {
   isStory: boolean;
 };
 
-const FORMAT_SPECS: Record<ShareFormat, { width: number; height: number; label: string }> = {
-  story: { width: 1080, height: 1920, label: "Save Story image" },
-  feed: { width: 1080, height: 1350, label: "Save Feed image" },
-};
+const STORY_EXPORT = { width: 1080, height: 1920, label: "Save Story image" };
 
 function formatDateLabel(tipoff: string | null) {
   if (!tipoff) return "Date TBD";
@@ -47,10 +42,6 @@ function formatDateLabel(tipoff: string | null) {
     month: "short",
     year: "numeric",
   });
-}
-
-function toHashtagLabel(value: string) {
-  return value.replace(/[^a-zA-Z0-9]+/g, "");
 }
 
 function ShareCard({
@@ -145,67 +136,39 @@ export default function GameSharePanel({
   awayScore,
 }: GameSharePanelProps) {
   const [status, setStatus] = useState<string>("");
-  const [isExporting, setIsExporting] = useState<ShareFormat | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const storyCardRef = useRef<HTMLDivElement | null>(null);
-  const feedCardRef = useRef<HTMLDivElement | null>(null);
 
   const dateLabel = useMemo(() => formatDateLabel(tipoff), [tipoff]);
   const hasFinalScore = homeScore !== null && awayScore !== null;
-  const captionText = useMemo(() => {
-    if (!hasFinalScore) return "";
 
-    const lines = [
-      `FINAL: ${homeTeamName} ${homeScore} - ${awayScore} ${awayTeamName}`,
-      season ? `${season}` : null,
-      tipoff ? dateLabel : null,
-      venue ? `Venue: ${venue}` : null,
-      "",
-      `#${toHashtagLabel(homeTeamName)} #${toHashtagLabel(awayTeamName)} #GameTime #LigaBasket`,
-    ];
-
-    return lines.filter(Boolean).join("\n");
-  }, [awayScore, awayTeamName, dateLabel, hasFinalScore, homeScore, homeTeamName, season, tipoff, venue]);
-
-  async function downloadShareImage(format: ShareFormat) {
+  async function downloadShareImage() {
     if (!hasFinalScore) return;
 
-    const targetRef = format === "story" ? storyCardRef.current : feedCardRef.current;
-    if (!targetRef) return;
+    if (!storyCardRef.current) return;
 
-    const spec = FORMAT_SPECS[format];
-    setIsExporting(format);
+    setIsExporting(true);
     setStatus("Preparing image...");
 
     try {
-      const dataUrl = await toPng(targetRef, {
+      const dataUrl = await toPng(storyCardRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        canvasWidth: spec.width,
-        canvasHeight: spec.height,
+        canvasWidth: STORY_EXPORT.width,
+        canvasHeight: STORY_EXPORT.height,
         skipAutoScale: true,
       });
 
       const link = document.createElement("a");
-      link.download = `gametime-${gameId}-${format}.png`;
+      link.download = `gametime-${gameId}-story.png`;
       link.href = dataUrl;
       link.click();
 
-      setStatus(`${format === "story" ? "Story" : "Feed"} image downloaded.`);
+      setStatus("Story image downloaded.");
     } catch {
       setStatus("Image export failed. Please try again.");
     } finally {
-      setIsExporting(null);
-    }
-  }
-
-  async function copyCaption() {
-    if (!hasFinalScore || !captionText) return;
-
-    try {
-      await navigator.clipboard.writeText(captionText);
-      setStatus("Caption copied to clipboard.");
-    } catch {
-      setStatus("Could not copy caption. Please try again.");
+      setIsExporting(false);
     }
   }
 
@@ -220,29 +183,11 @@ export default function GameSharePanel({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={copyCaption}
-            disabled={!hasFinalScore || isExporting !== null}
-            className="rounded-md border border-white/25 bg-white/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-white transition hover:border-orange-500 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Copy caption
-          </button>
-
-          <button
-            type="button"
-            onClick={() => downloadShareImage("story")}
-            disabled={!hasFinalScore || isExporting !== null}
+            onClick={downloadShareImage}
+            disabled={!hasFinalScore || isExporting}
             className="rounded-md border border-orange-500 bg-orange-600 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isExporting === "story" ? "Exporting..." : FORMAT_SPECS.story.label}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => downloadShareImage("feed")}
-            disabled={!hasFinalScore || isExporting !== null}
-            className="rounded-md border border-white/40 bg-black px-3 py-2 text-[11px] font-black uppercase tracking-wider text-white transition hover:border-orange-500 hover:text-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isExporting === "feed" ? "Exporting..." : FORMAT_SPECS.feed.label}
+            {isExporting ? "Exporting..." : STORY_EXPORT.label}
           </button>
         </div>
       </div>
@@ -254,13 +199,6 @@ export default function GameSharePanel({
       )}
 
       {status && <p className="mt-3 text-[11px] font-semibold text-orange-300">{status}</p>}
-
-      {hasFinalScore && (
-        <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Caption Preview</p>
-          <pre className="mt-2 whitespace-pre-wrap font-[inherit] text-xs leading-5 text-gray-200">{captionText}</pre>
-        </div>
-      )}
 
       <div className="pointer-events-none absolute -left-[99999px] -top-[99999px]">
         <div ref={storyCardRef}>
@@ -276,22 +214,6 @@ export default function GameSharePanel({
             awayScore={awayScore}
             cardHeight={1920}
             isStory
-          />
-        </div>
-
-        <div ref={feedCardRef}>
-          <ShareCard
-            season={season}
-            dateLabel={dateLabel}
-            venue={venue}
-            homeTeamId={homeTeamId}
-            awayTeamId={awayTeamId}
-            homeTeamName={homeTeamName}
-            awayTeamName={awayTeamName}
-            homeScore={homeScore}
-            awayScore={awayScore}
-            cardHeight={1350}
-            isStory={false}
           />
         </div>
       </div>

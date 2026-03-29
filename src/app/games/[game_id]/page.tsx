@@ -15,11 +15,18 @@ type RawPlayerGameStat = {
   player_id: string;
   team_id: string;
   points: number | null;
-  players: Array<{
-    first_name: string | null;
-    last_name: string | null;
-    jersey_number: number | null;
-  }> | null;
+  players:
+    | {
+        first_name: string | null;
+        last_name: string | null;
+        jersey_number: number | null;
+      }
+    | Array<{
+        first_name: string | null;
+        last_name: string | null;
+        jersey_number: number | null;
+      }>
+    | null;
 };
 type DataIssue = { level: "warn" | "error"; message: string; };
 
@@ -74,16 +81,16 @@ export default function GamePage() {
       if (cancelled) return;
       if (statsError) { setError(statsError); setLoading(false); return; }
 
-      const normalized: PlayerStat[] = ((statsData ?? []) as RawPlayerGameStat[]).map((s) => {
-        const player = s.players?.[0] ?? null;
+      const normalized: PlayerStat[] = ((statsData ?? []) as unknown as RawPlayerGameStat[]).map((s) => {
+        const player = Array.isArray(s.players) ? (s.players[0] ?? null) : s.players;
 
         return {
-        player_id: s.player_id,
-        team_id: s.team_id,
-        points: s.points,
-        first_name: player?.first_name ?? null,
-        last_name: player?.last_name ?? null,
-        jersey_number: player?.jersey_number ?? null,
+          player_id: s.player_id,
+          team_id: s.team_id,
+          points: s.points,
+          first_name: player?.first_name ?? null,
+          last_name: player?.last_name ?? null,
+          jersey_number: player?.jersey_number ?? null,
         };
       });
 
