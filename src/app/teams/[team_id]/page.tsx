@@ -78,37 +78,42 @@ export default function TeamPage() {
   if (!team) return <div className="p-20 text-center font-bold text-red-600 uppercase tracking-widest">Team not found ({teamId})</div>;
 
   return (
-    <main className="max-w-6xl mx-auto p-4 md:p-12 bg-white min-h-screen text-black">
+    <main className="max-w-6xl mx-auto p-4 md:p-12 bg-[var(--surface)] min-h-screen text-[var(--foreground)]">
       {/* HEADER SECTION */}
-      <header className="mb-12 border-b-8 border-black pb-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-4 mb-3">
-               <span className="bg-orange-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-[0.2em]">Active Franchise</span>
-               <span className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">UID: {team.team_id}</span>
-            </div>
-            <div className="flex items-end gap-4 md:gap-6">
-              <TeamLogo
-                teamId={team.team_id}
-                teamName={team.team_name}
-                size={96}
-                className="w-16 h-16 md:w-24 md:h-24 rounded-2xl border-2 border-black bg-gray-50 object-cover shrink-0"
-              />
-              <h1 className="text-5xl md:text-8xl font-black uppercase italic tracking-tighter leading-[0.85] text-black">
-                {team.team_name}
-              </h1>
-            </div>
-            <p className="text-sm font-black text-gray-500 uppercase tracking-[0.3em] mt-6">
-              {team.city ?? "Regional"} <span className="text-orange-600 mx-2">•</span> Head Coach {team.coach ?? "TBD"}
-            </p>
+      <header className="mb-12 border-b border-[var(--border)] pb-8">
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center gap-4">
+             <span className="bg-[var(--accent)] text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-[0.2em]">Active Franchise</span>
+             <span className="text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-widest">UID: {team.team_id}</span>
           </div>
 
-          {summary && (
-            <div className="bg-black text-white p-6 rounded-2xl text-center min-w-[140px] shadow-xl rotate-1">
-              <div className="text-[10px] font-black uppercase text-orange-500 tracking-widest mb-1">Win/Loss</div>
-              <div className="text-4xl font-black italic tracking-tighter">{summary.wins}-{summary.losses}</div>
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+            <div className="min-w-0">
+              <div className="flex items-center gap-4 md:gap-5">
+                <TeamLogo
+                  teamId={team.team_id}
+                  teamName={team.team_name}
+                  size={80}
+                  className="w-14 h-14 md:w-20 md:h-20 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] object-cover shrink-0"
+                />
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight leading-[0.9] break-words">
+                  {team.team_name}
+                </h1>
+              </div>
+              <p className="text-sm font-black text-[var(--text-muted)] uppercase tracking-[0.3em] mt-6">
+                {team.city ?? "Regional"} <span className="text-[var(--accent)] mx-2">•</span> Head Coach {team.coach ?? "TBD"}
+              </p>
             </div>
-          )}
+
+            {summary && (
+              <div className="border border-[var(--border)] bg-[var(--surface-muted)] px-5 py-4 rounded-xl min-w-[160px] shadow-sm">
+                <div className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest mb-2">Win/Loss</div>
+                <div className="text-4xl font-black tracking-tight tabular-nums leading-none">{summary.wins}-{summary.losses}</div>
+                <div className="text-[11px] font-medium text-[var(--text-muted)] mt-2">{summary.gamesPlayed} games played</div>
+              </div>
+            )}
+          </div>
+          <div className="h-1 bg-[var(--foreground)]"></div>
         </div>
       </header>
 
