@@ -265,25 +265,27 @@ export default function GamePage() {
           </div>
         </div>
 
-        <div className="mt-10 pt-8 border-t border-white/10 flex flex-wrap justify-center gap-x-10 gap-y-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+        <div className="mt-10 pt-8 border-t border-white/10 flex flex-wrap justify-center gap-x-10 gap-y-3 pr-14 md:pr-16 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
            <span className="flex items-center gap-2"><span className="text-orange-600">●</span> {game.tipoff ? new Date(game.tipoff).toLocaleString([], { dateStyle: 'full', timeStyle: 'short' }) : "TBD"}</span>
            <span className="flex items-center gap-2"><span className="text-orange-600">●</span> {game.venue ?? "Local Arena"}</span>
            <span className="flex items-center gap-2 text-white">{game.season ?? "2025/26 Season"}</span>
         </div>
-      </div>
 
-      <GameSharePanel
-        gameId={game.game_id}
-        season={game.season}
-        tipoff={game.tipoff}
-        venue={game.venue}
-        homeTeamId={game.home_team_id}
-        awayTeamId={game.away_team_id}
-        homeTeamName={homeTeam?.team_name ?? "Home Team"}
-        awayTeamName={awayTeam?.team_name ?? "Away Team"}
-        homeScore={game.home_score}
-        awayScore={game.away_score}
-      />
+        <div className="absolute bottom-4 right-4 z-20 md:bottom-6 md:right-6">
+          <GameSharePanel
+            gameId={game.game_id}
+            season={game.season}
+            tipoff={game.tipoff}
+            venue={game.venue}
+            homeTeamId={game.home_team_id}
+            awayTeamId={game.away_team_id}
+            homeTeamName={homeTeam?.team_name ?? "Home Team"}
+            awayTeamName={awayTeam?.team_name ?? "Away Team"}
+            homeScore={game.home_score}
+            awayScore={game.away_score}
+          />
+        </div>
+      </div>
 
       {/* ISSUES ALERT BOX */}
       {issues.length > 0 && (

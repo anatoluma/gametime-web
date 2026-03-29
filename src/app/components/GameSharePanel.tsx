@@ -173,32 +173,45 @@ export default function GameSharePanel({
   }
 
   return (
-    <section className="mt-6 rounded-2xl border border-white/20 bg-white/5 p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-orange-500">Share Result</h3>
-          <p className="mt-1 text-xs text-gray-300">Download a ready-to-post image for Instagram/Facebook.</p>
-        </div>
+    <>
+      <div className="flex items-center justify-end gap-2">
+        {status && (
+          <div className="rounded-full border border-white/10 bg-black/70 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-orange-300 shadow-lg backdrop-blur-sm">
+            {status}
+          </div>
+        )}
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={downloadShareImage}
-            disabled={!hasFinalScore || isExporting}
-            className="rounded-md border border-orange-500 bg-orange-600 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
+        <button
+          type="button"
+          onClick={downloadShareImage}
+          disabled={!hasFinalScore || isExporting}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/70 text-white shadow-lg backdrop-blur-sm transition hover:border-orange-500 hover:text-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
+          title={hasFinalScore ? STORY_EXPORT.label : "Save available after final score"}
+          aria-label={hasFinalScore ? STORY_EXPORT.label : "Save available after final score"}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
           >
-            {isExporting ? "Exporting..." : STORY_EXPORT.label}
-          </button>
-        </div>
+            <path d="M12 3v12" />
+            <path d="m7 10 5 5 5-5" />
+            <path d="M5 21h14" />
+          </svg>
+          <span className="sr-only">{isExporting ? "Exporting story image" : STORY_EXPORT.label}</span>
+        </button>
       </div>
 
       {!hasFinalScore && (
-        <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-gray-300">
-          Share export unlocks when final score is available.
-        </p>
+        <span className="sr-only">Share export unlocks when final score is available.</span>
       )}
-
-      {status && <p className="mt-3 text-[11px] font-semibold text-orange-300">{status}</p>}
 
       <div className="pointer-events-none absolute -left-[99999px] -top-[99999px]">
         <div ref={storyCardRef}>
@@ -217,6 +230,6 @@ export default function GameSharePanel({
           />
         </div>
       </div>
-    </section>
+    </>
   );
 }
