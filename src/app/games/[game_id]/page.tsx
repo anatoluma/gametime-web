@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import TeamLogo from "@/app/components/TeamLogo";
 
 // ... Types remain exactly the same ...
 type Game = { game_id: string; season: string | null; tipoff: string | null; venue: string | null; home_team_id: string; away_team_id: string; home_score: number | null; away_score: number | null; };
@@ -146,6 +147,12 @@ export default function GamePage() {
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
           <div className="text-center md:text-right flex-1">
+            <TeamLogo
+              teamId={game.home_team_id}
+              teamName={homeTeam?.team_name ?? "Home Team"}
+              size={112}
+              className="mx-auto md:ml-auto md:mr-0 mb-4 h-20 w-20 md:h-28 md:w-28 object-contain"
+            />
             <Link href={`/teams/${game.home_team_id}`} className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-white hover:text-orange-500 transition-colors block leading-none">
               {homeTeam?.team_name ?? "Home Team"}
             </Link>
@@ -164,6 +171,12 @@ export default function GamePage() {
           </div>
 
           <div className="text-center md:text-left flex-1">
+            <TeamLogo
+              teamId={game.away_team_id}
+              teamName={awayTeam?.team_name ?? "Away Team"}
+              size={112}
+              className="mx-auto md:ml-0 md:mr-auto mb-4 h-20 w-20 md:h-28 md:w-28 object-contain"
+            />
             <Link href={`/teams/${game.away_team_id}`} className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-white hover:text-orange-500 transition-colors block leading-none">
               {awayTeam?.team_name ?? "Away Team"}
             </Link>
