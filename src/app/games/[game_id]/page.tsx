@@ -145,52 +145,101 @@ export default function GamePage() {
           GAME
         </div>
 
-        <div className="flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
-          <div className="flex-1 flex flex-col items-center">
-            <div className="grid grid-cols-[auto,minmax(0,1fr)] items-center gap-4 w-full max-w-[320px]">
-              <TeamLogo
-                teamId={game.home_team_id}
-                teamName={homeTeam?.team_name ?? "Home Team"}
-                size={112}
-                className="h-20 w-20 md:h-28 md:w-28 object-contain shrink-0"
-              />
-              <Link
-                href={`/teams/${game.home_team_id}`}
-                className="flex min-h-[72px] md:min-h-[92px] items-center text-xl sm:text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-white hover:text-orange-500 transition-colors leading-[0.9] break-words"
-              >
-                {homeTeam?.team_name ?? "Home Team"}
-              </Link>
+        <div className="relative z-10">
+          <div className="md:hidden">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
+              <div className="flex flex-col items-center text-center">
+                <TeamLogo
+                  teamId={game.home_team_id}
+                  teamName={homeTeam?.team_name ?? "Home Team"}
+                  size={84}
+                  className="h-16 w-16 object-contain"
+                />
+                <Link
+                  href={`/teams/${game.home_team_id}`}
+                  className="mt-2 min-h-[36px] text-sm font-black uppercase italic tracking-tight text-white hover:text-orange-500 transition-colors leading-tight break-words"
+                >
+                  {homeTeam?.team_name ?? "Home Team"}
+                </Link>
+                <p className="text-[9px] font-black text-orange-500 tracking-[0.25em] uppercase mt-2">Home Team</p>
+              </div>
+
+              <div className="flex flex-col items-center pt-1">
+                <div className="flex items-center justify-center gap-3">
+                  <span className="text-5xl font-black italic tabular-nums text-white leading-none">{game.home_score ?? "-"}</span>
+                  <span className="text-xl font-black text-orange-600">:</span>
+                  <span className="text-5xl font-black italic tabular-nums text-white leading-none">{game.away_score ?? "-"}</span>
+                </div>
+                <div className="mt-3 bg-orange-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-[0.18em]">
+                  {game.home_score !== null ? "Final Results" : "Scheduled"}
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center text-center">
+                <TeamLogo
+                  teamId={game.away_team_id}
+                  teamName={awayTeam?.team_name ?? "Away Team"}
+                  size={84}
+                  className="h-16 w-16 object-contain"
+                />
+                <Link
+                  href={`/teams/${game.away_team_id}`}
+                  className="mt-2 min-h-[36px] text-sm font-black uppercase italic tracking-tight text-white hover:text-orange-500 transition-colors leading-tight break-words"
+                >
+                  {awayTeam?.team_name ?? "Away Team"}
+                </Link>
+                <p className="text-[9px] font-black text-orange-500 tracking-[0.25em] uppercase mt-2">Away Team</p>
+              </div>
             </div>
-            <p className="text-[10px] font-black text-orange-500 tracking-[0.3em] uppercase mt-3">Home Team</p>
           </div>
 
-          <div className="text-center flex flex-col items-center">
-             <div className="flex items-center justify-center gap-6">
-                <span className="text-6xl md:text-8xl font-black italic tabular-nums text-white leading-none">{game.home_score ?? "-"}</span>
-                <span className="text-2xl md:text-4xl font-black text-orange-600">:</span>
-                <span className="text-6xl md:text-8xl font-black italic tabular-nums text-white leading-none">{game.away_score ?? "-"}</span>
-             </div>
-             <div className="mt-6 bg-orange-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em]">
-                {game.home_score !== null ? 'Final Results' : 'Scheduled'}
-             </div>
-          </div>
-
-          <div className="flex-1 flex flex-col items-center">
-            <div className="grid grid-cols-[auto,minmax(0,1fr)] items-center gap-4 w-full max-w-[320px]">
-              <TeamLogo
-                teamId={game.away_team_id}
-                teamName={awayTeam?.team_name ?? "Away Team"}
-                size={112}
-                className="h-20 w-20 md:h-28 md:w-28 object-contain shrink-0"
-              />
-              <Link
-                href={`/teams/${game.away_team_id}`}
-                className="flex min-h-[72px] md:min-h-[92px] items-center text-xl sm:text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-white hover:text-orange-500 transition-colors leading-[0.9] break-words"
-              >
-                {awayTeam?.team_name ?? "Away Team"}
-              </Link>
+          <div className="hidden md:flex items-center justify-between gap-10">
+            <div className="flex-1 flex flex-col items-center">
+              <div className="grid grid-cols-[auto,minmax(0,1fr)] items-center gap-4 w-full max-w-[320px]">
+                <TeamLogo
+                  teamId={game.home_team_id}
+                  teamName={homeTeam?.team_name ?? "Home Team"}
+                  size={112}
+                  className="h-20 w-20 md:h-28 md:w-28 object-contain shrink-0"
+                />
+                <Link
+                  href={`/teams/${game.home_team_id}`}
+                  className="flex min-h-[72px] md:min-h-[92px] items-center text-xl sm:text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-white hover:text-orange-500 transition-colors leading-[0.9] break-words"
+                >
+                  {homeTeam?.team_name ?? "Home Team"}
+                </Link>
+              </div>
+              <p className="text-[10px] font-black text-orange-500 tracking-[0.3em] uppercase mt-3">Home Team</p>
             </div>
-            <p className="text-[10px] font-black text-orange-500 tracking-[0.3em] uppercase mt-3">Away Team</p>
+
+            <div className="text-center flex flex-col items-center">
+               <div className="flex items-center justify-center gap-6">
+                  <span className="text-6xl md:text-8xl font-black italic tabular-nums text-white leading-none">{game.home_score ?? "-"}</span>
+                  <span className="text-2xl md:text-4xl font-black text-orange-600">:</span>
+                  <span className="text-6xl md:text-8xl font-black italic tabular-nums text-white leading-none">{game.away_score ?? "-"}</span>
+               </div>
+               <div className="mt-6 bg-orange-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em]">
+                  {game.home_score !== null ? "Final Results" : "Scheduled"}
+               </div>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center">
+              <div className="grid grid-cols-[auto,minmax(0,1fr)] items-center gap-4 w-full max-w-[320px]">
+                <TeamLogo
+                  teamId={game.away_team_id}
+                  teamName={awayTeam?.team_name ?? "Away Team"}
+                  size={112}
+                  className="h-20 w-20 md:h-28 md:w-28 object-contain shrink-0"
+                />
+                <Link
+                  href={`/teams/${game.away_team_id}`}
+                  className="flex min-h-[72px] md:min-h-[92px] items-center text-xl sm:text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-white hover:text-orange-500 transition-colors leading-[0.9] break-words"
+                >
+                  {awayTeam?.team_name ?? "Away Team"}
+                </Link>
+              </div>
+              <p className="text-[10px] font-black text-orange-500 tracking-[0.3em] uppercase mt-3">Away Team</p>
+            </div>
           </div>
         </div>
 
