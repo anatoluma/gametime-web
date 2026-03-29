@@ -68,16 +68,10 @@ function ShareCard({
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_75%,_rgba(59,130,246,0.12),_transparent_40%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,_rgba(255,255,255,0.02),_transparent_22%,_rgba(255,255,255,0.02)_100%)]" />
 
-      <div className="relative z-10 flex h-full flex-col px-14 pb-12 pt-12">
-        <div className="flex justify-end">
-          <div className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-black tracking-[0.14em] text-white/90 backdrop-blur-sm">
-            ligabasket.md
-          </div>
-        </div>
-
-        <div className="mt-8 flex flex-1 flex-col">
+      <div className="relative z-10 flex h-full flex-col px-14 pb-12 pt-14">
+        <div className="flex flex-1 flex-col">
           <div className="text-center">
-            <p className="text-[13px] font-black uppercase tracking-[0.32em] text-white/70">Post-Game Summary</p>
+            <p className="text-[22px] font-black uppercase tracking-[0.34em] text-white/75">Final Score</p>
             <p
               className="mt-3 text-[212px] leading-[0.86] font-black tracking-tight text-[#FF8C00]"
               style={{ fontFamily: athleticFont }}
@@ -86,14 +80,14 @@ function ShareCard({
             </p>
           </div>
 
-          <div className="mt-8 grid flex-1 grid-cols-2 gap-8">
+          <div className="mt-7 grid flex-1 grid-cols-2 gap-8">
             <div className="rounded-[30px] border border-white/12 bg-white/[0.035] px-8 py-10 text-center shadow-[0_16px_36px_rgba(0,0,0,0.35)]">
-              <div className="mx-auto flex h-[120px] w-[120px] items-center justify-center rounded-full border border-white/20 bg-[#0b1328] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
+              <div className="mx-auto flex h-[180px] w-[180px] items-center justify-center rounded-full border border-white/20 bg-[#0b1328] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
                 <TeamLogo
                   teamId={homeTeamId}
                   teamName={homeTeamName}
-                  size={96}
-                  className="h-24 w-24 object-contain"
+                  size={148}
+                  className="h-[148px] w-[148px] object-contain"
                 />
               </div>
               <p
@@ -105,12 +99,12 @@ function ShareCard({
             </div>
 
             <div className="rounded-[30px] border border-white/12 bg-white/[0.035] px-8 py-10 text-center shadow-[0_16px_36px_rgba(0,0,0,0.35)]">
-              <div className="mx-auto flex h-[120px] w-[120px] items-center justify-center rounded-full border border-white/20 bg-[#0b1328] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
+              <div className="mx-auto flex h-[180px] w-[180px] items-center justify-center rounded-full border border-white/20 bg-[#0b1328] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
                 <TeamLogo
                   teamId={awayTeamId}
                   teamName={awayTeamName}
-                  size={96}
-                  className="h-24 w-24 object-contain"
+                  size={148}
+                  className="h-[148px] w-[148px] object-contain"
                 />
               </div>
               <p
@@ -122,22 +116,28 @@ function ShareCard({
             </div>
           </div>
 
-          <div className="mt-8 rounded-[26px] border border-white/20 bg-white/[0.07] px-8 py-7 shadow-[0_20px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-            <div className="grid grid-cols-3 gap-4">
+          <div className="mt-8 rounded-[26px] border border-white/20 bg-white/[0.07] px-8 py-8 shadow-[0_20px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+            <div className="grid grid-cols-1 gap-6 text-center">
               <div className="text-center">
-                <p className="text-[12px] font-black uppercase tracking-[0.24em] text-white/50">Date</p>
-                <p className="mt-3 text-[33px] font-black leading-tight text-white">{dateLabel}</p>
+                <p className="text-[13px] font-black uppercase tracking-[0.24em] text-white/50">Date</p>
+                <p className="mt-3 text-[40px] font-black leading-tight text-white">{dateLabel}</p>
               </div>
 
               <div className="text-center">
-                <p className="text-[12px] font-black uppercase tracking-[0.24em] text-white/50">Venue</p>
-                <p className="mt-3 text-[33px] font-black leading-tight break-words text-white">{venue ?? "TBD"}</p>
+                <p className="text-[13px] font-black uppercase tracking-[0.24em] text-white/50">Venue</p>
+                <p className="mt-3 text-[40px] font-black leading-tight break-words text-white">{venue ?? "TBD"}</p>
               </div>
 
               <div className="text-center">
-                <p className="text-[12px] font-black uppercase tracking-[0.24em] text-white/50">Season</p>
-                <p className="mt-3 text-[33px] font-black leading-tight text-white">{season ?? "Current"}</p>
+                <p className="text-[13px] font-black uppercase tracking-[0.24em] text-white/50">Season</p>
+                <p className="mt-3 text-[40px] font-black leading-tight text-white">{season ?? "Current"}</p>
               </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-center">
+            <div className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-7 py-3 text-[28px] font-black tracking-[0.12em] text-white/95 backdrop-blur-sm">
+              ligabasket.md
             </div>
           </div>
         </div>
