@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import TeamLogo from "@/app/components/TeamLogo";
-import { getVisibleTeams, isVisibleGame } from "@/lib/league";
 
 type Team = { team_id: string; team_name: string; city: string | null; coach: string | null; };
 type Player = { player_id: string; first_name: string; last_name: string; jersey_number: number | null; };
@@ -39,21 +38,9 @@ export default function TeamPage() {
 
       const { data: allTeams } = await supabase.from("teams").select("team_id, team_name");
       if (cancelled) return;
-      const { visibleTeams, visibleTeamIds } = getVisibleTeams(
-        ((allTeams ?? []) as Array<{ team_id: string; team_name: string | null }>).map((team) => ({
-          ...team,
-          team_name: team.team_name ?? null,
-        }))
-      );
       const map: TeamMap = {};
-      visibleTeams.forEach((t) => (map[t.team_id] = t.team_name));
+      ((allTeams ?? []) as Array<{ team_id: string; team_name: string }>).forEach((t) => (map[t.team_id] = t.team_name));
       setTeamsById(map);
-
-      if (!visibleTeamIds.has(teamId)) {
-        setTeam(null);
-        setLoading(false);
-        return;
-      }
 
       const { data: teamData, error: teamError } = await supabase.from("teams").select("*").eq("team_id", teamId).maybeSingle();
       if (cancelled) return;
@@ -68,7 +55,7 @@ export default function TeamPage() {
 
       if (cancelled) return;
       setRoster((rosterRes.data ?? []) as Player[]);
-      const allGames = ((gamesRes.data ?? []) as Game[]).filter((game) => isVisibleGame(game, visibleTeamIds));
+      const allGames = (gamesRes.data ?? []) as Game[];
       setGames(allGames);
 
       const finished = allGames.filter(g => g.home_score != null && g.away_score != null);

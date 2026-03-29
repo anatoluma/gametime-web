@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import PlayerAvatar from "@/app/components/PlayerAvatar";
-import { getVisibleTeams, isVisibleGame } from "@/lib/league";
 
 type Player = {
   player_id: string;
@@ -73,27 +72,13 @@ export default function PlayerPage() {
 
       setPlayer(playerData as Player);
 
-      const { data: teamsData } = await supabase
+      const { data: teamData } = await supabase
         .from("teams")
-        .select("team_id, team_name");
+        .select("team_id, team_name")
+        .eq("team_id", (playerData as Player).team_id)
+        .maybeSingle();
 
-      if (cancelled) return;
-
-      const { visibleTeams, visibleTeamIds } = getVisibleTeams(
-        ((teamsData ?? []) as Array<{ team_id: string; team_name: string | null }>).map((team) => ({
-          ...team,
-          team_name: team.team_name ?? null,
-        }))
-      );
-
-      if (!visibleTeamIds.has((playerData as Player).team_id)) {
-        setError({ message: "Player not found" });
-        setLoading(false);
-        return;
-      }
-
-      const teamMap = new Map(visibleTeams.map((entry) => [entry.team_id, entry]));
-      setTeam((teamMap.get((playerData as Player).team_id) as Team) ?? null);
+      if (!cancelled) setTeam((teamData as Team) ?? null);
 
       const { data: statsData, error: statsError } = await supabase
         .from("player_game_stats")
@@ -108,10 +93,10 @@ export default function PlayerPage() {
       }
 
       const statRows = (statsData ?? []) as StatRow[];
+      setStats(statRows);
 
       const gameIds = Array.from(new Set(statRows.map((s) => s.game_id)));
       if (gameIds.length === 0) {
-        setStats([]);
         setGamesById({});
         setLoading(false);
         return;
@@ -130,13 +115,8 @@ export default function PlayerPage() {
       }
 
       const map: Record<string, GameRow> = {};
-      ((gamesData ?? []) as GameRow[])
-        .filter((game) => isVisibleGame(game, visibleTeamIds))
-        .forEach((g) => {
-          map[g.game_id] = g;
-        });
+      (gamesData ?? []).forEach((g: any) => (map[g.game_id] = g));
       setGamesById(map);
-      setStats(statRows.filter((stat) => Boolean(map[stat.game_id])));
 
       setLoading(false);
     }

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import PlayerAvatar from "@/app/components/PlayerAvatar";
-import { isExcludedTeamName } from "@/lib/league";
 
 type StatRow = {
   player_id: string;
@@ -86,7 +85,7 @@ export default function LeadersPage() {
           pts: v.pts,
           ppg: v.gp > 0 ? v.pts / v.gp : 0,
         }))
-        .filter((x) => x.gp > 0 && !isExcludedTeamName(x.teamName));
+        .filter((x) => x.gp > 0);
       setRows(leaders);
       setLoading(false);
     }
