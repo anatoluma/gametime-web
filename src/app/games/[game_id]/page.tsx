@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { getVisibleTeams, isVisibleGame } from "@/lib/league";
 
 // ... Types remain exactly the same ...
 type Game = { game_id: string; season: string | null; tipoff: string | null; venue: string | null; home_team_id: string; away_team_id: string; home_score: number | null; away_score: number | null; };
@@ -49,8 +50,21 @@ export default function GamePage() {
       setGame(gameData as Game);
 
       const { data: teamsData } = await supabase.from("teams").select("team_id, team_name");
+      const { visibleTeams, visibleTeamIds } = getVisibleTeams(
+        ((teamsData ?? []) as Array<{ team_id: string; team_name: string | null }>).map((team) => ({
+          ...team,
+          team_name: team.team_name ?? null,
+        }))
+      );
+
+      if (!isVisibleGame(gameData as Game, visibleTeamIds)) {
+        setError({ message: "Game not found" });
+        setLoading(false);
+        return;
+      }
+
       const teamMap: Record<string, Team> = {};
-      (teamsData ?? []).forEach((t: Team) => { teamMap[t.team_id] = t; });
+      visibleTeams.forEach((t) => { teamMap[t.team_id] = t; });
       setTeams(teamMap);
 
       const { data: statsData, error: statsError } = await supabase

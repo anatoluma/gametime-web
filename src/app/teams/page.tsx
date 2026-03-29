@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import TeamLogo from "@/app/components/TeamLogo";
+import { getVisibleTeams } from "@/lib/league";
 
 export default async function TeamsPage() {
   const { data: teams, error } = await supabase
@@ -13,7 +14,11 @@ export default async function TeamsPage() {
     return <div className="p-8 text-red-500 font-bold">Error loading teams.</div>;
   }
 
-  const list = teams ?? [];
+  const { visibleTeams } = getVisibleTeams((teams ?? []).map((team) => ({
+    ...team,
+    team_name: team.team_name ?? null,
+  })));
+  const list = visibleTeams;
 
   return (
     <main className="p-4 md:p-12 max-w-4xl mx-auto bg-[var(--surface)] min-h-screen">

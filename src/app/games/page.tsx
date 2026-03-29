@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { getVisibleTeams, isVisibleGame } from "@/lib/league";
 
 type GameRow = {
   game_id: string;
@@ -62,8 +63,14 @@ export default function GamesPage() {
       setLoading(true);
       const { data: teams } = await supabase.from("teams").select("team_id, team_name");
       if (cancelled) return;
+      const { visibleTeams, visibleTeamIds } = getVisibleTeams(
+        ((teams ?? []) as TeamRow[]).map((team) => ({
+          ...team,
+          team_name: team.team_name ?? null,
+        }))
+      );
       const map: Record<string, string> = {};
-      (teams ?? []).forEach((t: TeamRow) => (map[t.team_id] = t.team_name));
+      visibleTeams.forEach((t) => (map[t.team_id] = t.team_name));
       setTeamsById(map);
 
       const { data: gamesData, error: gamesError } = await supabase
@@ -74,7 +81,7 @@ export default function GamesPage() {
       if (cancelled) return;
       if (gamesError) { setError(gamesError); setLoading(false); return; }
 
-      setGames((gamesData ?? []) as GameRow[]);
+      setGames(((gamesData ?? []) as GameRow[]).filter((game) => isVisibleGame(game, visibleTeamIds)));
       setLoading(false);
     }
     load();

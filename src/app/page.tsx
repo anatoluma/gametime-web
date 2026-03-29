@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import Image from "next/image";
 import banner from "../banner.png";
+import { getVisibleTeams, isVisibleGame } from "@/lib/league";
 
 export const revalidate = 0;
 
@@ -13,18 +14,23 @@ export default async function Home() {
     supabase.from("player_game_stats").select(`
       player_id,
       points,
-      players (first_name, last_name, team_id)
+      players (first_name, last_name, team_id, teams ( team_name ))
     `)
   ]);
 
-  const teams = teamsRes.data ?? [];
-  const allGames = gamesRes.data ?? [];
+  const { visibleTeams, visibleTeamIds } = getVisibleTeams(
+    ((teamsRes.data ?? []) as Array<{ team_id: string; team_name: string | null }>).map((team) => ({
+      ...team,
+      team_name: team.team_name ?? null,
+    }))
+  );
+  const allGames = (gamesRes.data ?? []).filter((game) => isVisibleGame(game, visibleTeamIds));
   const recentGames = allGames.slice(0, 4);
   const rawStats = leadersRes.data ?? [];
 
   // --- 1. STANDINGS LOGIC ---
   const table: Record<string, any> = {};
-  teams.forEach(t => {
+  visibleTeams.forEach(t => {
     table[t.team_id] = { name: t.team_name, id: t.team_id, w: 0, l: 0, pts: 0, pf: 0, pa: 0, diff: 0 };
   });
 
@@ -49,7 +55,9 @@ export default async function Home() {
 
   // --- 2. LEADERS LOGIC (Aggregated to match Leaders Page) ---
   const playerMap = new Map<string, any>();
-  rawStats.forEach((s: any) => {
+  rawStats
+    .filter((s: any) => s.players?.team_id && visibleTeamIds.has(s.players.team_id))
+    .forEach((s: any) => {
     const pid = s.player_id;
     const pts = s.points ?? 0;
     const existing = playerMap.get(pid);
@@ -65,7 +73,7 @@ export default async function Home() {
       existing.pts += pts;
       existing.gp += 1;
     }
-  });
+    });
 
   const sortedLeaders = Array.from(playerMap.values())
     .sort((a, b) => b.pts - a.pts || b.gp - a.gp) // Primary: Total PTS, Secondary: Games Played

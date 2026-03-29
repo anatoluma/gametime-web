@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
+import { getVisibleTeams } from "@/lib/league";
 
 type TeamRow = {
   team_id: string;
@@ -30,9 +31,16 @@ export default async function StandingsPage() {
 
   if (teamsError) return <pre className="p-6">{JSON.stringify(teamsError, null, 2)}</pre>;
 
+  const { visibleTeams } = getVisibleTeams(
+    ((teams ?? []) as Array<{ team_id: string; team_name: string | null }>).map((team) => ({
+      ...team,
+      team_name: team.team_name ?? null,
+    }))
+  );
+
   const table: Record<string, TeamRow> = {};
 
-  for (const t of teams ?? []) {
+  for (const t of visibleTeams) {
     table[t.team_id] = {
       team_id: t.team_id,
       name: t.team_name,
