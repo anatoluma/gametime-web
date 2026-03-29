@@ -147,14 +147,17 @@ export default function GamePage() {
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
           <div className="flex-1 flex flex-col items-center">
-            <div className="flex items-center justify-center gap-4 text-center">
+            <div className="grid grid-cols-[auto,minmax(0,1fr)] items-center gap-4 w-full max-w-[320px]">
               <TeamLogo
                 teamId={game.home_team_id}
                 teamName={homeTeam?.team_name ?? "Home Team"}
                 size={112}
                 className="h-20 w-20 md:h-28 md:w-28 object-contain shrink-0"
               />
-              <Link href={`/teams/${game.home_team_id}`} className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-white hover:text-orange-500 transition-colors block leading-none">
+              <Link
+                href={`/teams/${game.home_team_id}`}
+                className="flex min-h-[72px] md:min-h-[92px] items-center text-xl sm:text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-white hover:text-orange-500 transition-colors leading-[0.9] break-words"
+              >
                 {homeTeam?.team_name ?? "Home Team"}
               </Link>
             </div>
@@ -173,14 +176,17 @@ export default function GamePage() {
           </div>
 
           <div className="flex-1 flex flex-col items-center">
-            <div className="flex items-center justify-center gap-4 text-center">
+            <div className="grid grid-cols-[auto,minmax(0,1fr)] items-center gap-4 w-full max-w-[320px]">
               <TeamLogo
                 teamId={game.away_team_id}
                 teamName={awayTeam?.team_name ?? "Away Team"}
                 size={112}
                 className="h-20 w-20 md:h-28 md:w-28 object-contain shrink-0"
               />
-              <Link href={`/teams/${game.away_team_id}`} className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-white hover:text-orange-500 transition-colors block leading-none">
+              <Link
+                href={`/teams/${game.away_team_id}`}
+                className="flex min-h-[72px] md:min-h-[92px] items-center text-xl sm:text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-white hover:text-orange-500 transition-colors leading-[0.9] break-words"
+              >
                 {awayTeam?.team_name ?? "Away Team"}
               </Link>
             </div>
