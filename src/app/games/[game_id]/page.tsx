@@ -15,11 +15,11 @@ type RawPlayerGameStat = {
   player_id: string;
   team_id: string;
   points: number | null;
-  players: {
+  players: Array<{
     first_name: string | null;
     last_name: string | null;
     jersey_number: number | null;
-  } | null;
+  }> | null;
 };
 type DataIssue = { level: "warn" | "error"; message: string; };
 
@@ -74,14 +74,18 @@ export default function GamePage() {
       if (cancelled) return;
       if (statsError) { setError(statsError); setLoading(false); return; }
 
-      const normalized: PlayerStat[] = ((statsData ?? []) as RawPlayerGameStat[]).map((s) => ({
+      const normalized: PlayerStat[] = ((statsData ?? []) as RawPlayerGameStat[]).map((s) => {
+        const player = s.players?.[0] ?? null;
+
+        return {
         player_id: s.player_id,
         team_id: s.team_id,
         points: s.points,
-        first_name: s.players?.first_name ?? null,
-        last_name: s.players?.last_name ?? null,
-        jersey_number: s.players?.jersey_number ?? null,
-      }));
+        first_name: player?.first_name ?? null,
+        last_name: player?.last_name ?? null,
+        jersey_number: player?.jersey_number ?? null,
+        };
+      });
 
       const newIssues: DataIssue[] = [];
       const homeId = (gameData as Game).home_team_id;

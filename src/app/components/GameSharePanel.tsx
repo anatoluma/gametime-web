@@ -49,6 +49,10 @@ function formatDateLabel(tipoff: string | null) {
   });
 }
 
+function toHashtagLabel(value: string) {
+  return value.replace(/[^a-zA-Z0-9]+/g, "");
+}
+
 function ShareCard({
   season,
   dateLabel,
@@ -147,6 +151,20 @@ export default function GameSharePanel({
 
   const dateLabel = useMemo(() => formatDateLabel(tipoff), [tipoff]);
   const hasFinalScore = homeScore !== null && awayScore !== null;
+  const captionText = useMemo(() => {
+    if (!hasFinalScore) return "";
+
+    const lines = [
+      `FINAL: ${homeTeamName} ${homeScore} - ${awayScore} ${awayTeamName}`,
+      season ? `${season}` : null,
+      tipoff ? dateLabel : null,
+      venue ? `Venue: ${venue}` : null,
+      "",
+      `#${toHashtagLabel(homeTeamName)} #${toHashtagLabel(awayTeamName)} #GameTime #LigaBasket`,
+    ];
+
+    return lines.filter(Boolean).join("\n");
+  }, [awayScore, awayTeamName, dateLabel, hasFinalScore, homeScore, homeTeamName, season, tipoff, venue]);
 
   async function downloadShareImage(format: ShareFormat) {
     if (!hasFinalScore) return;
@@ -180,6 +198,17 @@ export default function GameSharePanel({
     }
   }
 
+  async function copyCaption() {
+    if (!hasFinalScore || !captionText) return;
+
+    try {
+      await navigator.clipboard.writeText(captionText);
+      setStatus("Caption copied to clipboard.");
+    } catch {
+      setStatus("Could not copy caption. Please try again.");
+    }
+  }
+
   return (
     <section className="mt-6 rounded-2xl border border-white/20 bg-white/5 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -189,6 +218,15 @@ export default function GameSharePanel({
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={copyCaption}
+            disabled={!hasFinalScore || isExporting !== null}
+            className="rounded-md border border-white/25 bg-white/10 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-white transition hover:border-orange-500 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Copy caption
+          </button>
+
           <button
             type="button"
             onClick={() => downloadShareImage("story")}
@@ -216,6 +254,13 @@ export default function GameSharePanel({
       )}
 
       {status && <p className="mt-3 text-[11px] font-semibold text-orange-300">{status}</p>}
+
+      {hasFinalScore && (
+        <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Caption Preview</p>
+          <pre className="mt-2 whitespace-pre-wrap font-[inherit] text-xs leading-5 text-gray-200">{captionText}</pre>
+        </div>
+      )}
 
       <div className="pointer-events-none absolute -left-[99999px] -top-[99999px]">
         <div ref={storyCardRef}>

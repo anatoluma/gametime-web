@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request })
-  
+
   // Track page visits (skip API routes and static assets)
   const pathname = request.nextUrl.pathname
-  
+
   if (
     !pathname.startsWith('/api') &&
     !pathname.startsWith('/_next') &&
@@ -13,7 +13,7 @@ export async function middleware(request: NextRequest) {
   ) {
     // Send tracking request asynchronously
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `https://${request.headers.get('host')}`
-    
+
     try {
       fetch(`${baseUrl}/api/stats/track-visit`, {
         method: 'POST',
@@ -36,7 +36,7 @@ export async function middleware(request: NextRequest) {
       console.error('Error triggering visit tracking:', error)
     }
   }
-  
+
   return response
 }
 
