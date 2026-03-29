@@ -1,15 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { isExcludedTeamName } from "@/lib/league";
 
 interface SearchPlayer {
   player_id: string;
   first_name: string;
   last_name: string;
   team_id: string;
-  teams?: {
-    team_name: string | null;
-  } | null;
 }
 
 interface SearchTeam {
@@ -43,7 +39,7 @@ export function useGlobalSearch(query: string) {
       const [playersRes, teamsRes] = await Promise.all([
         supabase
           .from("players")
-          .select("player_id, first_name, last_name, team_id, teams ( team_name )")
+          .select("player_id, first_name, last_name, team_id")
           .or(`first_name.ilike.%${normalizedQuery}%,last_name.ilike.%${normalizedQuery}%`)
           .limit(5),
         supabase
@@ -55,16 +51,9 @@ export function useGlobalSearch(query: string) {
 
       if (!isActive) return;
 
-      const players = ((playersRes.data as SearchPlayer[]) || []).filter(
-        (player) => !isExcludedTeamName(player.teams?.team_name)
-      );
-      const teams = ((teamsRes.data as SearchTeam[]) || []).filter(
-        (team) => !isExcludedTeamName(team.team_name)
-      );
-
       setResults({
-        players,
-        teams
+        players: (playersRes.data as SearchPlayer[]) || [],
+        teams: (teamsRes.data as SearchTeam[]) || []
       });
       setIsSearching(false);
     }, 300); // 300ms debounce to save API calls
