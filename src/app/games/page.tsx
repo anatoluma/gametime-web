@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import TeamLogo from "@/app/components/TeamLogo";
 
 type GameRow = {
   game_id: string;
@@ -148,9 +149,12 @@ export default function GamesPage() {
         <div className="p-3 flex items-center justify-between gap-2">
           {/* Home Team */}
           <div className="flex-1 flex flex-col items-center text-center">
-            <div className="w-10 h-10 rounded-full bg-[var(--surface-muted)] border border-[var(--border)] flex items-center justify-center font-semibold text-xs text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors mb-1">
-              {g.home_team_id.substring(0, 3)}
-            </div>
+            <TeamLogo
+              teamId={g.home_team_id}
+              teamName={teamsById[g.home_team_id] || g.home_team_id}
+              size={40}
+              className="mb-1 shrink-0"
+            />
             <span className="text-[11px] font-medium leading-tight h-8 flex items-center">{teamsById[g.home_team_id] || g.home_team_id}</span>
           </div>
 
@@ -170,9 +174,12 @@ export default function GamesPage() {
 
           {/* Away Team */}
           <div className="flex-1 flex flex-col items-center text-center">
-            <div className="w-10 h-10 rounded-full bg-[var(--surface-muted)] border border-[var(--border)] flex items-center justify-center font-semibold text-xs text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors mb-1">
-              {g.away_team_id.substring(0, 3)}
-            </div>
+            <TeamLogo
+              teamId={g.away_team_id}
+              teamName={teamsById[g.away_team_id] || g.away_team_id}
+              size={40}
+              className="mb-1 shrink-0"
+            />
             <span className="text-[11px] font-medium leading-tight h-8 flex items-center">{teamsById[g.away_team_id] || g.away_team_id}</span>
           </div>
         </div>
