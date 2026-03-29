@@ -40,6 +40,13 @@ export default function AdminPage() {
         >
           Edit existing game
         </Link>
+
+        <Link
+          href="/admin/stats"
+          className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-4 text-lg font-medium hover:bg-[var(--surface-muted)]"
+        >
+          View site statistics
+        </Link>
       </div>
     </main>
   );

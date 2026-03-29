@@ -1,8 +1,43 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
-  // Auth routing is handled client-side to support magic-link hash callbacks.
-  return NextResponse.next({ request })
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next({ request })
+  
+  // Track page visits (skip API routes and static assets)
+  const pathname = request.nextUrl.pathname
+  
+  if (
+    !pathname.startsWith('/api') &&
+    !pathname.startsWith('/_next') &&
+    !pathname.match(/\.(svg|png|jpg|jpeg|gif|webp)$/)
+  ) {
+    // Send tracking request asynchronously
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `https://${request.headers.get('host')}`
+    
+    try {
+      fetch(`${baseUrl}/api/stats/track-visit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-forwarded-for': request.headers.get('x-forwarded-for') || '',
+          'x-real-ip': request.headers.get('x-real-ip') || '',
+          'user-agent': request.headers.get('user-agent') || '',
+        },
+        body: JSON.stringify({
+          pagePath: pathname,
+          referrer: request.headers.get('referer') || null,
+        }),
+      }).catch((err) => {
+        // Silently fail - don't block page rendering
+        console.error('Failed to track visit:', err)
+      })
+    } catch (error) {
+      // Silently fail
+      console.error('Error triggering visit tracking:', error)
+    }
+  }
+  
+  return response
 }
 
 export const config = {
