@@ -35,7 +35,7 @@ export default async function StandingsPage() {
   for (const t of teams ?? []) {
     table[t.team_id] = {
       team_id: t.team_id,
-      name: t.team_name,
+      name: t.team_name ?? t.team_id,
       gp: 0, w: 0, l: 0, pts: 0, pf: 0, pa: 0, diff: 0,
     };
   }
