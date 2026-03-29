@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import PlayerAvatar from "@/app/components/PlayerAvatar";
 
 type StatRow = {
   player_id: string;
@@ -128,13 +129,22 @@ export default function LeadersPage() {
             <div className="grid grid-cols-[1fr_auto] items-center gap-2">
               
               {/* LEFT: PLAYER INFO (Wrapped text) */}
-              <div className="min-w-0">
-                <div className="text-[9px] font-black text-gray-300 italic mb-0.5 uppercase tracking-tighter">#{idx + 1}</div>
-                <div className="text-base font-black uppercase italic tracking-tight leading-tight group-hover:text-orange-600 transition-colors text-black break-words">
-                  {p.name}
-                </div>
-                <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-tight break-words">
-                  {p.teamName}
+              <div className="min-w-0 flex items-center gap-3">
+                <PlayerAvatar
+                  playerId={p.player_id}
+                  playerName={p.name}
+                  width={52}
+                  height={65}
+                  className="w-11 h-14 rounded-lg border border-black/10 bg-white object-cover shrink-0"
+                />
+                <div className="min-w-0">
+                  <div className="text-[9px] font-black text-gray-300 italic mb-0.5 uppercase tracking-tighter">#{idx + 1}</div>
+                  <div className="text-base font-black uppercase italic tracking-tight leading-tight group-hover:text-orange-600 transition-colors text-black break-words">
+                    {p.name}
+                  </div>
+                  <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-tight break-words">
+                    {p.teamName}
+                  </div>
                 </div>
               </div>
 

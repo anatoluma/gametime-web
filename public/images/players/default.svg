@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000" role="img" aria-label="Player profile placeholder">
+  <rect width="800" height="1000" rx="48" fill="#f3f4f6"/>
+  <rect x="40" y="40" width="720" height="920" rx="40" fill="#ffffff" stroke="#d1d5db" stroke-width="12"/>
+  <circle cx="400" cy="340" r="140" fill="#111827"/>
+  <rect x="220" y="520" width="360" height="280" rx="180" fill="#111827"/>
+  <text x="400" y="900" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="800" fill="#6b7280">PLAYER</text>
+</svg>

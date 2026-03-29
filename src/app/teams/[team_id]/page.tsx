@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import TeamLogo from "@/app/components/TeamLogo";
 
 type Team = { team_id: string; team_name: string; city: string | null; coach: string | null; };
 type Player = { player_id: string; first_name: string; last_name: string; jersey_number: number | null; };
@@ -86,9 +87,17 @@ export default function TeamPage() {
                <span className="bg-orange-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-[0.2em]">Active Franchise</span>
                <span className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">UID: {team.team_id}</span>
             </div>
-            <h1 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter leading-[0.85] text-black">
-              {team.team_name}
-            </h1>
+            <div className="flex items-end gap-4 md:gap-6">
+              <TeamLogo
+                teamId={team.team_id}
+                teamName={team.team_name}
+                size={96}
+                className="w-16 h-16 md:w-24 md:h-24 rounded-2xl border-2 border-black bg-gray-50 object-cover shrink-0"
+              />
+              <h1 className="text-5xl md:text-8xl font-black uppercase italic tracking-tighter leading-[0.85] text-black">
+                {team.team_name}
+              </h1>
+            </div>
             <p className="text-sm font-black text-gray-500 uppercase tracking-[0.3em] mt-6">
               {team.city ?? "Regional"} <span className="text-orange-600 mx-2">•</span> Head Coach {team.coach ?? "TBD"}
             </p>

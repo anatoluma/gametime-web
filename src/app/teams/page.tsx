@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
+import TeamLogo from "@/app/components/TeamLogo";
 
 export default async function TeamsPage() {
   const { data: teams, error } = await supabase
@@ -33,9 +34,12 @@ export default async function TeamsPage() {
             className="group flex items-center justify-between p-4 border border-[var(--border)] rounded-xl hover:border-[var(--accent)] hover:bg-[var(--surface-muted)] transition-all"
           >
             <div className="flex items-center gap-5">
-              <div className="w-12 h-12 bg-[var(--surface-muted)] border border-[var(--border)] text-[var(--text-muted)] flex items-center justify-center text-xl font-semibold rounded-lg group-hover:text-[var(--accent)] transition-colors shrink-0">
-                {t.team_name?.[0]}
-              </div>
+              <TeamLogo
+                teamId={t.team_id}
+                teamName={t.team_name}
+                size={48}
+                className="w-12 h-12 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] object-cover shrink-0"
+              />
 
               <div>
                 <h2 className="text-lg font-semibold tracking-tight leading-none">

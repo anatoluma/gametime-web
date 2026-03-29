@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Team logo placeholder">
+  <rect width="512" height="512" rx="64" fill="#f3f4f6"/>
+  <rect x="38" y="38" width="436" height="436" rx="52" fill="#ffffff" stroke="#d1d5db" stroke-width="12"/>
+  <circle cx="256" cy="216" r="96" fill="#111827"/>
+  <path d="M154 216h204" stroke="#f59e0b" stroke-width="20" stroke-linecap="round"/>
+  <path d="M256 114v204" stroke="#f59e0b" stroke-width="20" stroke-linecap="round"/>
+  <text x="256" y="420" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="52" font-weight="800" fill="#6b7280">TEAM</text>
+</svg>

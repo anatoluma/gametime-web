@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import PlayerAvatar from "@/app/components/PlayerAvatar";
 
 type Player = {
   player_id: string;
@@ -147,7 +148,16 @@ export default function PlayerPage() {
     <main className="p-4 md:p-8 max-w-4xl mx-auto bg-gray-50 min-h-screen text-black">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b-4 border-black pb-6 mb-8 gap-6">
-        <div>
+        <div className="flex items-end gap-4">
+          <PlayerAvatar
+            playerId={player.player_id}
+            playerName={`${player.first_name} ${player.last_name}`}
+            width={96}
+            height={120}
+            className="w-20 h-24 md:w-24 md:h-[120px] rounded-xl border-2 border-black bg-white object-cover shrink-0"
+          />
+
+          <div>
           <h1 className="text-4xl md:text-5xl font-black text-black uppercase italic tracking-tighter">
             {player.first_name} {player.last_name}
           </h1>
@@ -156,6 +166,7 @@ export default function PlayerPage() {
             <Link href={`/teams/${player.team_id}`} className="text-black/60 hover:text-orange-600 font-black uppercase tracking-tight underline decoration-orange-600 decoration-2 underline-offset-4 transition-colors">
               {team?.team_name ?? player.team_id}
             </Link>
+          </div>
           </div>
         </div>
 
