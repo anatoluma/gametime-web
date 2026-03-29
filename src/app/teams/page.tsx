@@ -33,23 +33,22 @@ export default async function TeamsPage() {
             href={`/teams/${t.team_id}`}
             className="group flex items-center justify-between p-4 border border-[var(--border)] rounded-xl hover:border-[var(--accent)] hover:bg-[var(--surface-muted)] transition-all"
           >
-            <div className="flex items-center gap-5">
-              <TeamLogo
-                teamId={t.team_id}
-                teamName={t.team_name}
-                size={48}
-                className="w-12 h-12 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] object-cover shrink-0"
-              />
-
-              <div>
-                <h2 className="text-lg font-semibold tracking-tight leading-none">
+            <div className="flex flex-col gap-2 min-w-0 flex-1">
+              <div className="flex items-center gap-3">
+                <TeamLogo
+                  teamId={t.team_id}
+                  teamName={t.team_name}
+                  size={28}
+                  className="w-7 h-7 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] object-cover shrink-0"
+                />
+                <h2 className="text-sm font-semibold tracking-tight leading-none truncate">
                   {t.team_name}
                 </h2>
-                <div className="flex items-center gap-3 mt-1.5 text-[11px] font-medium text-[var(--text-muted)] tracking-wide">
-                  <span>{t.city ?? "General"}</span>
-                  <span className="opacity-30">|</span>
-                  <span>Coach: {t.coach ?? "Unassigned"}</span>
-                </div>
+              </div>
+              <div className="flex items-center gap-3 text-[11px] font-medium text-[var(--text-muted)] tracking-wide">
+                <span>{t.city ?? "General"}</span>
+                <span className="opacity-30">|</span>
+                <span>Coach: {t.coach ?? "Unassigned"}</span>
               </div>
             </div>
 
