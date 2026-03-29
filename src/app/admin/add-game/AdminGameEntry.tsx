@@ -231,7 +231,15 @@ export default function AdminGameEntry({
       away_score: awayScore
     };
 
-    const gameId = editingGameId ?? crypto.randomUUID();
+    const generateGameId = (tipoff: string, homeTeamId: string, awayTeamId: string) => {
+      const d = new Date(tipoff);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `g_${y}_${m}_${day}_${homeTeamId}_${awayTeamId}`;
+    };
+
+    const gameId = editingGameId ?? generateGameId(gameData.tipoff, gameData.home_team_id, gameData.away_team_id);
 
     const response = await fetch("/api/admin/game", {
       method: "POST",
