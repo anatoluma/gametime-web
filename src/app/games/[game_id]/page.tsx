@@ -5,17 +5,28 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import TeamLogo from "@/app/components/TeamLogo";
+import GameSharePanel from "@/app/components/GameSharePanel";
 
 // ... Types remain exactly the same ...
 type Game = { game_id: string; season: string | null; tipoff: string | null; venue: string | null; home_team_id: string; away_team_id: string; home_score: number | null; away_score: number | null; };
 type Team = { team_id: string; team_name: string; };
 type PlayerStat = { player_id: string; team_id: string; points: number | null; first_name: string | null; last_name: string | null; jersey_number: number | null; };
+type RawPlayerGameStat = {
+  player_id: string;
+  team_id: string;
+  points: number | null;
+  players: {
+    first_name: string | null;
+    last_name: string | null;
+    jersey_number: number | null;
+  } | null;
+};
 type DataIssue = { level: "warn" | "error"; message: string; };
 
 export default function GamePage() {
-  const params = useParams();
+  const params = useParams<{ game_id?: string | string[] }>();
   const gameId = useMemo(() => {
-    const raw = (params as any)?.game_id;
+    const raw = params?.game_id;
     if (Array.isArray(raw)) return raw[0] ?? "";
     return raw ?? "";
   }, [params]);
@@ -25,7 +36,7 @@ export default function GamePage() {
   const [stats, setStats] = useState<PlayerStat[]>([]);
   const [issues, setIssues] = useState<DataIssue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,7 +74,7 @@ export default function GamePage() {
       if (cancelled) return;
       if (statsError) { setError(statsError); setLoading(false); return; }
 
-      const normalized: PlayerStat[] = (statsData ?? []).map((s: any) => ({
+      const normalized: PlayerStat[] = ((statsData ?? []) as RawPlayerGameStat[]).map((s) => ({
         player_id: s.player_id,
         team_id: s.team_id,
         points: s.points,
@@ -249,6 +260,19 @@ export default function GamePage() {
            <span className="flex items-center gap-2 text-white">{game.season ?? "2025/26 Season"}</span>
         </div>
       </div>
+
+      <GameSharePanel
+        gameId={game.game_id}
+        season={game.season}
+        tipoff={game.tipoff}
+        venue={game.venue}
+        homeTeamId={game.home_team_id}
+        awayTeamId={game.away_team_id}
+        homeTeamName={homeTeam?.team_name ?? "Home Team"}
+        awayTeamName={awayTeam?.team_name ?? "Away Team"}
+        homeScore={game.home_score}
+        awayScore={game.away_score}
+      />
 
       {/* ISSUES ALERT BOX */}
       {issues.length > 0 && (
