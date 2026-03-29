@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
+import TeamLogo from "@/app/components/TeamLogo";
 
 type TeamRow = {
   team_id: string;
@@ -128,9 +129,12 @@ export default async function StandingsPage() {
                   <td className="py-2 px-2 font-black text-gray-900 sticky left-8 bg-white group-hover:bg-orange-50/50 z-10 border-r border-gray-50 lg:border-r-0">
                     <Link 
                       href={`/teams/${t.team_id}`} 
-                      className="hover:text-orange-600 transition-colors uppercase tracking-tighter text-[10px] md:text-sm leading-tight block max-w-[90px] md:max-w-none"
+                      className="flex items-center gap-2 hover:text-orange-600 transition-colors"
                     >
-                      {t.name}
+                      <TeamLogo teamId={t.team_id} size={22} className="shrink-0" />
+                      <span className="uppercase tracking-tighter text-[10px] md:text-sm leading-tight truncate max-w-[70px] md:max-w-none">
+                        {t.name}
+                      </span>
                     </Link>
                   </td>
                   

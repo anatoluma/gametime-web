@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import Image from "next/image";
 import banner from "../banner.png";
+import TeamLogo from "@/app/components/TeamLogo";
 
 export const revalidate = 0;
 
@@ -21,6 +22,7 @@ export default async function Home() {
   const allGames = gamesRes.data ?? [];
   const recentGames = allGames.slice(0, 4);
   const rawStats = leadersRes.data ?? [];
+  const teamMap = new Map(teams.map(t => [t.team_id, t.team_name ?? t.team_id]));
 
   // --- 1. STANDINGS LOGIC ---
   const table: Record<string, any> = {};
@@ -90,8 +92,20 @@ export default async function Home() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {recentGames.map((game) => (
             <Link key={game.game_id} href={`/games/${game.game_id}`} className="bg-white border-2 border-black p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all">
-              <div className="flex justify-between text-[11px] font-black uppercase"><span>{game.home_team_id}</span><span>{game.home_score ?? 0}</span></div>
-              <div className="flex justify-between text-[11px] font-black uppercase"><span>{game.away_team_id}</span><span>{game.away_score ?? 0}</span></div>
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <TeamLogo teamId={game.home_team_id} size={18} className="shrink-0" />
+                  <span className="text-[10px] font-black uppercase truncate">{teamMap.get(game.home_team_id) ?? game.home_team_id}</span>
+                </div>
+                <span className="text-[11px] font-black shrink-0 ml-1">{game.home_score ?? 0}</span>
+              </div>
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <TeamLogo teamId={game.away_team_id} size={18} className="shrink-0" />
+                  <span className="text-[10px] font-black uppercase truncate">{teamMap.get(game.away_team_id) ?? game.away_team_id}</span>
+                </div>
+                <span className="text-[11px] font-black shrink-0 ml-1">{game.away_score ?? 0}</span>
+              </div>
             </Link>
           ))}
         </div>
@@ -119,8 +133,10 @@ export default async function Home() {
                 {sortedStandings.map((team: any, i) => (
                   <tr key={i} className="hover:bg-orange-50 transition-colors">
                     <td className="p-3 font-black uppercase text-[11px]">
-                      <Link href={`/teams/${team.id}`} className="hover:text-orange-600 truncate block max-w-[140px] md:max-w-none">
-                        <span className="text-gray-300 mr-2"># {i+1}</span> {team.name}
+                      <Link href={`/teams/${team.id}`} className="flex items-center gap-2 hover:text-orange-600 transition-colors">
+                        <span className="text-gray-300 shrink-0"># {i+1}</span>
+                        <TeamLogo teamId={team.id} size={20} className="shrink-0" />
+                        <span className="truncate max-w-[110px] md:max-w-none">{team.name}</span>
                       </Link>
                     </td>
                     <td className="p-3 text-center text-xs font-bold">{team.w}-{team.l}</td>
