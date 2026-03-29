@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/client'
 
 interface DailyStats {
   visit_date: string
@@ -27,8 +27,6 @@ export default function StatsPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const supabase = createClient()
-
         // Fetch daily stats
         const { data: daily, error: dailyError } = await supabase
           .from('daily_visitor_stats')
