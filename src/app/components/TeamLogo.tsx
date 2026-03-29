@@ -11,7 +11,7 @@ type TeamLogoProps = {
 };
 
 export default function TeamLogo({ teamId, teamName, className = "", size = 48 }: TeamLogoProps) {
-  const normalizedId = useMemo(() => (teamId || "").trim(), [teamId]);
+  const normalizedId = useMemo(() => (teamId || "").trim().toLowerCase(), [teamId]);
   const primarySrc = useMemo(() => `/images/teams/${normalizedId}.webp`, [normalizedId]);
   const [src, setSrc] = useState(primarySrc);
 
