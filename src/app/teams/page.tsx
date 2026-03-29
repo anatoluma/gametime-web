@@ -3,6 +3,8 @@ import { supabase } from "@/lib/supabase/client";
 import TeamLogo from "@/app/components/TeamLogo";
 import { getVisibleTeams } from "@/lib/league";
 
+export const revalidate = 0;
+
 export default async function TeamsPage() {
   const { data: teams, error } = await supabase
     .from("teams")
