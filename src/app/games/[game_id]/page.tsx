@@ -118,6 +118,17 @@ export default function GamePage() {
     return () => { cancelled = true; };
   }, [gameId]);
 
+  const topScorer = useMemo(() => {
+    if (stats.length === 0) return null;
+    const best = [...stats].sort((a, b) => (b.points ?? 0) - (a.points ?? 0))[0];
+    if (!best || (best.points ?? 0) === 0) return null;
+    return {
+      name: `${best.first_name ?? ""} ${best.last_name ?? ""}`.trim(),
+      points: best.points ?? 0,
+      teamName: teams[best.team_id]?.team_name ?? "",
+    };
+  }, [stats, teams]);
+
   if (loading) return <main className="p-8 text-center font-black uppercase italic text-gray-500">Loading Game...</main>;
   if (error || !game) return <main className="p-8 text-center text-red-500 font-bold uppercase">Game not found</main>;
 
@@ -125,6 +136,15 @@ export default function GamePage() {
   const awayTeam = teams[game.away_team_id];
   const homeStats = stats.filter((s) => s.team_id === game.home_team_id);
   const awayStats = stats.filter((s) => s.team_id === game.away_team_id);
+
+  const dateLabel = game.tipoff
+    ? new Date(game.tipoff).toLocaleDateString([], {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "Date TBD";
 
   // UPDATED: High Contrast Table
   const renderTable = (rows: PlayerStat[]) => (
@@ -271,20 +291,27 @@ export default function GamePage() {
            <span className="flex items-center gap-2 text-white">{game.season ?? "2025/26 Season"}</span>
         </div>
 
-        <div className="absolute bottom-4 right-4 z-20 md:bottom-6 md:right-6">
-          <GameSharePanel
-            gameId={game.game_id}
-            season={game.season}
-            tipoff={game.tipoff}
-            venue={game.venue}
-            homeTeamId={game.home_team_id}
-            awayTeamId={game.away_team_id}
-            homeTeamName={homeTeam?.team_name ?? "Home Team"}
-            awayTeamName={awayTeam?.team_name ?? "Away Team"}
-            homeScore={game.home_score}
-            awayScore={game.away_score}
-          />
-        </div>
+        {game.home_score !== null && game.away_score !== null && (
+          <div className="absolute bottom-4 right-4 z-20 md:bottom-6 md:right-6">
+            <GameSharePanel
+              gameId={game.game_id}
+              homeTeam={{
+                name: homeTeam?.team_name ?? "Home Team",
+                logoUrl: `/images/teams/${game.home_team_id.toLowerCase()}.webp`,
+              }}
+              awayTeam={{
+                name: awayTeam?.team_name ?? "Away Team",
+                logoUrl: `/images/teams/${game.away_team_id.toLowerCase()}.webp`,
+              }}
+              homeScore={game.home_score}
+              awayScore={game.away_score}
+              venue={game.venue ?? "Local Arena"}
+              date={dateLabel}
+              season={game.season ?? "2025-2026"}
+              topScorer={topScorer}
+            />
+          </div>
+        )}
       </div>
 
       {/* ISSUES ALERT BOX */}
