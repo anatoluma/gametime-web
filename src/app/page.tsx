@@ -45,18 +45,19 @@ export default async function Home() {
 
   // --- LEADERS LOGIC ---
   const statsData = statsRes.data ?? [];
-  const ptsByPlayer: Record<string, { name: string; teamId: string; pts: number }> = {};
+  const ptsByPlayer: Record<string, { name: string; teamId: string; gp: number; pts: number }> = {};
   statsData.forEach((s: any) => {
     if (!s.player_id || !s.players) return;
     const fullName = [s.players.first_name, s.players.last_name].filter(Boolean).join(' ') || s.player_id;
     if (!ptsByPlayer[s.player_id]) {
-      ptsByPlayer[s.player_id] = { name: fullName, teamId: s.players.team_id, pts: 0 };
+      ptsByPlayer[s.player_id] = { name: fullName, teamId: s.players.team_id, gp: 0, pts: 0 };
     }
+    ptsByPlayer[s.player_id].gp += 1;
     ptsByPlayer[s.player_id].pts += Number(s.points ?? 0);
   });
   const sortedLeaders = Object.entries(ptsByPlayer)
-    .map(([id, v]) => ({ id, ...v }))
-    .sort((a, b) => b.pts - a.pts)
+    .map(([id, v]) => ({ id, ...v, ppg: v.gp > 0 ? v.pts / v.gp : 0 }))
+    .sort((a, b) => b.pts - a.pts || b.ppg - a.ppg)
     .slice(0, 5);
 
   return (
@@ -185,24 +186,23 @@ export default async function Home() {
               <thead className="bg-gray-900 text-white text-[9px] uppercase tracking-widest">
                 <tr>
                   <th className="p-3">Player</th>
-                  <th className="p-3 text-center">Team</th>
+                  <th className="p-3 text-center">GP</th>
+                  <th className="p-3 text-center">PPG</th>
                   <th className="p-3 text-center">PTS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {sortedLeaders.map((p: any, i) => (
                   <tr key={i} className="hover:bg-orange-50 transition-colors">
-                    <td className="p-3 px-3">
-                      <Link href={`/players/${p.id}`} className="group flex flex-col leading-tight">
-                        <span className="text-[10px] text-gray-400">#{i + 1}</span>
-                        <span className="font-black uppercase text-[11px] group-hover:text-orange-600 transition-colors">{p.name}</span>
+                    <td className="p-3 px-3 font-black uppercase text-[11px]">
+                      <Link href={`/players/${p.id}`} className="group flex items-center gap-2 hover:text-orange-600 transition-colors">
+                        <span className="text-gray-300 shrink-0"># {i + 1}</span>
+                        <TeamLogo teamId={p.teamId} size={20} className="shrink-0" />
+                        <span className="truncate max-w-[130px] md:max-w-none">{p.name}</span>
                       </Link>
                     </td>
-                    <td className="p-3 text-center">
-                      <div className="flex justify-center">
-                        <TeamLogo teamId={p.teamId} size={20} />
-                      </div>
-                    </td>
+                    <td className="p-3 text-center text-xs font-bold text-gray-600">{p.gp}</td>
+                    <td className="p-3 text-center text-xs font-bold text-gray-600">{p.ppg.toFixed(1)}</td>
                     <td className="p-3 text-center font-black text-orange-600">{p.pts}</td>
                   </tr>
                 ))}
