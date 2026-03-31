@@ -157,40 +157,6 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* COMPRESSED TOP SCORERS */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black uppercase italic text-orange-600">Top Scorers</h2>
-            <Link href="/leaders" className="text-xs font-bold border-b-2 border-black text-black">All Leaders</Link>
-          </div>
-          <div className="bg-white border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] min-h-[360px]">
-            <table className="w-full text-left bg-white">
-              <thead className="bg-gray-900 text-white text-[9px] uppercase tracking-widest">
-                <tr>
-                  <th className="p-3">Player</th>
-                  <th className="p-3 text-center">GP</th>
-                  <th className="p-3 text-center">PTS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {sortedLeaders.map((p: any, i) => (
-                  <tr key={i} className="hover:bg-orange-50 transition-colors">
-                    <td className="p-3 px-3">
-                      <Link href={`/players/${p.id}`} className="group flex flex-col leading-tight">
-                        <span className="text-[11px] font-black uppercase group-hover:text-orange-600 transition-colors truncate max-w-[140px] md:max-w-none">
-                          {p.name}
-                        </span>
-                        <span className="text-[8px] font-bold text-gray-400 uppercase">{p.team}</span>
-                      </Link>
-                    </td>
-                    <td className="p-2.5 text-center text-xs font-bold text-gray-500">{p.gp}</td>
-                    <td className="p-2.5 text-center font-black text-gray-900 italic">{p.pts}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
       </div>
     </main>
   );
