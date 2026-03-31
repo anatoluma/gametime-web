@@ -94,6 +94,15 @@ export default async function Home() {
               <p className="mt-3 text-sm text-gray-400 max-w-xs">
                 Scores, standings, and player stats for every game of the season.
               </p>
+              <a
+                href="https://gametime.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-orange-400 hover:text-orange-300 transition-colors border border-orange-500/30 hover:border-orange-400/60 rounded-full px-3 py-1.5"
+              >
+                <span>🏀</span>
+                <span>Want to play? → gametime.md</span>
+              </a>
             </div>
 
             {/* Right: stat tiles + leader card */}

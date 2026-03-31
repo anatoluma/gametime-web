@@ -35,8 +35,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
         </div>
 
-        <footer className="max-w-5xl mx-auto py-6 text-center text-[9px] font-bold text-gray-400 uppercase tracking-widest bg-white border-x border-gray-200">
-          � 2026 LBM Stats
+        <footer className="max-w-5xl mx-auto py-6 text-center bg-white border-x border-gray-200 space-y-2">
+          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">© 2026 LBM Stats</p>
+          <p className="text-[9px] text-gray-400 uppercase tracking-widest">
+            Want to play? Find pickup games at{" "}
+            <a
+              href="https://gametime.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold text-orange-500 hover:text-orange-600 transition-colors"
+            >
+              gametime.md
+            </a>
+          </p>
         </footer>
       </body>
     </html>
