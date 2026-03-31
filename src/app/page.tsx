@@ -8,7 +8,7 @@ export default async function Home() {
   const [teamsRes, gamesRes, statsRes] = await Promise.all([
     supabase.from("teams").select("team_id, team_name").eq("is_active", true),
     supabase.from("games").select("*").order("tipoff", { ascending: false }),
-    supabase.from("playerstats").select("player_id, pts, players(player_name, team_id)"),
+    supabase.from("player_game_stats").select("player_id, points, players(first_name, last_name, team_id)"),
   ]);
 
   const teams = teamsRes.data ?? [];
@@ -48,10 +48,11 @@ export default async function Home() {
   const ptsByPlayer: Record<string, { name: string; teamId: string; pts: number }> = {};
   statsData.forEach((s: any) => {
     if (!s.player_id || !s.players) return;
+    const fullName = [s.players.first_name, s.players.last_name].filter(Boolean).join(' ') || s.player_id;
     if (!ptsByPlayer[s.player_id]) {
-      ptsByPlayer[s.player_id] = { name: s.players.player_name ?? s.player_id, teamId: s.players.team_id, pts: 0 };
+      ptsByPlayer[s.player_id] = { name: fullName, teamId: s.players.team_id, pts: 0 };
     }
-    ptsByPlayer[s.player_id].pts += Number(s.pts ?? 0);
+    ptsByPlayer[s.player_id].pts += Number(s.points ?? 0);
   });
   const sortedLeaders = Object.entries(ptsByPlayer)
     .map(([id, v]) => ({ id, ...v }))
