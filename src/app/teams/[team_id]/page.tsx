@@ -84,7 +84,6 @@ export default function TeamPage() {
         <div className="flex flex-col gap-5">
           <div className="flex items-center gap-4">
              <span className="bg-[var(--accent)] text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-[0.2em]">Active Franchise</span>
-             <span className="text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-widest">UID: {team.team_id}</span>
           </div>
 
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
