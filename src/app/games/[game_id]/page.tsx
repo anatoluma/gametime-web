@@ -328,6 +328,21 @@ export default function GamePage() {
           </div>
         </div>
 
+        {/* ── Top Scorer strip ── */}
+        {topScorer && (
+          <div className="relative z-10 mx-6 md:mx-10 mt-5 rounded-2xl flex items-center justify-between gap-4 px-5 py-4" style={{ background: "linear-gradient(135deg, rgba(255,140,0,0.1) 0%, rgba(255,140,0,0.04) 100%)", border: "1px solid rgba(255,140,0,0.22)" }}>
+            <div className="flex items-center gap-4 min-w-0">
+              <span className="text-[8px] font-bold uppercase tracking-[2.5px] flex-shrink-0" style={{ color: "#FF8C00", opacity: 0.8 }}>★ Top Scorer</span>
+              <span className="font-black leading-none truncate" style={{ fontFamily: "'Bebas Neue', Impact, serif", fontSize: "28px", color: "#fff", letterSpacing: "1px" }}>{topScorer.name}</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[1.5px] truncate hidden sm:block" style={{ color: "rgba(255,255,255,0.3)" }}>{topScorer.teamName}</span>
+            </div>
+            <div className="flex items-baseline gap-1.5 flex-shrink-0">
+              <span className="font-black leading-none" style={{ fontFamily: "'Bebas Neue', Impact, serif", fontSize: "40px", color: "#FF8C00", textShadow: "0 0 24px rgba(255,130,0,0.4)" }}>{topScorer.points}</span>
+              <span className="text-[8px] font-bold uppercase tracking-[2px]" style={{ color: "rgba(255,140,0,0.5)" }}>PTS</span>
+            </div>
+          </div>
+        )}
+
         {/* ── Meta strip ── */}
         <div className="relative z-10 mt-5 px-6 md:px-10 py-4 pr-16 md:pr-20 flex flex-wrap gap-x-8 gap-y-2" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
           <span className="flex items-center gap-2">
