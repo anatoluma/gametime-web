@@ -146,6 +146,10 @@ export default function GamePage() {
       })
     : "Date TBD";
 
+  const hasFinalScore = game.home_score !== null && game.away_score !== null;
+  const homeWins = hasFinalScore && game.home_score! > game.away_score!;
+  const awayWins = hasFinalScore && game.away_score! > game.home_score!;
+
   // UPDATED: High Contrast Table
   const renderTable = (rows: PlayerStat[]) => (
     <div className="bg-white border-4 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] mt-3">
@@ -182,117 +186,167 @@ export default function GamePage() {
   return (
     <main className="p-4 md:p-8 max-w-5xl mx-auto bg-white min-h-screen border-x border-gray-100">
       {/* SCOREBOARD HERO */}
-      <div className="bg-black text-white rounded-3xl p-6 md:p-12 shadow-2xl relative overflow-hidden border-b-8 border-orange-600">
-        <div className="absolute top-0 right-0 text-9xl font-black italic text-white/5 select-none pointer-events-none transform translate-x-1/4 -translate-y-1/4">
-          GAME
-        </div>
+      <div
+        className="relative overflow-hidden rounded-3xl text-white shadow-2xl"
+        style={{ background: "#0d0d14" }}
+      >
+        {/* ── Background decorations ── */}
+        <div className="pointer-events-none absolute" style={{ width: "600px", height: "600px", borderRadius: "50%", border: "1px solid rgba(255,140,0,0.05)", top: "-240px", left: "50%", transform: "translateX(-50%)" }} />
+        <div className="pointer-events-none absolute" style={{ width: "440px", height: "440px", borderRadius: "50%", border: "1px solid rgba(255,140,0,0.05)", top: "-180px", left: "50%", transform: "translateX(-50%)" }} />
+        <div className="pointer-events-none absolute inset-x-0 top-0" style={{ height: "200px", background: "radial-gradient(ellipse at top center, rgba(255,130,0,0.08), transparent)" }} />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20" style={{ height: "3px", background: "linear-gradient(90deg, transparent, #FF8C00 25%, #FFB800 50%, #FF8C00 75%, transparent)", animation: "accentPulse 2.5s ease-in-out infinite" }} />
 
-        <div className="relative z-10">
+        {/* ── Content ── */}
+        <div className="relative z-10 px-6 md:px-10 pt-6 pb-0">
+
+          {/* Header row: branding only (pill moved to score center) */}
+          <div className="flex items-start justify-end mb-4">
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "1px" }}>
+                <span style={{ color: "rgba(255,255,255,0.85)" }}>liga</span>
+                <span style={{ color: "#FF8C00" }}>basket</span>
+                <span style={{ color: "rgba(255,255,255,0.85)" }}>.md</span>
+              </div>
+              <div style={{ fontSize: "8px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "rgba(255,255,255,0.25)" }}>Basketball League</div>
+            </div>
+          </div>
+
+          {/* ── MOBILE layout ── */}
           <div className="md:hidden">
             <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
+
+              {/* Home team */}
               <div className="flex flex-col items-center text-center">
-                <TeamLogo
-                  teamId={game.home_team_id}
-                  teamName={homeTeam?.team_name ?? "Home Team"}
-                  size={84}
-                  className="h-16 w-16 object-contain"
-                />
-                <Link
-                  href={`/teams/${game.home_team_id}`}
-                  className="mt-2 min-h-[36px] text-sm font-black uppercase italic tracking-tight text-white hover:text-orange-500 transition-colors leading-tight break-words"
-                >
+                <div className="relative">
+                  <div style={{ width: "64px", height: "64px", borderRadius: "50%", border: homeWins ? "2px solid rgba(255,140,0,0.45)" : "2px solid rgba(255,255,255,0.08)", background: homeWins ? "rgba(255,140,0,0.06)" : "rgba(255,255,255,0.04)", boxShadow: homeWins ? "0 0 20px rgba(255,130,0,0.15)" : "none", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <TeamLogo teamId={game.home_team_id} teamName={homeTeam?.team_name ?? "Home Team"} size={56} className="h-14 w-14 object-contain" />
+                  </div>
+                  {homeWins && (
+                    <div style={{ position: "absolute", top: "-3px", right: "-3px", width: "18px", height: "18px", borderRadius: "50%", background: "#FF8C00", border: "2px solid #0d0d14", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", fontWeight: 900, color: "#000" }}>✓</div>
+                  )}
+                </div>
+                <Link href={`/teams/${game.home_team_id}`} className="mt-2 min-h-[36px] text-sm font-black uppercase tracking-tight leading-tight break-words transition-colors" style={{ color: homeWins ? "#FF8C00" : "rgba(255,255,255,0.85)" }}>
                   {homeTeam?.team_name ?? "Home Team"}
                 </Link>
-                <p className="text-[9px] font-black text-orange-500 tracking-[0.25em] uppercase mt-2">Home Team</p>
+                <p className="text-[8px] font-bold uppercase tracking-[0.2em] mt-1" style={{ color: homeWins ? "rgba(255,140,0,0.6)" : "rgba(255,255,255,0.22)" }}>
+                  {homeWins ? "HOME · WINNER" : "HOME"}
+                </p>
               </div>
 
+              {/* Score */}
               <div className="flex flex-col items-center pt-1">
-                <div className="flex items-center justify-center gap-3">
-                  <span className="text-5xl font-black italic tabular-nums text-white leading-none">{game.home_score ?? "-"}</span>
-                  <span className="text-xl font-black text-orange-600">:</span>
-                  <span className="text-5xl font-black italic tabular-nums text-white leading-none">{game.away_score ?? "-"}</span>
+                <div className="flex items-end">
+                  <span className="text-5xl font-black tabular-nums leading-none" style={{ fontFamily: "'Bebas Neue', Impact, serif", color: hasFinalScore ? (homeWins ? "#FF8C00" : "rgba(255,255,255,0.3)") : "white", textShadow: homeWins ? "0 0 40px rgba(255,130,0,0.35)" : "none" }}>{game.home_score ?? "-"}</span>
+                  <span className="text-2xl font-black leading-none pb-1 px-1" style={{ fontFamily: "'Bebas Neue', Impact, serif", color: "rgba(255,255,255,0.13)" }}>:</span>
+                  <span className="text-5xl font-black tabular-nums leading-none" style={{ fontFamily: "'Bebas Neue', Impact, serif", color: hasFinalScore ? (awayWins ? "#FF8C00" : "rgba(255,255,255,0.3)") : "white", textShadow: awayWins ? "0 0 40px rgba(255,130,0,0.35)" : "none" }}>{game.away_score ?? "-"}</span>
                 </div>
-                <div className="mt-3 bg-orange-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-[0.18em]">
-                  {game.home_score !== null ? "Final Results" : "Scheduled"}
+                <div className="mt-3" style={{ background: hasFinalScore ? "rgba(255,140,0,0.12)" : "rgba(255,255,255,0.07)", border: hasFinalScore ? "1px solid rgba(255,140,0,0.3)" : "1px solid rgba(255,255,255,0.1)", borderRadius: "20px", padding: "4px 10px", fontSize: "8px", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: hasFinalScore ? "#FF8C00" : "rgba(255,255,255,0.4)" }}>
+                  {hasFinalScore ? "⚡ Final" : "Scheduled"}
                 </div>
               </div>
 
+              {/* Away team */}
               <div className="flex flex-col items-center text-center">
-                <TeamLogo
-                  teamId={game.away_team_id}
-                  teamName={awayTeam?.team_name ?? "Away Team"}
-                  size={84}
-                  className="h-16 w-16 object-contain"
-                />
-                <Link
-                  href={`/teams/${game.away_team_id}`}
-                  className="mt-2 min-h-[36px] text-sm font-black uppercase italic tracking-tight text-white hover:text-orange-500 transition-colors leading-tight break-words"
-                >
+                <div className="relative">
+                  <div style={{ width: "64px", height: "64px", borderRadius: "50%", border: awayWins ? "2px solid rgba(255,140,0,0.45)" : "2px solid rgba(255,255,255,0.08)", background: awayWins ? "rgba(255,140,0,0.06)" : "rgba(255,255,255,0.04)", boxShadow: awayWins ? "0 0 20px rgba(255,130,0,0.15)" : "none", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <TeamLogo teamId={game.away_team_id} teamName={awayTeam?.team_name ?? "Away Team"} size={56} className="h-14 w-14 object-contain" />
+                  </div>
+                  {awayWins && (
+                    <div style={{ position: "absolute", top: "-3px", right: "-3px", width: "18px", height: "18px", borderRadius: "50%", background: "#FF8C00", border: "2px solid #0d0d14", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", fontWeight: 900, color: "#000" }}>✓</div>
+                  )}
+                </div>
+                <Link href={`/teams/${game.away_team_id}`} className="mt-2 min-h-[36px] text-sm font-black uppercase tracking-tight leading-tight break-words transition-colors" style={{ color: awayWins ? "#FF8C00" : "rgba(255,255,255,0.85)" }}>
                   {awayTeam?.team_name ?? "Away Team"}
                 </Link>
-                <p className="text-[9px] font-black text-orange-500 tracking-[0.25em] uppercase mt-2">Away Team</p>
+                <p className="text-[8px] font-bold uppercase tracking-[0.2em] mt-1" style={{ color: awayWins ? "rgba(255,140,0,0.6)" : "rgba(255,255,255,0.22)" }}>
+                  {awayWins ? "AWAY · WINNER" : "AWAY"}
+                </p>
               </div>
+
             </div>
           </div>
 
-          <div className="hidden md:flex items-center justify-between gap-10">
-            <div className="flex-1 flex flex-col items-center">
-              <div className="grid grid-cols-[auto,minmax(0,1fr)] items-center gap-4 w-full max-w-[320px]">
-                <TeamLogo
-                  teamId={game.home_team_id}
-                  teamName={homeTeam?.team_name ?? "Home Team"}
-                  size={112}
-                  className="h-20 w-20 md:h-28 md:w-28 object-contain shrink-0"
-                />
-                <Link
-                  href={`/teams/${game.home_team_id}`}
-                  className="flex min-h-[72px] md:min-h-[92px] items-center text-xl sm:text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-white hover:text-orange-500 transition-colors leading-[0.9] break-words"
-                >
-                  {homeTeam?.team_name ?? "Home Team"}
-                </Link>
+          {/* ── DESKTOP layout ── */}
+          <div className="hidden md:flex items-center justify-between gap-8">
+
+            {/* Home team — left-aligned */}
+            <div className="flex-1 flex flex-col items-start">
+              <div className="flex items-center gap-5">
+                <div className="relative flex-shrink-0">
+                  <div style={{ width: "80px", height: "80px", borderRadius: "50%", border: homeWins ? "2px solid rgba(255,140,0,0.45)" : "2px solid rgba(255,255,255,0.08)", background: homeWins ? "rgba(255,140,0,0.06)" : "rgba(255,255,255,0.04)", boxShadow: homeWins ? "0 0 24px rgba(255,130,0,0.18)" : "none", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <TeamLogo teamId={game.home_team_id} teamName={homeTeam?.team_name ?? "Home Team"} size={72} className="h-[72px] w-[72px] object-contain" />
+                  </div>
+                  {homeWins && (
+                    <div style={{ position: "absolute", top: "-3px", right: "-3px", width: "20px", height: "20px", borderRadius: "50%", background: "#FF8C00", border: "2px solid #0d0d14", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: 900, color: "#000" }}>✓</div>
+                  )}
+                </div>
+                <div>
+                  <Link href={`/teams/${game.home_team_id}`} className="block font-black uppercase tracking-tighter leading-[0.9] break-words transition-colors text-2xl md:text-3xl xl:text-4xl" style={{ color: homeWins ? "#FF8C00" : "rgba(255,255,255,0.9)" }}>
+                    {homeTeam?.team_name ?? "Home Team"}
+                  </Link>
+                  <p className="mt-2 text-[9px] font-bold uppercase tracking-[0.22em]" style={{ color: homeWins ? "rgba(255,140,0,0.6)" : "rgba(255,255,255,0.22)" }}>
+                    {homeWins ? "HOME · WINNER" : "HOME"}
+                  </p>
+                </div>
               </div>
-              <p className="text-[10px] font-black text-orange-500 tracking-[0.3em] uppercase mt-3">Home Team</p>
             </div>
 
-            <div className="text-center flex flex-col items-center">
-               <div className="flex items-center justify-center gap-6">
-                  <span className="text-6xl md:text-8xl font-black italic tabular-nums text-white leading-none">{game.home_score ?? "-"}</span>
-                  <span className="text-2xl md:text-4xl font-black text-orange-600">:</span>
-                  <span className="text-6xl md:text-8xl font-black italic tabular-nums text-white leading-none">{game.away_score ?? "-"}</span>
-               </div>
-               <div className="mt-6 bg-orange-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em]">
-                  {game.home_score !== null ? "Final Results" : "Scheduled"}
-               </div>
+            {/* Score — center */}
+            <div className="text-center flex flex-col items-center flex-shrink-0">
+              <div className="flex items-end">
+                <span className="font-black tabular-nums leading-none text-7xl md:text-8xl" style={{ fontFamily: "'Bebas Neue', Impact, serif", color: hasFinalScore ? (homeWins ? "#FF8C00" : "rgba(255,255,255,0.3)") : "white", textShadow: homeWins ? "0 0 50px rgba(255,130,0,0.4)" : "none" }}>{game.home_score ?? "-"}</span>
+                <span className="font-black leading-none pb-2 px-2 text-4xl" style={{ fontFamily: "'Bebas Neue', Impact, serif", color: "rgba(255,255,255,0.12)" }}>:</span>
+                <span className="font-black tabular-nums leading-none text-7xl md:text-8xl" style={{ fontFamily: "'Bebas Neue', Impact, serif", color: hasFinalScore ? (awayWins ? "#FF8C00" : "rgba(255,255,255,0.3)") : "white", textShadow: awayWins ? "0 0 50px rgba(255,130,0,0.4)" : "none" }}>{game.away_score ?? "-"}</span>
+              </div>
+              <div className="mt-4" style={{ background: hasFinalScore ? "rgba(255,140,0,0.12)" : "rgba(255,255,255,0.07)", border: hasFinalScore ? "1px solid rgba(255,140,0,0.3)" : "1px solid rgba(255,255,255,0.1)", borderRadius: "20px", padding: "5px 14px", fontSize: "9px", fontWeight: 700, letterSpacing: "2.5px", textTransform: "uppercase", color: hasFinalScore ? "#FF8C00" : "rgba(255,255,255,0.4)" }}>
+                {hasFinalScore ? "⚡ Final Result" : "Scheduled"}
+              </div>
             </div>
 
-            <div className="flex-1 flex flex-col items-center">
-              <div className="grid grid-cols-[auto,minmax(0,1fr)] items-center gap-4 w-full max-w-[320px]">
-                <TeamLogo
-                  teamId={game.away_team_id}
-                  teamName={awayTeam?.team_name ?? "Away Team"}
-                  size={112}
-                  className="h-20 w-20 md:h-28 md:w-28 object-contain shrink-0"
-                />
-                <Link
-                  href={`/teams/${game.away_team_id}`}
-                  className="flex min-h-[72px] md:min-h-[92px] items-center text-xl sm:text-2xl md:text-4xl font-black uppercase italic tracking-tighter text-white hover:text-orange-500 transition-colors leading-[0.9] break-words"
-                >
-                  {awayTeam?.team_name ?? "Away Team"}
-                </Link>
+            {/* Away team — right-aligned */}
+            <div className="flex-1 flex flex-col items-end">
+              <div className="flex items-center gap-5 flex-row-reverse">
+                <div className="relative flex-shrink-0">
+                  <div style={{ width: "80px", height: "80px", borderRadius: "50%", border: awayWins ? "2px solid rgba(255,140,0,0.45)" : "2px solid rgba(255,255,255,0.08)", background: awayWins ? "rgba(255,140,0,0.06)" : "rgba(255,255,255,0.04)", boxShadow: awayWins ? "0 0 24px rgba(255,130,0,0.18)" : "none", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <TeamLogo teamId={game.away_team_id} teamName={awayTeam?.team_name ?? "Away Team"} size={72} className="h-[72px] w-[72px] object-contain" />
+                  </div>
+                  {awayWins && (
+                    <div style={{ position: "absolute", top: "-3px", right: "-3px", width: "20px", height: "20px", borderRadius: "50%", background: "#FF8C00", border: "2px solid #0d0d14", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: 900, color: "#000" }}>✓</div>
+                  )}
+                </div>
+                <div className="text-right">
+                  <Link href={`/teams/${game.away_team_id}`} className="block font-black uppercase tracking-tighter leading-[0.9] break-words transition-colors text-2xl md:text-3xl xl:text-4xl" style={{ color: awayWins ? "#FF8C00" : "rgba(255,255,255,0.9)" }}>
+                    {awayTeam?.team_name ?? "Away Team"}
+                  </Link>
+                  <p className="mt-2 text-[9px] font-bold uppercase tracking-[0.22em]" style={{ color: awayWins ? "rgba(255,140,0,0.6)" : "rgba(255,255,255,0.22)" }}>
+                    {awayWins ? "AWAY · WINNER" : "AWAY"}
+                  </p>
+                </div>
               </div>
-              <p className="text-[10px] font-black text-orange-500 tracking-[0.3em] uppercase mt-3">Away Team</p>
             </div>
+
           </div>
         </div>
 
-        <div className="mt-10 pt-8 border-t border-white/10 flex flex-wrap justify-center gap-x-10 gap-y-3 pr-14 md:pr-16 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
-           <span className="flex items-center gap-2"><span className="text-orange-600">●</span> {game.tipoff ? new Date(game.tipoff).toLocaleString([], { dateStyle: 'full', timeStyle: 'short' }) : "TBD"}</span>
-           <span className="flex items-center gap-2"><span className="text-orange-600">●</span> {game.venue ?? "Local Arena"}</span>
-           <span className="flex items-center gap-2 text-white">{game.season ?? "2025/26 Season"}</span>
+        {/* ── Meta strip ── */}
+        <div className="relative z-10 mt-5 px-6 md:px-10 py-4 pr-16 md:pr-20 flex flex-wrap gap-x-8 gap-y-2" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+          <span className="flex items-center gap-2">
+            <span className="h-[5px] w-[5px] flex-shrink-0 rounded-full" style={{ background: "#FF8C00", opacity: 0.5 }} />
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.6)" }}>{dateLabel}</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-[5px] w-[5px] flex-shrink-0 rounded-full" style={{ background: "#FF8C00", opacity: 0.5 }} />
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.35)" }}>{game.venue ?? "Local Arena"}</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-[5px] w-[5px] flex-shrink-0 rounded-full" style={{ background: "#FF8C00", opacity: 0.5 }} />
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.35)" }}>Season {game.season ?? "2025-2026"}</span>
+          </span>
         </div>
 
-        {game.home_score !== null && game.away_score !== null && (
-          <div className="absolute bottom-4 right-4 z-20 md:bottom-6 md:right-6">
+        {/* ── Share button ── */}
+        {hasFinalScore && (
+          <div className="absolute bottom-4 right-4 z-20 md:bottom-5 md:right-6">
             <GameSharePanel
               gameId={game.game_id}
               homeTeam={{
@@ -303,8 +357,8 @@ export default function GamePage() {
                 name: awayTeam?.team_name ?? "Away Team",
                 logoUrl: `/images/teams/${game.away_team_id.toLowerCase()}.webp`,
               }}
-              homeScore={game.home_score}
-              awayScore={game.away_score}
+              homeScore={game.home_score!}
+              awayScore={game.away_score!}
               venue={game.venue ?? "Local Arena"}
               date={dateLabel}
               season={game.season ?? "2025-2026"}

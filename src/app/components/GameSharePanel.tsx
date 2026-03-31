@@ -422,13 +422,14 @@ function ShareCard({
               </div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, gap: "2px" }}>
               <span
                 style={{
                   fontFamily: BEBAS,
                   fontSize: "56px",
                   color: "#FF8C00",
-                  lineHeight: 1,
+                  lineHeight: "0.85",
+                  display: "block",
                   textShadow: "0 0 30px rgba(255,130,0,0.4)",
                 }}
               >
@@ -442,6 +443,7 @@ function ShareCard({
                   letterSpacing: "2px",
                   textTransform: "uppercase",
                   color: "rgba(255,140,0,0.5)",
+                  display: "block",
                 }}
               >
                 POINTS
