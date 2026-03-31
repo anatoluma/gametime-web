@@ -5,9 +5,10 @@ import TeamLogo from "@/app/components/TeamLogo";
 export const revalidate = 0;
 
 export default async function Home() {
-  const [teamsRes, gamesRes] = await Promise.all([
+  const [teamsRes, gamesRes, statsRes] = await Promise.all([
     supabase.from("teams").select("team_id, team_name").eq("is_active", true),
     supabase.from("games").select("*").order("tipoff", { ascending: false }),
+    supabase.from("playerstats").select("player_id, pts, players(player_name, team_id)"),
   ]);
 
   const teams = teamsRes.data ?? [];
@@ -41,6 +42,21 @@ export default async function Home() {
     .slice(0, 5);
 
   const gamesPlayed = allGames.filter(g => g.home_score !== null).length;
+
+  // --- LEADERS LOGIC ---
+  const statsData = statsRes.data ?? [];
+  const ptsByPlayer: Record<string, { name: string; teamId: string; pts: number }> = {};
+  statsData.forEach((s: any) => {
+    if (!s.player_id || !s.players) return;
+    if (!ptsByPlayer[s.player_id]) {
+      ptsByPlayer[s.player_id] = { name: s.players.player_name ?? s.player_id, teamId: s.players.team_id, pts: 0 };
+    }
+    ptsByPlayer[s.player_id].pts += Number(s.pts ?? 0);
+  });
+  const sortedLeaders = Object.entries(ptsByPlayer)
+    .map(([id, v]) => ({ id, ...v }))
+    .sort((a, b) => b.pts - a.pts)
+    .slice(0, 5);
 
   return (
     <main className="min-h-screen bg-white text-black">
@@ -150,6 +166,43 @@ export default async function Home() {
                     </td>
                     <td className="p-3 text-center text-xs font-bold">{team.w}-{team.l}</td>
                     <td className="p-3 text-center font-black text-orange-600">{team.pts}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* LEADERS */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-black uppercase italic">Top Scorers</h2>
+            <Link href="/leaders" className="text-xs font-bold border-b-2 border-black text-black">Full Leaders</Link>
+          </div>
+          <div className="border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] min-h-[360px]">
+            <table className="w-full text-left bg-white">
+              <thead className="bg-gray-900 text-white text-[9px] uppercase tracking-widest">
+                <tr>
+                  <th className="p-3">Player</th>
+                  <th className="p-3 text-center">Team</th>
+                  <th className="p-3 text-center">PTS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {sortedLeaders.map((p: any, i) => (
+                  <tr key={i} className="hover:bg-orange-50 transition-colors">
+                    <td className="p-3 px-3">
+                      <Link href={`/players/${p.id}`} className="group flex flex-col leading-tight">
+                        <span className="text-[10px] text-gray-400">#{i + 1}</span>
+                        <span className="font-black uppercase text-[11px] group-hover:text-orange-600 transition-colors">{p.name}</span>
+                      </Link>
+                    </td>
+                    <td className="p-3 text-center">
+                      <div className="flex justify-center">
+                        <TeamLogo teamId={p.teamId} size={20} />
+                      </div>
+                    </td>
+                    <td className="p-3 text-center font-black text-orange-600">{p.pts}</td>
                   </tr>
                 ))}
               </tbody>
