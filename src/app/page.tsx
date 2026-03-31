@@ -1,7 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
-import Image from "next/image";
-import banner from "../banner.png";
 import TeamLogo from "@/app/components/TeamLogo";
 
 export const revalidate = 0;
@@ -73,18 +71,87 @@ export default async function Home() {
     .sort((a, b) => b.pts - a.pts || b.gp - a.gp) // Primary: Total PTS, Secondary: Games Played
     .slice(0, 5);
 
+  const gamesPlayed = allGames.filter(g => g.home_score !== null).length;
+
   return (
     <main className="min-h-screen bg-white text-black">
       {/* HERO BANNER */}
-      <section className="bg-white py-4 md:py-6 px-3 sm:px-6 border-b-2 border-gray-200">
-        <div className="overflow-hidden rounded-xl border border-gray-200">
-          <Image
-            src={banner}
-            alt="Liga Basket Moldova banner"
-            priority
-            className="w-full h-[170px] sm:h-[220px] md:h-[280px] object-cover object-center block"
-            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 1200px, 1400px"
-          />
+      <section className="relative overflow-hidden bg-gray-950 text-white border-b-4 border-orange-500">
+        {/* Decorative radial glows */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-20 top-0 h-full w-1/2 rounded-full bg-orange-500/10 blur-3xl" />
+          <div className="absolute -right-20 bottom-0 h-full w-1/2 rounded-full bg-blue-800/20 blur-3xl" />
+        </div>
+        {/* Decorative basketball circle */}
+        <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 hidden sm:block">
+          <div className="h-48 w-48 md:h-64 md:w-64 rounded-full border-[16px] border-orange-500/10 opacity-60" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="h-28 w-28 md:h-40 md:w-40 rounded-full border-[10px] border-orange-500/8" />
+          </div>
+        </div>
+
+        <div className="relative mx-auto max-w-screen-xl px-4 sm:px-6 py-8 sm:py-10 md:py-14">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+
+            {/* Left: branding + CTAs */}
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <span className="text-orange-400 text-[10px] font-black uppercase tracking-[0.2em]">Official Stats Platform</span>
+                <span className="h-px w-8 bg-orange-400/60 inline-block" />
+                <span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Season 2025/26</span>
+              </div>
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase leading-none tracking-tight">
+                Liga Basket<br />
+                <span className="text-orange-400">Moldova</span>
+              </h1>
+              <p className="mt-3 text-sm text-gray-400 max-w-xs">
+                Scores, standings, and player stats for every game of the season.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link href="/games" className="bg-orange-500 hover:bg-orange-400 text-white text-xs font-black uppercase px-5 py-2.5 rounded-lg transition-colors">
+                  All Games
+                </Link>
+                <Link href="/standings" className="border border-white/20 hover:bg-white/10 text-white text-xs font-black uppercase px-5 py-2.5 rounded-lg transition-colors">
+                  Standings
+                </Link>
+                <Link href="/leaders" className="border border-white/20 hover:bg-white/10 text-white text-xs font-black uppercase px-5 py-2.5 rounded-lg transition-colors">
+                  Leaders
+                </Link>
+              </div>
+            </div>
+
+            {/* Right: stat tiles + leader card */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-xl bg-white/8 border border-white/10 p-4 text-center">
+                <div className="text-3xl font-black">{teams.length}</div>
+                <div className="mt-1 text-[10px] uppercase tracking-widest text-gray-400">Teams</div>
+              </div>
+              <div className="rounded-xl bg-white/8 border border-white/10 p-4 text-center">
+                <div className="text-3xl font-black">{gamesPlayed}</div>
+                <div className="mt-1 text-[10px] uppercase tracking-widest text-gray-400">Games</div>
+              </div>
+              <div className="rounded-xl bg-white/8 border border-white/10 p-4 text-center">
+                <div className="text-3xl font-black text-orange-400">{sortedLeaders[0]?.pts ?? 0}</div>
+                <div className="mt-1 text-[10px] uppercase tracking-widest text-gray-400">Top PTS</div>
+              </div>
+
+              {sortedLeaders[0] && (
+                <div className="col-span-3 rounded-xl border border-orange-500/30 bg-orange-500/10 p-4">
+                  <div className="text-[9px] font-black uppercase tracking-[0.2em] text-orange-400 mb-1">Scoring Leader</div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-base font-black uppercase leading-snug">{sortedLeaders[0].name}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{sortedLeaders[0].team} · {sortedLeaders[0].gp} games</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-black text-orange-400 leading-none">{sortedLeaders[0].pts}</div>
+                      <div className="text-[9px] uppercase tracking-widest text-gray-500 mt-1">Total PTS</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
