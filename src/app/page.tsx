@@ -5,24 +5,17 @@ import TeamLogo from "@/app/components/TeamLogo";
 export const revalidate = 0;
 
 export default async function Home() {
-  const [teamsRes, gamesRes, leadersRes] = await Promise.all([
+  const [teamsRes, gamesRes] = await Promise.all([
     supabase.from("teams").select("team_id, team_name").eq("is_active", true),
     supabase.from("games").select("*").order("tipoff", { ascending: false }),
-    // Fetch all stats to calculate real leaders (Total Points)
-    supabase.from("player_game_stats").select(`
-      player_id,
-      points,
-      players (first_name, last_name, team_id)
-    `)
   ]);
 
   const teams = teamsRes.data ?? [];
   const allGames = gamesRes.data ?? [];
   const recentGames = allGames.slice(0, 4);
-  const rawStats = leadersRes.data ?? [];
   const teamMap = new Map(teams.map(t => [t.team_id, t.team_name ?? t.team_id]));
 
-  // --- 1. STANDINGS LOGIC ---
+  // --- STANDINGS LOGIC ---
   const table: Record<string, any> = {};
   teams.forEach(t => {
     table[t.team_id] = { name: t.team_name, id: t.team_id, w: 0, l: 0, pts: 0, pf: 0, pa: 0, diff: 0 };
@@ -45,30 +38,6 @@ export default async function Home() {
   Object.keys(table).forEach(k => { table[k].diff = table[k].pf - table[k].pa; });
   const sortedStandings = Object.values(table)
     .sort((a: any, b: any) => b.pts - a.pts || b.diff - a.diff || b.pf - a.pf || a.name.localeCompare(b.name))
-    .slice(0, 5);
-
-  // --- 2. LEADERS LOGIC (Aggregated to match Leaders Page) ---
-  const playerMap = new Map<string, any>();
-  rawStats.forEach((s: any) => {
-    const pid = s.player_id;
-    const pts = s.points ?? 0;
-    const existing = playerMap.get(pid);
-    if (!existing) {
-      playerMap.set(pid, {
-        id: pid,
-        name: `${s.players?.first_name} ${s.players?.last_name}`,
-        team: s.players?.team_id,
-        pts: pts,
-        gp: 1
-      });
-    } else {
-      existing.pts += pts;
-      existing.gp += 1;
-    }
-  });
-
-  const sortedLeaders = Array.from(playerMap.values())
-    .sort((a, b) => b.pts - a.pts || b.gp - a.gp) // Primary: Total PTS, Secondary: Games Played
     .slice(0, 5);
 
   const gamesPlayed = allGames.filter(g => g.home_score !== null).length;
@@ -107,17 +76,6 @@ export default async function Home() {
               <p className="mt-3 text-sm text-gray-400 max-w-xs">
                 Scores, standings, and player stats for every game of the season.
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link href="/games" className="bg-orange-500 hover:bg-orange-400 text-white text-xs font-black uppercase px-5 py-2.5 rounded-lg transition-colors">
-                  All Games
-                </Link>
-                <Link href="/standings" className="border border-white/20 hover:bg-white/10 text-white text-xs font-black uppercase px-5 py-2.5 rounded-lg transition-colors">
-                  Standings
-                </Link>
-                <Link href="/leaders" className="border border-white/20 hover:bg-white/10 text-white text-xs font-black uppercase px-5 py-2.5 rounded-lg transition-colors">
-                  Leaders
-                </Link>
-              </div>
             </div>
 
             {/* Right: stat tiles + leader card */}
@@ -131,25 +89,9 @@ export default async function Home() {
                 <div className="mt-1 text-[10px] uppercase tracking-widest text-gray-400">Games</div>
               </div>
               <div className="rounded-xl bg-white/8 border border-white/10 p-4 text-center">
-                <div className="text-3xl font-black text-orange-400">{sortedLeaders[0]?.pts ?? 0}</div>
-                <div className="mt-1 text-[10px] uppercase tracking-widest text-gray-400">Top PTS</div>
+                <div className="text-3xl font-black text-orange-400">{allGames.length}</div>
+                <div className="mt-1 text-[10px] uppercase tracking-widest text-gray-400">Total Games</div>
               </div>
-
-              {sortedLeaders[0] && (
-                <div className="col-span-3 rounded-xl border border-orange-500/30 bg-orange-500/10 p-4">
-                  <div className="text-[9px] font-black uppercase tracking-[0.2em] text-orange-400 mb-1">Scoring Leader</div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-base font-black uppercase leading-snug">{sortedLeaders[0].name}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{sortedLeaders[0].team} · {sortedLeaders[0].gp} games</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-black text-orange-400 leading-none">{sortedLeaders[0].pts}</div>
-                      <div className="text-[9px] uppercase tracking-widest text-gray-500 mt-1">Total PTS</div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
