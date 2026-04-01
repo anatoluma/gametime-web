@@ -39,6 +39,37 @@ type ExistingPlayer = {
   jersey_number: number | null;
 };
 
+type PlayerGameStatInsert = {
+  game_id: string;
+  source_job_id: string;
+  player_id: string;
+  team_id: string;
+  is_starter: boolean;
+  is_captain: boolean;
+  dnp: boolean;
+  minutes: string | null;
+  fg_made: number | null;
+  fg_att: number | null;
+  two_made: number | null;
+  two_att: number | null;
+  three_made: number | null;
+  three_att: number | null;
+  ft_made: number | null;
+  ft_att: number | null;
+  reb_off: number | null;
+  reb_def: number | null;
+  reb_tot: number | null;
+  assists: number | null;
+  turnovers: number | null;
+  steals: number | null;
+  blocks: number | null;
+  fouls_personal: number | null;
+  fouls_drawn: number | null;
+  plus_minus: number | null;
+  efficiency: number | null;
+  points: number | null;
+};
+
 type PlayerLike = {
   team_code?: string | null;
   number?: number | null;
@@ -294,9 +325,23 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
       .from("games")
       .upsert({
         game_id: gameId,
+        source_job_id: job.id,
+        competition_id: job.competition_id,
+        game_number: toNumber(extraction.meta?.game_number),
         tipoff: playedAt,
         season,
         venue,
+        duration_minutes: toNumber(extraction.meta?.duration_minutes),
+        crew_chief: toStringOrNull(extraction.meta?.crew_chief),
+        umpires: Array.isArray(extraction.meta?.umpires) ? extraction.meta?.umpires : [],
+        score_intervals: {
+          home: Array.isArray(extraction.score_by_periods?.home?.intervals)
+            ? extraction.score_by_periods.home.intervals
+            : [],
+          away: Array.isArray(extraction.score_by_periods?.away?.intervals)
+            ? extraction.score_by_periods.away.intervals
+            : [],
+        },
         home_team_id: homeTeamId,
         away_team_id: awayTeamId,
         home_score: toNumber(extraction.home_team?.score),
@@ -369,14 +414,39 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
       }
       const stats = player.stats ?? {};
 
-      return {
+      const row: PlayerGameStatInsert = {
         game_id: game.game_id,
+        source_job_id: job.id,
         player_id: playerId,
         team_id: teamId,
+        is_starter: player.starter ?? false,
+        is_captain: player.captain ?? false,
+        dnp: player.dnp ?? false,
+        minutes: toStringOrNull(stats.min),
+        fg_made: toNumber(stats.fg_made),
+        fg_att: toNumber(stats.fg_att),
+        two_made: toNumber(stats.two_made),
+        two_att: toNumber(stats.two_att),
+        three_made: toNumber(stats.three_made),
+        three_att: toNumber(stats.three_att),
+        ft_made: toNumber(stats.ft_made),
+        ft_att: toNumber(stats.ft_att),
+        reb_off: toNumber(stats.reb_off),
+        reb_def: toNumber(stats.reb_def),
+        reb_tot: toNumber(stats.reb_tot),
+        assists: toNumber(stats.assists),
+        turnovers: toNumber(stats.turnovers),
+        steals: toNumber(stats.steals),
+        blocks: toNumber(stats.blocks),
+        fouls_personal: toNumber(stats.fouls_personal),
+        fouls_drawn: toNumber(stats.fouls_drawn),
+        plus_minus: toNumber(stats.plus_minus),
+        efficiency: toNumber(stats.efficiency),
         points: toNumber(stats.points),
       };
+      return row;
       })
-      .filter((row): row is { game_id: string; player_id: string; team_id: string; points: number | null } => row !== null);
+      .filter((row): row is PlayerGameStatInsert => row !== null);
 
     if (playerStatRows.length > 0) {
       const { error: playerStatsError } = await supabaseAdmin
@@ -393,6 +463,7 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
       const teamCode = normalizeCode(summary.team_code);
       return {
         game_id: game.game_id,
+        source_job_id: job.id,
         team_id: teamCode ? teamIdByCode.get(teamCode) ?? null : null,
         points_from_turnovers: toNumber(summary.points_from_turnovers),
         points_in_paint: toNumber(summary.points_in_paint),
