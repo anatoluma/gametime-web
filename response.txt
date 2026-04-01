@@ -1,1 +1,1 @@
-{"error":"Storage upload failed: Bucket not found"}
+{"job_id":"53ae417d-7d22-430e-a778-5c2866087fd8","status":"pending","created_at":"2026-04-01T17:30:58.236819+00:00"}

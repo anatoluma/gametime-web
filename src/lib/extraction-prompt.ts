@@ -1,4 +1,4 @@
-You are extracting structured data from a FIBA box score image.
+export const EXTRACTION_PROMPT = String.raw`You are extracting structured data from a FIBA box score image.
 Return ONLY valid JSON, no explanation, no markdown, no backticks.
 Extract every field exactly as printed. Do not calculate or infer any values — if something is not legible, use null.
 
@@ -111,4 +111,6 @@ Duration:
 General:
 - Use null for any value not visible or not legible
 - Extract names exactly as printed, including initials and spacing
-- Do not correct spelling or normalise names
+- Do not correct spelling or normalise names`;
+
+export default EXTRACTION_PROMPT;
