@@ -316,7 +316,26 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
       toStringOrNull(extraction.meta?.start_time)
     );
 
-    const gameId = generateGameId(playedAt, homeTeamId, awayTeamId);
+    // If a game with matching teams already exists on the same date, reuse its game_id
+    // instead of generating a new one (avoids duplicate game rows on re-commit).
+    const gameDate = playedAt ? playedAt.slice(0, 10) : null;
+    let gameId = generateGameId(playedAt, homeTeamId, awayTeamId);
+
+    if (gameDate) {
+      const { data: existingGame } = await supabaseAdmin
+        .from("games")
+        .select("game_id")
+        .eq("home_team_id", homeTeamId)
+        .eq("away_team_id", awayTeamId)
+        .gte("tipoff", `${gameDate}T00:00:00Z`)
+        .lte("tipoff", `${gameDate}T23:59:59Z`)
+        .maybeSingle<{ game_id: string }>();
+
+      if (existingGame?.game_id) {
+        gameId = existingGame.game_id;
+      }
+    }
+
     const fallbackSeason = String(job.season_id ?? "").trim();
     const season = computeSeasonFromTipoff(playedAt) ?? (fallbackSeason.length > 0 ? fallbackSeason : null);
     const venue = getVenueFromHomeTeam(homeTeamId);
