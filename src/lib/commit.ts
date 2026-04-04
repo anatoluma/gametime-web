@@ -288,6 +288,7 @@ async function setCommitError(jobId: string, message: string): Promise<void> {
 }
 
 export async function commitJob(jobId: string): Promise<{ game_id: string }> {
+  console.log("TEAM_CODE_MAP keys:", Object.keys(TEAM_CODE_MAP));
   try {
     const { data: job, error: jobError } = await supabaseAdmin
       .from("processing_jobs")
