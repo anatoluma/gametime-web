@@ -77,6 +77,12 @@ Teams:
 - team_code must match the abbreviation shown in the box score tables (e.g. ADM, MET)
 
 Score by periods:
+- score_by_periods: the "Scoring by 5 Minute intervals" table has two rows
+  labeled ADM and MET (or whatever the team codes are)
+- Match each row to the correct team by the label on the LEFT of that row
+- Do NOT assume the first row is home and second row is away
+- Cross-check: score_by_periods.home.intervals last value must equal home_team.score
+  and score_by_periods.away.intervals last value must equal away_team.score
 - score_by_periods.home must correspond to home_team, score_by_periods.away to away_team
 - q1_end/q2_end/q3_end/q4_end are the cumulative scores at the END of each quarter
 - intervals: extract the 8 cumulative values left-to-right from the "Scoring by 5 Minute intervals" grid
