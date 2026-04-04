@@ -390,6 +390,33 @@ export function validateExtraction(
 		)
 	);
 
+	// Duplicate jersey numbers within the same team
+	const jerseySeenByTeam = new Map<string, Map<number, string>>();
+	const duplicateJerseyOffenders: string[] = [];
+	for (const p of players) {
+		const team = typeof p.team_code === "string" && p.team_code.trim() ? p.team_code.trim().toUpperCase() : null;
+		const num = toNumber(p.number);
+		if (team === null || num === null) continue;
+		if (!jerseySeenByTeam.has(team)) jerseySeenByTeam.set(team, new Map());
+		const seen = jerseySeenByTeam.get(team)!;
+		if (seen.has(num)) {
+			duplicateJerseyOffenders.push(`${team} #${num}: ${seen.get(num)} & ${playerLabel(p)}`);
+		} else {
+			seen.set(num, playerLabel(p));
+		}
+	}
+
+	checks.push(
+		makeCheck(
+			"duplicate_jersey",
+			"soft",
+			duplicateJerseyOffenders.length === 0,
+			duplicateJerseyOffenders.length === 0
+				? "No duplicate jersey numbers within any team"
+				: `Duplicate jersey numbers: ${duplicateJerseyOffenders.join("; ")}`
+		)
+	);
+
 	return checks;
 }
 
