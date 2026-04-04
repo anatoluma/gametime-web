@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { commitJob } from "@/lib/commit";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -86,5 +87,15 @@ export async function POST(
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ job_id, status: "approved" });
+  // Commit the approved job — writes to games and player_game_stats, marks status committed
+  let game_id: string;
+  try {
+    const result = await commitJob(job_id);
+    game_id = result.game_id;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Commit failed";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+
+  return NextResponse.json({ job_id, status: "committed", game_id });
 }
