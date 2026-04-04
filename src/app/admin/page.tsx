@@ -47,6 +47,13 @@ export default function AdminPage() {
         >
           View site statistics
         </Link>
+
+        <Link
+          href="/admin/box-scores"
+          className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-4 text-lg font-medium hover:bg-[var(--surface-muted)]"
+        >
+          Box score jobs
+        </Link>
       </div>
     </main>
   );
