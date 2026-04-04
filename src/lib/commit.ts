@@ -445,15 +445,23 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
       })
       .filter((row): row is PlayerGameStatInsert => row !== null);
 
-    if (playerStatRows.length > 0) {
+    // Deduplicate by player_id — two extracted rows resolving to the same player would
+    // violate the (game_id, player_id) PK. Keep the last occurrence.
+    const seenPlayerIds = new Map<string, PlayerGameStatInsert>();
+    for (const row of playerStatRows) {
+      seenPlayerIds.set(row.player_id, row);
+    }
+    const dedupedRows = Array.from(seenPlayerIds.values());
+
+    if (dedupedRows.length > 0) {
       const { error: playerStatsError } = await supabaseAdmin
         .from("player_game_stats")
-        .insert(playerStatRows);
+        .insert(dedupedRows);
 
       if (playerStatsError) {
         // If extended columns don't exist yet (migration not run), fall back to core-only insert
         if (playerStatsError.message.includes("column") && playerStatsError.message.includes("schema cache")) {
-          const coreRows = playerStatRows.map(({ game_id, player_id, team_id, points }) => ({
+          const coreRows = dedupedRows.map(({ game_id, player_id, team_id, points }) => ({
             game_id,
             player_id,
             team_id,
