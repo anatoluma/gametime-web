@@ -175,6 +175,7 @@ export default async function BoxScoreJobDetailPage({
         resolutionResults={resolutionResults}
         hasHardFailure={hasHardFailure}
         currentStatus={job.status as string}
+        errorMessage={job.error_message as string | null}
       />
     </main>
   );

@@ -14,15 +14,17 @@ type Props = {
   resolutionResults: NameResolutionResult[];
   hasHardFailure: boolean;
   currentStatus: string;
+  errorMessage?: string | null;
 };
 
-const TERMINAL_STATUSES = new Set(["committed", "rejected", "failed"]);
+const TERMINAL_STATUSES = new Set(["approved", "committed", "rejected", "failed"]);
 
 export default function JobActions({
   jobId,
   resolutionResults,
   hasHardFailure,
   currentStatus,
+  errorMessage,
 }: Props) {
   const router = useRouter();
   const [overrides, setOverrides] = useState<Record<string, string>>({});
@@ -250,8 +252,15 @@ export default function JobActions({
 
       {/* Committed/rejected notice */}
       {isTerminal && (
-        <p className="text-sm text-[var(--text-muted)] text-center py-2">
-          This job is <strong>{currentStatus}</strong> and can no longer be modified.
+        <p className={`text-sm text-center py-2 font-medium ${
+          currentStatus === "approved" ? "text-green-600 dark:text-green-400" :
+          currentStatus === "committed" ? "text-emerald-600 dark:text-emerald-400" :
+          "text-[var(--text-muted)]"
+        }`}>
+          {currentStatus === "approved" && "✓ Job approved — ready to commit."}
+          {currentStatus === "committed" && "✓ Job committed to the database."}
+          {currentStatus === "rejected" && `Job rejected${errorMessage ? `: ${errorMessage}` : "."}`}
+          {currentStatus === "failed" && "Job failed during processing."}
         </p>
       )}
     </div>
