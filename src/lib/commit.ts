@@ -340,27 +340,14 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
     const season = computeSeasonFromTipoff(playedAt) ?? (fallbackSeason.length > 0 ? fallbackSeason : null);
     const venue = getVenueFromHomeTeam(homeTeamId);
 
+    // Core fields — always present in the original schema
     const { data: game, error: gameUpsertError } = await supabaseAdmin
       .from("games")
       .upsert({
         game_id: gameId,
-        source_job_id: job.id,
-        competition_id: job.competition_id,
-        game_number: toNumber(extraction.meta?.game_number),
         tipoff: playedAt,
         season,
         venue,
-        duration_minutes: toNumber(extraction.meta?.duration_minutes),
-        crew_chief: toStringOrNull(extraction.meta?.crew_chief),
-        umpires: Array.isArray(extraction.meta?.umpires) ? extraction.meta?.umpires : [],
-        score_intervals: {
-          home: Array.isArray(extraction.score_by_periods?.home?.intervals)
-            ? extraction.score_by_periods.home.intervals
-            : [],
-          away: Array.isArray(extraction.score_by_periods?.away?.intervals)
-            ? extraction.score_by_periods.away.intervals
-            : [],
-        },
         home_team_id: homeTeamId,
         away_team_id: awayTeamId,
         home_score: toNumber(extraction.home_team?.score),
@@ -372,6 +359,29 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
     if (gameUpsertError || !game) {
       throw new Error(gameUpsertError?.message ?? "Failed to upsert game");
     }
+
+    // Extended OCR metadata — only available after BOX_SCORE_OCR_MIGRATION.sql has been run.
+    // Soft-fail so commit works on the original schema too.
+    await supabaseAdmin
+      .from("games")
+      .update({
+        source_job_id: job.id,
+        competition_id: job.competition_id,
+        game_number: toNumber(extraction.meta?.game_number),
+        duration_minutes: toNumber(extraction.meta?.duration_minutes),
+        crew_chief: toStringOrNull(extraction.meta?.crew_chief),
+        umpires: Array.isArray(extraction.meta?.umpires) ? extraction.meta.umpires : [],
+        score_intervals: {
+          home: Array.isArray(extraction.score_by_periods?.home?.intervals)
+            ? extraction.score_by_periods!.home!.intervals
+            : [],
+          away: Array.isArray(extraction.score_by_periods?.away?.intervals)
+            ? extraction.score_by_periods!.away!.intervals
+            : [],
+        },
+      })
+      .eq("game_id", game.game_id)
+      .then(() => { /* intentionally swallow — columns may not exist yet */ });
 
     const { error: deleteOldStatsError } = await supabaseAdmin
       .from("player_game_stats")
@@ -473,7 +483,23 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
         .insert(playerStatRows);
 
       if (playerStatsError) {
-        throw new Error(`Failed to insert player_game_stats: ${playerStatsError.message}`);
+        // If extended columns don't exist yet (migration not run), fall back to core-only insert
+        if (playerStatsError.message.includes("column") && playerStatsError.message.includes("schema cache")) {
+          const coreRows = playerStatRows.map(({ game_id, player_id, team_id, points }) => ({
+            game_id,
+            player_id,
+            team_id,
+            points,
+          }));
+          const { error: fallbackError } = await supabaseAdmin
+            .from("player_game_stats")
+            .insert(coreRows);
+          if (fallbackError) {
+            throw new Error(`Failed to insert player_game_stats: ${fallbackError.message}`);
+          }
+        } else {
+          throw new Error(`Failed to insert player_game_stats: ${playerStatsError.message}`);
+        }
       }
     }
 
