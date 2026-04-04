@@ -84,6 +84,10 @@ export async function POST(request: Request) {
     await supabaseAdmin.storage.from("uploads").remove([storagePath]);
     return NextResponse.json({ error: `Database insert failed: ${dbError.message}` }, { status: 500 });
   }
+  // trigger extraction asynchronously
+  import("@/lib/claude").then(({ extractBoxScore }) => 
+    extractBoxScore(jobId).catch(console.error)
+  );
 
   return NextResponse.json(
     { job_id: job.id, status: job.status, created_at: job.created_at },
