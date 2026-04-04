@@ -20,6 +20,7 @@ export const TEAM_CODE_MAP: Record<string, string> = {
   BCB: "BLD",
   HTC: "HAI",
   GTB: "GTM",
+  GMT: "GTM",
   CAN: "CAS",
   DBC: "DRO",
   BRC: "BRI",

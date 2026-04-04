@@ -162,9 +162,18 @@ export default async function BoxScoreJobDetailPage({
             ))}
           </ul>
           {hasHardFailure && (
-            <p className="mt-4 text-sm font-medium text-red-600 dark:text-red-400">
-              ✗ Hard failure detected — this job cannot be approved until the source image is re-processed.
-            </p>
+            <div className="mt-4 rounded bg-red-50 border border-red-200 px-4 py-3 dark:bg-red-950/30 dark:border-red-800">
+              <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2">
+                ✗ Hard failure — cannot approve until re-processed
+              </p>
+              <ul className="space-y-1">
+                {validationChecks.filter((c) => c.severity === "hard" && !c.passed).map((c) => (
+                  <li key={c.rule_id} className="text-xs text-red-700 dark:text-red-400">
+                    <span className="font-mono mr-2">{c.rule_id}</span>{c.detail}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </section>
       )}
