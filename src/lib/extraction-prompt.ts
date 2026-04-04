@@ -70,6 +70,8 @@ Use this exact structure:
 EXTRACTION RULES:
 
 Teams:
+- The header may contain an optional venue/location line between 
+  the competition name and the date line — ignore it
 - The header format is "TeamA Score — Score TeamB"
 - home_team is ALWAYS the team listed first (left side of the header)
 - away_team is ALWAYS the team listed second (right side of the header)
@@ -88,7 +90,10 @@ Score by periods:
 - intervals: extract the 8 cumulative values left-to-right from the "Scoring by 5 Minute intervals" grid
 - Intervals must be monotonically increasing — each value must be >= the previous one
 - q4_end must equal the team's final score
-
+- The totals row is always the last row before "Team/Coach" 
+  and has "200:00" in the minutes column
+- Free throws column (FT M/A): if the cell shows "0/0" extract 
+  as ft_made=0, ft_att=0 — never extract made > att
 Players:
 - starter: true only if * appears before the player number in the table
 - captain: true only if (C) appears after the player name
