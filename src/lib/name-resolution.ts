@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { resolveTeamId } from "@/lib/team-codes";
 
 const supabaseAdmin = createClient(
 	process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -288,7 +289,8 @@ export async function resolvePlayerNames(jobId: string): Promise<NameResolutionR
 				continue;
 			}
 
-			const roster = teamCode && validTeamIds.has(teamCode) ? rosterByTeam.get(teamCode) ?? [] : [];
+			const resolvedTeamId = resolveTeamId(teamCode);
+			const roster = resolvedTeamId ? rosterByTeam.get(resolvedTeamId) ?? [] : [];
 			const scoredCandidates = roster
 				.map((player) => {
 					const baseScore = bestScoreForPlayer(extractedName, player);

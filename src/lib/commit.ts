@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { TEAM_CODE_MAP, resolveTeamId } from "@/lib/team-codes";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,42 +23,6 @@ type ResolutionItem = {
   extracted_name?: string;
   resolved_player_id?: number | string;
 };
-
-const TEAM_CODE_MAP: Record<string, string> = {
-  // direct matches
-  ADM: "ADM",
-  ALU: "ALU",
-  AMB: "AMB",
-  BLD: "BLD",
-  BRI: "BRI",
-  CAS: "CAS",
-  DRO: "DRO",
-  EDI: "EDI",
-  GTM: "GTM",
-  HAI: "HAI",
-  MET: "MET",
-  USM: "USM",
-  VET: "VET",
-  WOL: "WOL",
-  // known box score variants
-  EDB: "EDI",
-  BCV: "VET",
-  BCB: "BLD",
-  HTC: "HAI",
-  GTB: "GTM",
-  CAN: "CAS",
-  DBC: "DRO",
-  BRC: "BRI",
-  WWO: "WOL",
-};
-
-function resolveTeamId(extractedCode: string | null): string | null {
-  if (!extractedCode) return null;
-  const normalized = extractedCode.trim().toUpperCase();
-  const resolved = TEAM_CODE_MAP[normalized] ?? null;
-  if (!resolved) console.warn(`[commitJob] Unknown team code: "${extractedCode}"`);
-  return resolved;
-}
 
 type ExistingPlayer = {
   player_id: string;
