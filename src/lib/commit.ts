@@ -360,28 +360,24 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
       throw new Error(gameUpsertError?.message ?? "Failed to upsert game");
     }
 
-    // Extended OCR metadata — only available after BOX_SCORE_OCR_MIGRATION.sql has been run.
-    // Soft-fail so commit works on the original schema too.
-    await supabaseAdmin
-      .from("games")
-      .update({
-        source_job_id: job.id,
-        competition_id: job.competition_id,
+    const { error: gameDetailsError } = await supabaseAdmin
+      .from("game_details")
+      .upsert({
+        game_id: game.game_id,
         game_number: toNumber(extraction.meta?.game_number),
         duration_minutes: toNumber(extraction.meta?.duration_minutes),
         crew_chief: toStringOrNull(extraction.meta?.crew_chief),
         umpires: Array.isArray(extraction.meta?.umpires) ? extraction.meta.umpires : [],
         score_intervals: {
-          home: Array.isArray(extraction.score_by_periods?.home?.intervals)
-            ? extraction.score_by_periods!.home!.intervals
-            : [],
-          away: Array.isArray(extraction.score_by_periods?.away?.intervals)
-            ? extraction.score_by_periods!.away!.intervals
-            : [],
+          home: extraction.score_by_periods?.home?.intervals ?? [],
+          away: extraction.score_by_periods?.away?.intervals ?? [],
         },
-      })
-      .eq("game_id", game.game_id)
-      .then(() => { /* intentionally swallow — columns may not exist yet */ });
+        source_job_id: job.id,
+      }, { onConflict: "game_id" });
+
+    if (gameDetailsError) {
+      throw new Error(`Failed to upsert game_details: ${gameDetailsError.message}`);
+    }
 
     const { error: deleteOldStatsError } = await supabaseAdmin
       .from("player_game_stats")
