@@ -84,10 +84,12 @@ export async function POST(request: Request) {
     await supabaseAdmin.storage.from("uploads").remove([storagePath]);
     return NextResponse.json({ error: `Database insert failed: ${dbError.message}` }, { status: 500 });
   }
-  // trigger full pipeline asynchronously
-  import("@/lib/pipeline").then(({ runPipeline }) =>
-    runPipeline(jobId).catch(console.error)
-  );
+  // trigger full pipeline asynchronously via internal API route
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  fetch(`${baseUrl}/api/admin/box-scores/jobs/${jobId}/process`, {
+    method: "POST",
+    headers: { "x-internal-secret": process.env.INTERNAL_SECRET ?? "dev" },
+  }).catch(console.error);
 
   return NextResponse.json(
     { job_id: job.id, status: job.status, created_at: job.created_at },
