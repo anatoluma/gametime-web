@@ -23,10 +23,41 @@ type ResolutionItem = {
   resolved_player_id?: number | string;
 };
 
-type TeamRow = {
-  team_id: string;
-  team_name: string | null;
+const TEAM_CODE_MAP: Record<string, string> = {
+  // direct matches
+  ADM: "ADM",
+  ALU: "ALU",
+  AMB: "AMB",
+  BLD: "BLD",
+  BRI: "BRI",
+  CAS: "CAS",
+  DRO: "DRO",
+  EDI: "EDI",
+  GTM: "GTM",
+  HAI: "HAI",
+  MET: "MET",
+  USM: "USM",
+  VET: "VET",
+  WOL: "WOL",
+  // known box score variants
+  EDB: "EDI",
+  BCV: "VET",
+  BCB: "BLD",
+  HTC: "HAI",
+  GTB: "GTM",
+  CAN: "CAS",
+  DBC: "DRO",
+  BRC: "BRI",
+  WWO: "WOL",
 };
+
+function resolveTeamId(extractedCode: string | null): string | null {
+  if (!extractedCode) return null;
+  const normalized = extractedCode.trim().toUpperCase();
+  const resolved = TEAM_CODE_MAP[normalized] ?? null;
+  if (!resolved) console.warn(`[commitJob] Unknown team code: "${extractedCode}"`);
+  return resolved;
+}
 
 type ExistingPlayer = {
   player_id: string;
@@ -193,72 +224,7 @@ function resolutionKey(teamCode: string | null, number: number | null, name: str
   return `${teamCode ?? ""}|${number ?? ""}|${(name ?? "").trim().toLowerCase()}`;
 }
 
-// ── Jaro-Winkler for team code fuzzy matching ────────────────────────────────
 
-function jaroSimilarity(s1: string, t: string): number {
-  if (s1 === t) return 1;
-  const s = s1;
-  const matchWindow = Math.max(0, Math.floor(Math.max(s.length, t.length) / 2) - 1);
-  const sMatches = new Array<boolean>(s.length).fill(false);
-  const tMatches = new Array<boolean>(t.length).fill(false);
-  let matches = 0;
-  let transpositions = 0;
-  for (let i = 0; i < s.length; i++) {
-    const start = Math.max(0, i - matchWindow);
-    const end = Math.min(i + matchWindow + 1, t.length);
-    for (let j = start; j < end; j++) {
-      if (tMatches[j] || s[i] !== t[j]) continue;
-      sMatches[i] = true;
-      tMatches[j] = true;
-      matches++;
-      break;
-    }
-  }
-  if (matches === 0) return 0;
-  const sSeq = s.split("").filter((_, i) => sMatches[i]);
-  const tSeq = t.split("").filter((_, i) => tMatches[i]);
-  for (let i = 0; i < sSeq.length; i++) {
-    if (sSeq[i] !== tSeq[i]) transpositions++;
-  }
-  return (matches / s.length + matches / t.length + (matches - transpositions / 2) / matches) / 3;
-}
-
-function jaroWinkler(s1: string, s2: string): number {
-  const j = jaroSimilarity(s1, s2);
-  let prefix = 0;
-  for (let i = 0; i < Math.min(4, Math.min(s1.length, s2.length)); i++) {
-    if (s1[i] === s2[i]) prefix++; else break;
-  }
-  return j + prefix * 0.1 * (1 - j);
-}
-
-function resolveTeamId(extractedCode: string, teams: TeamRow[]): { teamId: string; method: string } | null {
-  const code = extractedCode.toUpperCase();
-
-  // Priority 1: exact match on team_id
-  const exactById = teams.find((t) => t.team_id.toUpperCase() === code);
-  if (exactById) return { teamId: exactById.team_id, method: "exact_id" };
-
-  // Priority 2: first 3 characters of team_name uppercased
-  const byPrefix = teams.find(
-    (t) => t.team_name && t.team_name.toUpperCase().slice(0, 3) === code.slice(0, 3)
-  );
-  if (byPrefix) return { teamId: byPrefix.team_id, method: "name_prefix" };
-
-  // Priority 3: Jaro-Winkler against team_id and team_name
-  let best: { teamId: string; score: number } | null = null;
-  for (const t of teams) {
-    const scoreById = jaroWinkler(code.toLowerCase(), t.team_id.toLowerCase());
-    const scoreByName = t.team_name
-      ? jaroWinkler(code.toLowerCase(), t.team_name.toLowerCase().slice(0, 6))
-      : 0;
-    const score = Math.max(scoreById, scoreByName);
-    if (!best || score > best.score) best = { teamId: t.team_id, score };
-  }
-  if (best && best.score >= 0.7) return { teamId: best.teamId, method: "fuzzy" };
-
-  return null;
-}
 
 function normalizeName(value: string | null): string {
   if (!value) {
@@ -345,27 +311,8 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
     const homeCode = normalizeCode(extraction.home_team?.code);
     const awayCode = normalizeCode(extraction.away_team?.code);
 
-    const { data: teamsData, error: teamsError } = await supabaseAdmin
-      .from("teams")
-      .select("team_id, team_name");
-    if (teamsError) {
-      throw new Error(`Failed to load teams: ${teamsError.message}`);
-    }
-
-    const teams = (teamsData ?? []) as TeamRow[];
-
-    const resolveCode = (code: string | null): string | null => {
-      if (!code) return null;
-      const result = resolveTeamId(code, teams);
-      if (!result) return null;
-      if (result.method === "fuzzy") {
-        console.warn(`[commitJob] Team code "${code}" resolved via fuzzy match → ${result.teamId}`);
-      }
-      return result.teamId;
-    };
-
-    const homeTeamId = resolveCode(homeCode);
-    const awayTeamId = resolveCode(awayCode);
+    const homeTeamId = resolveTeamId(homeCode);
+    const awayTeamId = resolveTeamId(awayCode);
     if (!homeTeamId || !awayTeamId) {
       throw new Error("Could not resolve home/away team IDs from extracted team codes");
     }
@@ -482,7 +429,7 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
     const playerStatRows = players
       .map((player) => {
       const teamCode = normalizeCode(player.team_code);
-      const teamId = resolveCode(teamCode);
+      const teamId = resolveTeamId(teamCode);
       if (!teamId) {
         return null;
       }
@@ -560,11 +507,10 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
 
     const teamSummary = Array.isArray(extraction.team_summary) ? extraction.team_summary : [];
     const teamSummaryRows = teamSummary.map((summary) => {
-      const teamCode = normalizeCode(summary.team_code);
       return {
         game_id: game.game_id,
         source_job_id: job.id,
-        team_id: resolveCode(teamCode),
+        team_id: resolveTeamId(normalizeCode(summary.team_code)),
         points_from_turnovers: toNumber(summary.points_from_turnovers),
         points_in_paint: toNumber(summary.points_in_paint),
         points_in_paint_att: toNumber(summary.points_in_paint_att),
