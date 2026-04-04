@@ -144,7 +144,6 @@ export async function extractBoxScore(jobId: string): Promise<Record<string, unk
 			.from("processing_jobs")
 			.update({
 				extraction_json: extractionJson,
-				status: "validating",
 				error_message: null,
 				updated_at: new Date().toISOString(),
 			})
