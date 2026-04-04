@@ -134,9 +134,10 @@ export async function extractBoxScore(jobId: string): Promise<Record<string, unk
 
 		let extractionJson: Record<string, unknown>;
 		try {
-			extractionJson = JSON.parse(outputText) as Record<string, unknown>;
+		const cleaned = outputText.replace(/```json|```/g, "").trim();
+		extractionJson = JSON.parse(cleaned) as Record<string, unknown>;
 		} catch {
-			throw new Error("Claude response was not valid JSON");
+		throw new Error(`Claude response was not valid JSON: ${outputText.slice(0, 200)}`);
 		}
 
 		const { error: updateError } = await supabaseAdmin
