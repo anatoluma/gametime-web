@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
+import BoxScoreUpload from "./BoxScoreUpload";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,8 @@ export default async function BoxScoresAdminPage() {
           ← Admin
         </Link>
       </div>
+
+      <BoxScoreUpload />
 
       {rows.length === 0 ? (
         <p className="text-[var(--text-muted)]">No jobs yet.</p>
