@@ -44,11 +44,9 @@ type TeamTotalsRow = {
 
 type ScoreByPeriods = {
 	home?: {
-		q4_end?: number | null;
 		intervals?: number[] | null;
 	} | null;
 	away?: {
-		q4_end?: number | null;
 		intervals?: number[] | null;
 	} | null;
 };
@@ -140,9 +138,6 @@ export function validateExtraction(
 	const homeTotalPoints = totalPointsForCode(homeCode);
 	const awayTotalPoints = totalPointsForCode(awayCode);
 
-	const homeQ4 = toNumber(payload.score_by_periods?.home?.q4_end);
-	const awayQ4 = toNumber(payload.score_by_periods?.away?.q4_end);
-
 	const homeIntervalsRaw = payload.score_by_periods?.home?.intervals;
 	const awayIntervalsRaw = payload.score_by_periods?.away?.intervals;
 
@@ -152,6 +147,10 @@ export function validateExtraction(
 	const awayIntervals = Array.isArray(awayIntervalsRaw)
 		? awayIntervalsRaw.filter((v): v is number => typeof v === "number" && Number.isFinite(v))
 		: [];
+
+	// Derive q4 from the last interval value — more reliable than asking Claude to map it
+	const homeQ4 = homeIntervals.length > 0 ? homeIntervals[homeIntervals.length - 1] : null;
+	const awayQ4 = awayIntervals.length > 0 ? awayIntervals[awayIntervals.length - 1] : null;
 
 	const checks: ValidationCheck[] = [];
 
@@ -205,8 +204,8 @@ export function validateExtraction(
 			"hard",
 			homeScore !== null && homeQ4 !== null && homeQ4 === homeScore,
 			homeScore === null || homeQ4 === null
-				? "home q4_end or home score missing"
-				: `${homeQ4} == ${homeScore}`
+				? "home intervals missing or home score missing"
+				: `intervals[-1]=${homeQ4} == ${homeScore}`
 		)
 	);
 
@@ -216,8 +215,8 @@ export function validateExtraction(
 			"hard",
 			awayScore !== null && awayQ4 !== null && awayQ4 === awayScore,
 			awayScore === null || awayQ4 === null
-				? "away q4_end or away score missing"
-				: `${awayQ4} == ${awayScore}`
+				? "away intervals missing or away score missing"
+				: `intervals[-1]=${awayQ4} == ${awayScore}`
 		)
 	);
 

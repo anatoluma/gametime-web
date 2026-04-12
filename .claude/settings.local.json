@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(ls -la /c/Users/anato/gametime-web/.cursor*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(node ocr/test-extraction.mjs ocr/ADM-EDI.jpg)"
     ]
   }
 }

@@ -17,8 +17,8 @@ No test suite is configured. ESLint is the only automated checker — run it bef
 
 **GameTime Web** is the official stats platform for the Liga Basket Moldova basketball league. It's a Next.js 16 App Router full-stack app with:
 - Public pages: games, standings, player profiles, team rosters, league leaders
-- Admin dashboard: box score upload/processing pipeline, game/player management, analytics
-- Backend: FIBA box score images processed via Claude Vision API → validated → committed to Supabase
+- Admin dashboard: manual game/stats entry, box score upload/processing pipeline (in progress), analytics
+- Backend: stats entered manually via admin forms; FIBA box score image processing via Claude Vision API is under development and not yet reliable
 
 ## Tech Stack
 
@@ -52,7 +52,13 @@ No test suite is configured. ESLint is the only automated checker — run it bef
 | `supabase/client.ts` | Anon Supabase client (browser) |
 | `supabase/server.ts` | Service-role Supabase client (server-only) |
 
-### Box Score Processing Pipeline
+### Primary Data Entry: Manual Admin Forms
+
+Stats are currently entered manually through the admin UI at `/admin/add-game` and `/admin/edit-game`. This is the active, production workflow.
+
+### Box Score Processing Pipeline (In Development — Not Yet Reliable)
+
+The pipeline exists but is not production-ready. It is the intended future workflow:
 
 1. **Upload** — Admin uploads FIBA box score image; job created with `status="pending"`, image stored in Supabase Storage
 2. **Extract** (`/process`) — Claude Vision reads image using the extraction prompt; raw JSON saved to `extraction_json`

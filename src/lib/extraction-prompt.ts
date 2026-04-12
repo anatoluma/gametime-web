@@ -16,8 +16,8 @@ Use this exact structure:
   "home_team": { "code": "...", "name": "...", "score": 0, "coach": "..." },
   "away_team": { "code": "...", "name": "...", "score": 0, "coach": "..." },
   "score_by_periods": {
-    "home": { "q1_end": 0, "q2_end": 0, "q3_end": 0, "q4_end": 0, "intervals": [] },
-    "away": { "q1_end": 0, "q2_end": 0, "q3_end": 0, "q4_end": 0, "intervals": [] }
+    "home": { "intervals": [] },
+    "away": { "intervals": [] }
   },
   "players": [...],
   "team_totals": [...],
@@ -39,11 +39,11 @@ Score by periods:
 - The "Scoring by 5 Minute intervals" table has two rows labeled with team codes
 - Match each row to the correct team by the label on the LEFT of that row
 - Do NOT assume the first row is home and second row is away
-- intervals: extract the 8 cumulative values left-to-right from the grid
+- intervals: extract all 8 cumulative values left-to-right from the grid
 - Intervals must be monotonically increasing — each value must be >= the previous one
-- q1_end = value at end of 2nd interval, q2_end = 4th, q3_end = 6th, q4_end = 8th (last)
-- q4_end MUST equal the team's final score — if it does not, re-read the row
+- The 8th (last) interval value MUST equal the team's final score — if it does not, re-read that row
 - score_by_periods.home corresponds to home_team, score_by_periods.away to away_team
+- Do NOT extract q1_end, q2_end, q3_end, q4_end — only extract intervals
 
 Players:
 - starter: true only if * appears before the player number
@@ -84,6 +84,7 @@ Points in paint:
 Duration:
 - Read from "Game Duration: HH:MM", convert to total minutes as integer
 - Example: "01:07" = 67, "00:21" = 21
+- Note: "200:00" in the team totals row is the total player-minutes (5 players × 40 min game) — this is a valid value
 
 General:
 - Use null for any value not visible or not legible

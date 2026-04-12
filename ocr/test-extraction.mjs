@@ -30,8 +30,8 @@ Use this exact structure:
   "home_team": { "code": "...", "name": "...", "score": 0, "coach": "..." },
   "away_team": { "code": "...", "name": "...", "score": 0, "coach": "..." },
   "score_by_periods": {
-    "home": { "q1_end": 0, "q2_end": 0, "q3_end": 0, "q4_end": 0, "intervals": [] },
-    "away": { "q1_end": 0, "q2_end": 0, "q3_end": 0, "q4_end": 0, "intervals": [] }
+    "home": { "intervals": [] },
+    "away": { "intervals": [] }
   },
   "players": [
     {
@@ -72,7 +72,9 @@ Rules:
 - starter: true only if * appears before the player number
 - captain: true only if (C) appears after the name
 - dnp: true if DNP appears in the row; set all stats fields to null for DNP players
-- intervals: 8 cumulative scores left-to-right from the 5-min scoring grid
+- intervals: extract all 8 cumulative values left-to-right from the 5-min scoring grid
+- The 8th (last) interval MUST equal the team's final score — if not, re-read that row
+- Do NOT extract q1_end, q2_end, q3_end, q4_end — only extract intervals
 - For points_in_paint: parse "28 (14/37) 37,8" as points_in_paint=28, points_in_paint_att=37, points_in_paint_pct=37.8
 - Use null for any value not visible or legible
 - team_code must match the abbreviation used in the box score header`;
@@ -117,18 +119,23 @@ function runChecks(data, filename) {
 
   const h = data.score_by_periods?.home;
   const a = data.score_by_periods?.away;
-  if (h)
+  if (h?.intervals?.length) {
+    const lastHome = h.intervals[h.intervals.length - 1];
     checks.push({
-      label: "Q4 end matches final (home)",
-      ok: h.q4_end === data.home_team?.score,
-      detail: `${h.q4_end} vs ${data.home_team?.score}`,
+      label: "intervals[-1] matches final (home)",
+      ok: lastHome === data.home_team?.score,
+      detail: `${lastHome} vs ${data.home_team?.score}`,
     });
-  if (a)
+  }
+  if (a?.intervals?.length) {
+    const lastAway = a.intervals[a.intervals.length - 1];
     checks.push({
-      label: "Q4 end matches final (away)",
-      ok: a.q4_end === data.away_team?.score,
-      detail: `${a.q4_end} vs ${data.away_team?.score}`,
+      label: "intervals[-1] matches final (away)",
+      ok: lastAway === data.away_team?.score,
+      detail: `${lastAway} vs ${data.away_team?.score}`,
     });
+  }
+
 
   const passed = checks.filter((c) => c.ok).length;
   console.log(`\n  Sanity checks: ${passed}/${checks.length} passed`);
