@@ -8,7 +8,6 @@ const supabaseAdmin = createClient(
 
 const AUTO_ACCEPT_THRESHOLD = 0.92;
 const REVIEW_THRESHOLD = 0.7;
-const NUMBER_HINT_THRESHOLD = 0.75;
 const NUMBER_HINT_BOOST = 0.15;
 
 type ProcessingJob = {
@@ -294,28 +293,32 @@ export async function resolvePlayerNames(jobId: string): Promise<NameResolutionR
 			const scoredCandidates = roster
 				.map((player) => {
 					const baseScore = bestScoreForPlayer(extractedName, player);
-					const boostedScore = jerseyNumber !== null && player.jersey_number === jerseyNumber
+					const numberMatch = jerseyNumber !== null && player.jersey_number === jerseyNumber;
+					const boostedScore = numberMatch
 						? Math.min(1, baseScore + NUMBER_HINT_BOOST)
 						: baseScore;
 
-					return {
-						player,
-						baseScore,
-						boostedScore,
-						hasNumberHint: jerseyNumber !== null && player.jersey_number === jerseyNumber,
-					};
+					return { player, baseScore, boostedScore, numberMatch };
 				})
-				.sort((left, right) => right.baseScore - left.baseScore);
+				// Sort by boostedScore so jersey-matched players rise to the top
+				.sort((left, right) => right.boostedScore - left.boostedScore);
 
-			const topCandidates = scoredCandidates.slice(0, 3).map((candidate) => ({
-				player_id: candidate.player.player_id,
-				name: canonicalPlayerName(candidate.player),
-				confidence: Number(candidate.baseScore.toFixed(3)),
-				jersey_number: candidate.player.jersey_number,
+			// Top 3 by boostedScore + any jersey-number-matched players not already included
+			const top3 = scoredCandidates.slice(0, 3);
+			const top3Ids = new Set(top3.map((c) => c.player.player_id));
+			const extraNumberMatches = scoredCandidates.filter(
+				(c) => c.numberMatch && !top3Ids.has(c.player.player_id)
+			);
+			const topCandidates = [...top3, ...extraNumberMatches].map((c) => ({
+				player_id: c.player.player_id,
+				name: canonicalPlayerName(c.player),
+				confidence: Number(c.boostedScore.toFixed(3)),
+				jersey_number: c.player.jersey_number,
 			}));
 
 			const bestCandidate = scoredCandidates[0];
 
+			// Auto-accept: name score alone is high enough (jersey boost is secondary evidence)
 			if (bestCandidate && bestCandidate.baseScore >= AUTO_ACCEPT_THRESHOLD) {
 				const result: NameResolutionResult = {
 					team_code: teamCode,
@@ -350,42 +353,26 @@ export async function resolvePlayerNames(jobId: string): Promise<NameResolutionR
 				continue;
 			}
 
-			if (bestCandidate && bestCandidate.baseScore >= REVIEW_THRESHOLD) {
+			// Review required: decent name match OR jersey number boosted it into review range
+			if (bestCandidate && bestCandidate.boostedScore >= REVIEW_THRESHOLD) {
 				results.push({
 					team_code: teamCode,
 					number: jerseyNumber,
 					extracted_name: extractedName,
 					resolved_player_id: bestCandidate.player.player_id,
 					resolved_name: canonicalPlayerName(bestCandidate.player),
-					confidence: Number(bestCandidate.baseScore.toFixed(3)),
-					method: "manual",
+					confidence: Number(bestCandidate.boostedScore.toFixed(3)),
+					method: bestCandidate.numberMatch ? "number_hint" : "manual",
 					confirmed: false,
 					candidates: topCandidates,
-					note: "Review required: fuzzy match below auto-accept threshold",
+					note: bestCandidate.numberMatch
+						? "Review required: jersey number hint boosted match"
+						: "Review required: fuzzy match below auto-accept threshold",
 				});
 				continue;
 			}
 
-			const hintedCandidate = scoredCandidates
-				.filter((candidate) => candidate.hasNumberHint)
-				.sort((left, right) => right.boostedScore - left.boostedScore)[0];
-
-			if (hintedCandidate && hintedCandidate.boostedScore >= NUMBER_HINT_THRESHOLD) {
-				results.push({
-					team_code: teamCode,
-					number: jerseyNumber,
-					extracted_name: extractedName,
-					resolved_player_id: hintedCandidate.player.player_id,
-					resolved_name: canonicalPlayerName(hintedCandidate.player),
-					confidence: Number(hintedCandidate.boostedScore.toFixed(3)),
-					method: "number_hint",
-					confirmed: false,
-					candidates: topCandidates,
-					note: "Review required: jersey number hint boosted match",
-				});
-				continue;
-			}
-
+			// Unresolved — still include jersey-matched players in candidates so reviewer can pick
 			results.push({
 				team_code: teamCode,
 				number: jerseyNumber,
