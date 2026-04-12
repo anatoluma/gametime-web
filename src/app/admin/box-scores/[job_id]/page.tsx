@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import JobActions from "./JobActions";
+import ExtractionDebug from "./ExtractionDebug";
 import type { ValidationCheck } from "@/lib/validation";
 import type { NameResolutionResult } from "@/lib/name-resolution";
 
@@ -45,7 +46,7 @@ export default async function BoxScoreJobDetailPage({
 
   const { data: job } = await supabaseAdmin
     .from("processing_jobs")
-    .select("id, status, extraction_json, validation_json, resolution_json, error_message, created_at")
+    .select("id, status, raw_file_path, extraction_json, validation_json, resolution_json, error_message, created_at")
     .eq("id", job_id)
     .single();
 
@@ -58,6 +59,15 @@ export default async function BoxScoreJobDetailPage({
   const away = extraction?.away_team;
   const hasHardFailure = validationChecks.some((c) => c.severity === "hard" && !c.passed);
   const badgeClass = STATUS_BADGE[job.status as string] ?? "bg-gray-100 text-gray-600";
+
+  // Generate a short-lived signed URL for the raw box score image
+  let imageUrl: string | null = null;
+  if (job.raw_file_path) {
+    const { data: signed } = await supabaseAdmin.storage
+      .from(process.env.BOX_SCORES_STORAGE_BUCKET ?? "uploads")
+      .createSignedUrl(job.raw_file_path as string, 3600);
+    imageUrl = signed?.signedUrl ?? null;
+  }
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-12 text-[var(--foreground)]">
@@ -137,6 +147,12 @@ export default async function BoxScoreJobDetailPage({
           </p>
         )}
       </section>
+
+      {/* Image + extraction debug (collapsible) */}
+      <ExtractionDebug
+        extractionJson={job.extraction_json as Record<string, unknown> | null}
+        imageUrl={imageUrl}
+      />
 
       {/* Validation checks */}
       {validationChecks.length > 0 && (
