@@ -12,8 +12,7 @@ export async function POST(
 
   const { job_id } = await params;
 
-  // Run the pipeline in the background — do not await, return 200 immediately
-  runPipeline(job_id).catch(console.error);
+  await runPipeline(job_id);
 
   return NextResponse.json({ job_id, accepted: true });
 }

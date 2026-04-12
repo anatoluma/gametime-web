@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { runPipeline } from "@/lib/pipeline";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -84,15 +85,19 @@ export async function POST(request: Request) {
     await supabaseAdmin.storage.from("uploads").remove([storagePath]);
     return NextResponse.json({ error: `Database insert failed: ${dbError.message}` }, { status: 500 });
   }
-  // trigger full pipeline asynchronously via internal API route
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  fetch(`${baseUrl}/api/admin/box-scores/jobs/${jobId}/process`, {
-    method: "POST",
-    headers: { "x-internal-secret": process.env.INTERNAL_SECRET ?? "dev" },
-  }).catch(console.error);
+  // Run the pipeline synchronously so it completes before the response is sent.
+  // This takes ~15–30 s (Claude Vision call) but is reliable on serverless — no
+  // fire-and-forget background tasks that get killed when the request closes.
+  await runPipeline(jobId);
+
+  const { data: updatedJob } = await supabaseAdmin
+    .from("processing_jobs")
+    .select("id, status, created_at")
+    .eq("id", jobId)
+    .single();
 
   return NextResponse.json(
-    { job_id: job.id, status: job.status, created_at: job.created_at },
+    { job_id: jobId, status: updatedJob?.status ?? "pending", created_at: updatedJob?.created_at ?? job.created_at },
     { status: 202 }
   );
 }

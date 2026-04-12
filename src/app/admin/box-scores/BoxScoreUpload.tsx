@@ -107,7 +107,7 @@ export default function BoxScoreUpload() {
         disabled={!file || uploading}
         className="mt-3 w-full rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
       >
-        {uploading ? "Uploading…" : "Upload & process"}
+        {uploading ? "Uploading & processing… (this takes ~20 s)" : "Upload & process"}
       </button>
     </form>
   );
