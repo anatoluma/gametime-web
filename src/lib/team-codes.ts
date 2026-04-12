@@ -16,15 +16,19 @@ export const TEAM_CODE_MAP: Record<string, string> = {
   WOL: "WOL",
   // known box score variants
   EDB: "EDI",
+  EDN: "EDI",
   BCV: "VET",
   BCB: "BLD",
   HTC: "HAI",
+  HIT: "HAI",
   GTB: "GTM",
   GMT: "GTM",
   CAN: "CAS",
   DBC: "DRO",
   BRC: "BRI",
   WWO: "WOL",
+  WHI: "WOL",
+  WW:  "WOL",
 };
 
 export function resolveTeamId(extractedCode: string | null): string | null {
