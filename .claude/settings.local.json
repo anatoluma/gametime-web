@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /c/Users/anato/gametime-web/.cursor*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
