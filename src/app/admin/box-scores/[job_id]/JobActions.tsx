@@ -157,25 +157,19 @@ export default function JobActions({
                       <td className="py-2.5 pr-4">
                         {needsInput ? (
                           <select
-                            className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--accent)] min-w-[180px]"
+                            className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--accent)] min-w-[220px]"
                             value={effectivePlayerId}
                             onChange={(e) => setOverride(r.extracted_name, e.target.value)}
                           >
                             <option value="">— pick player —</option>
-                            {r.resolved_player_id && (
-                              <option value={r.resolved_player_id}>
-                                ✓ {r.resolved_name ?? r.resolved_player_id}
+                            {(r.candidates ?? []).map((c) => (
+                              <option key={c.player_id} value={c.player_id}>
+                                {c.player_id === r.resolved_player_id ? "✓ " : ""}
+                                {c.name}
+                                {c.jersey_number != null ? ` #${c.jersey_number}` : ""}
+                                {` (${Math.round(c.confidence * 100)}%)`}
                               </option>
-                            )}
-                            {(r.candidates ?? [])
-                              .filter((c) => c.player_id !== r.resolved_player_id)
-                              .map((c) => (
-                                <option key={c.player_id} value={c.player_id}>
-                                  {c.name}
-                                  {c.jersey_number != null ? ` #${c.jersey_number}` : ""}
-                                  {` (${Math.round(c.confidence * 100)}%)`}
-                                </option>
-                              ))}
+                            ))}
                             <option value="new">➕ New player</option>
                           </select>
                         ) : (

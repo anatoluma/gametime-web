@@ -303,13 +303,8 @@ export async function resolvePlayerNames(jobId: string): Promise<NameResolutionR
 				// Sort by boostedScore so jersey-matched players rise to the top
 				.sort((left, right) => right.boostedScore - left.boostedScore);
 
-			// Top 3 by boostedScore + any jersey-number-matched players not already included
-			const top3 = scoredCandidates.slice(0, 3);
-			const top3Ids = new Set(top3.map((c) => c.player.player_id));
-			const extraNumberMatches = scoredCandidates.filter(
-				(c) => c.numberMatch && !top3Ids.has(c.player.player_id)
-			);
-			const topCandidates = [...top3, ...extraNumberMatches].map((c) => ({
+			// All roster players sorted by boostedScore — reviewer needs the full list to correct OCR errors
+			const topCandidates = scoredCandidates.map((c) => ({
 				player_id: c.player.player_id,
 				name: canonicalPlayerName(c.player),
 				confidence: Number(c.boostedScore.toFixed(3)),

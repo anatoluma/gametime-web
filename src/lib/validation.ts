@@ -223,7 +223,7 @@ export function validateExtraction(
 	checks.push(
 		makeCheck(
 			"intervals_monotonic_home",
-			"hard",
+			"soft",
 			homeIntervals.length > 0 && isMonotonicIncreasing(homeIntervals),
 			homeIntervals.length > 0
 				? `home intervals: [${homeIntervals.join(", ")}]`
@@ -234,7 +234,7 @@ export function validateExtraction(
 	checks.push(
 		makeCheck(
 			"intervals_monotonic_away",
-			"hard",
+			"soft",
 			awayIntervals.length > 0 && isMonotonicIncreasing(awayIntervals),
 			awayIntervals.length > 0
 				? `away intervals: [${awayIntervals.join(", ")}]`
