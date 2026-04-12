@@ -394,54 +394,69 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
     const players = Array.isArray(extraction.players) ? extraction.players : [];
     const playerStatRows = players
       .map((player) => {
-      const teamCode = normalizeCode(player.team_code);
-      const teamId = resolveTeamId(teamCode);
-      if (!teamId) {
-        return null;
-      }
-      const playerNumber = toNumber(player.number);
-      const playerName = toStringOrNull(player.name);
-      const resolutionId = resolvedPlayerByKey.get(
-        resolutionKey(teamCode, playerNumber, playerName)
-      );
-      const teamRoster = playersByTeam.get(teamId) ?? [];
-      const playerId = findPlayerId(player, teamId, teamRoster, resolutionId ?? null);
-      if (!playerId) {
-        return null;
-      }
-      const stats = player.stats ?? {};
+        // DNP players have no stats — skip them entirely rather than inserting null points
+        if (player.dnp === true) return null;
 
-      const row: PlayerGameStatInsert = {
-        game_id: game.game_id,
-        source_job_id: job.id,
-        player_id: playerId,
-        team_id: teamId,
-        is_starter: player.starter ?? false,
-        is_captain: player.captain ?? false,
-        dnp: player.dnp ?? false,
-        minutes: toStringOrNull(stats.min),
-        fg_made: toNumber(stats.fg_made),
-        fg_att: toNumber(stats.fg_att),
-        two_made: toNumber(stats.two_made),
-        two_att: toNumber(stats.two_att),
-        three_made: toNumber(stats.three_made),
-        three_att: toNumber(stats.three_att),
-        ft_made: toNumber(stats.ft_made),
-        ft_att: toNumber(stats.ft_att),
-        reb_off: toNumber(stats.reb_off),
-        reb_def: toNumber(stats.reb_def),
-        reb_tot: toNumber(stats.reb_tot),
-        assists: toNumber(stats.assists),
-        turnovers: toNumber(stats.turnovers),
-        steals: toNumber(stats.steals),
-        blocks: toNumber(stats.blocks),
-        fouls_personal: toNumber(stats.fouls_personal),
-        fouls_drawn: toNumber(stats.fouls_drawn),
-        plus_minus: toNumber(stats.plus_minus),
-        efficiency: toNumber(stats.efficiency),
-        points: toNumber(stats.points),
-      };
-      return row;
+        const teamCode = normalizeCode(player.team_code);
+        const teamId = resolveTeamId(teamCode);
+        if (!teamId) return null;
+
+        const playerNumber = toNumber(player.number);
+        const playerName = toStringOrNull(player.name);
+        const resolutionId = resolvedPlayerByKey.get(
+          resolutionKey(teamCode, playerNumber, playerName)
+        );
+        const teamRoster = playersByTeam.get(teamId) ?? [];
+        const playerId = findPlayerId(player, teamId, teamRoster, resolutionId ?? null);
+        if (!playerId) return null;
+
+        const stats = player.stats ?? {};
+        const twoMade = toNumber(stats.two_made);
+        const threeMade = toNumber(stats.three_made);
+        const ftMade = toNumber(stats.ft_made);
+
+        // Compute points from components if the field itself is null
+        const extractedPoints = toNumber(stats.points);
+        const computedPoints =
+          twoMade !== null && threeMade !== null && ftMade !== null
+            ? twoMade * 2 + threeMade * 3 + ftMade
+            : null;
+        const points = extractedPoints ?? computedPoints;
+
+        // Cannot write a row without points — DB has NOT NULL constraint
+        if (points === null) return null;
+
+        const row: PlayerGameStatInsert = {
+          game_id: game.game_id,
+          source_job_id: job.id,
+          player_id: playerId,
+          team_id: teamId,
+          is_starter: player.starter ?? false,
+          is_captain: player.captain ?? false,
+          dnp: false,
+          minutes: toStringOrNull(stats.min),
+          fg_made: toNumber(stats.fg_made),
+          fg_att: toNumber(stats.fg_att),
+          two_made: twoMade,
+          two_att: toNumber(stats.two_att),
+          three_made: threeMade,
+          three_att: toNumber(stats.three_att),
+          ft_made: ftMade,
+          ft_att: toNumber(stats.ft_att),
+          reb_off: toNumber(stats.reb_off),
+          reb_def: toNumber(stats.reb_def),
+          reb_tot: toNumber(stats.reb_tot),
+          assists: toNumber(stats.assists),
+          turnovers: toNumber(stats.turnovers),
+          steals: toNumber(stats.steals),
+          blocks: toNumber(stats.blocks),
+          fouls_personal: toNumber(stats.fouls_personal),
+          fouls_drawn: toNumber(stats.fouls_drawn),
+          plus_minus: toNumber(stats.plus_minus),
+          efficiency: toNumber(stats.efficiency),
+          points,
+        };
+        return row;
       })
       .filter((row): row is PlayerGameStatInsert => row !== null);
 
