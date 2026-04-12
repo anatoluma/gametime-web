@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { extractBoxScore } from "@/lib/claude";
 import { validateExtraction } from "@/lib/validation";
 import { resolvePlayerNames } from "@/lib/name-resolution";
+import { normalizeExtractionJson } from "@/lib/normalize-extraction";
 
 const supabaseAdmin = createClient(
 	process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,7 +14,15 @@ const AUTO_ACCEPT_THRESHOLD = 0.92;
 export async function runPipeline(jobId: string): Promise<void> {
 	try {
 		// Step 1: Extract — sets status to "extracting", returns extraction_json
-		const extractionJson = await extractBoxScore(jobId);
+		let extractionJson = await extractBoxScore(jobId);
+
+		// Step 1b: Normalize field names/structure before validation
+		// Different FIBA software uses different abbreviations; Claude sometimes mirrors them.
+		extractionJson = normalizeExtractionJson(extractionJson);
+		await supabaseAdmin
+			.from("processing_jobs")
+			.update({ extraction_json: extractionJson, updated_at: new Date().toISOString() })
+			.eq("id", jobId);
 
 		// Step 2: Validate — evaluate all hard and soft rules
 		const validationChecks = validateExtraction(extractionJson);
