@@ -9,6 +9,8 @@
 
 // Map any abbreviation Claude might use → canonical stat field name
 const STAT_ALIASES: Record<string, string> = {
+  // Minutes
+  minutes: "min", mins: "min",
   // Field goals
   fgm: "fg_made", fg_m: "fg_made", "fg-made": "fg_made",
   fga: "fg_att",  fg_a: "fg_att",  "fg-att":  "fg_att",
@@ -25,8 +27,11 @@ const STAT_ALIASES: Record<string, string> = {
   fta: "ft_att",  ft_a: "ft_att",
   // Rebounds
   or:      "reb_off", off_reb: "reb_off", reb_o: "reb_off", o_reb: "reb_off",
+  rebounds_off: "reb_off", oreb: "reb_off", off: "reb_off",
   dr:      "reb_def", def_reb: "reb_def", reb_d: "reb_def", d_reb: "reb_def",
+  rebounds_def: "reb_def", dreb: "reb_def", def: "reb_def",
   tot:     "reb_tot", reb:     "reb_tot", total_reb: "reb_tot",
+  rebounds_tot: "reb_tot", treb: "reb_tot", trb: "reb_tot",
   // Other box score stats
   ast:     "assists",  as: "assists",
   to:      "turnovers", tov: "turnovers",
@@ -82,12 +87,22 @@ function resolveStatKey(raw: string): string | null {
   return null;
 }
 
+function coerceStatValue(key: string, value: unknown): unknown {
+  // Minutes stay as string ("MM:SS"); everything else should be a number
+  if (key === "min") return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return value;
+}
+
 function normalizeStats(raw: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(raw)) {
     if (DISCARD_FIELDS.has(k.toLowerCase())) continue;
     const canonical = resolveStatKey(k);
-    if (canonical) out[canonical] = v;
+    if (canonical) out[canonical] = coerceStatValue(canonical, v);
   }
   return out;
 }
