@@ -98,7 +98,7 @@ export async function extractBoxScore(jobId: string): Promise<Record<string, unk
 			},
 			body: JSON.stringify({
 				model: ANTHROPIC_MODEL,
-				max_tokens: 8000,
+				max_tokens: 32000,
 				messages: [
 					{
 						role: "user",
@@ -137,7 +137,9 @@ export async function extractBoxScore(jobId: string): Promise<Record<string, unk
 		const cleaned = outputText.replace(/```json|```/g, "").trim();
 		extractionJson = JSON.parse(cleaned) as Record<string, unknown>;
 		} catch {
-		throw new Error(`Claude response was not valid JSON: ${outputText.slice(0, 200)}`);
+		const truncated = outputText.length > 0 && !outputText.trimEnd().endsWith("}");
+		const hint = truncated ? " (response appears truncated — likely hit token limit)" : "";
+		throw new Error(`Claude response was not valid JSON${hint}: ${outputText.slice(0, 300)}`);
 		}
 
 		const { error: updateError } = await supabaseAdmin
