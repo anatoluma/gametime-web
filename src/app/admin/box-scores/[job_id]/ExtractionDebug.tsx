@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { NameResolutionResult } from "@/lib/name-resolution";
 
 type Player = {
   team_code?: string | null;
@@ -13,6 +14,7 @@ type Player = {
 type Props = {
   extractionJson: Record<string, unknown> | null;
   imageUrl: string | null;
+  resolutionResults: NameResolutionResult[];
 };
 
 const STAT_COLS = [
@@ -29,16 +31,30 @@ const SHORT: Record<string, string> = {
   plus_minus: "+/-", efficiency: "EF", points: "PTS",
 };
 
-export default function ExtractionDebug({ extractionJson, imageUrl }: Props) {
+export default function ExtractionDebug({ extractionJson, imageUrl, resolutionResults }: Props) {
   const [showImage, setShowImage] = useState(true);
   const [showTable, setShowTable] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
 
   const players = (extractionJson?.players ?? []) as Player[];
-  const teams = [
-    (extractionJson?.home_team as { code?: string } | null)?.code,
-    (extractionJson?.away_team as { code?: string } | null)?.code,
-  ].filter(Boolean) as string[];
+
+  // Group players by their actual team_code — don't rely on home_team/away_team matching
+  const teamOrder: string[] = [];
+  const playersByTeam = new Map<string, Player[]>();
+  for (const p of players) {
+    const code = p.team_code ?? "??";
+    if (!playersByTeam.has(code)) {
+      teamOrder.push(code);
+      playersByTeam.set(code, []);
+    }
+    playersByTeam.get(code)!.push(p);
+  }
+
+  // Build a lookup: extracted_name → resolution result for the "not in DB" flag
+  const resolvedByName = new Map<string, NameResolutionResult>();
+  for (const r of resolutionResults) {
+    resolvedByName.set(r.extracted_name, r);
+  }
 
   return (
     <div className="space-y-3 mb-6">
@@ -78,12 +94,13 @@ export default function ExtractionDebug({ extractionJson, imageUrl }: Props) {
           </button>
           {showTable && (
             <div className="overflow-x-auto">
-              <table className="w-full text-xs font-mono">
+              <table className="w-full text-xs font-mono border-collapse">
                 <thead>
                   <tr className="bg-[var(--surface-muted)] border-y border-[var(--border)]">
-                    <th className="px-3 py-2 text-left font-medium sticky left-0 bg-[var(--surface-muted)]">Team</th>
+                    <th className="px-3 py-2 text-left font-medium">Team</th>
                     <th className="px-3 py-2 text-left font-medium">#</th>
-                    <th className="px-3 py-2 text-left font-medium min-w-[120px]">Name</th>
+                    <th className="px-3 py-2 text-left font-medium min-w-[140px]">Name</th>
+                    <th className="px-3 py-2 text-center font-medium">DB</th>
                     {STAT_COLS.map((col) => (
                       <th key={col} className="px-2 py-2 text-center font-medium whitespace-nowrap">
                         {SHORT[col]}
@@ -92,26 +109,42 @@ export default function ExtractionDebug({ extractionJson, imageUrl }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {teams.map((team) => {
-                    const teamPlayers = players.filter((p) => p.team_code === team);
+                  {teamOrder.map((team) => {
+                    const teamPlayers = playersByTeam.get(team) ?? [];
                     return teamPlayers.map((p, i) => {
                       const stats = p.stats ?? {};
                       const hasPts = typeof stats.points === "number";
+                      const resolution = p.name ? resolvedByName.get(p.name) : undefined;
+                      const inDb = resolution ? resolution.resolved_player_id !== null : null;
+
                       return (
                         <tr
                           key={`${team}-${i}`}
-                          className={`border-b border-[var(--border)] ${p.dnp ? "opacity-40" : ""} ${!hasPts && !p.dnp ? "bg-red-50 dark:bg-red-950/20" : ""}`}
+                          className={[
+                            "border-b border-[var(--border)]",
+                            p.dnp ? "opacity-40" : "",
+                            !hasPts && !p.dnp ? "bg-amber-50 dark:bg-amber-950/20" : "",
+                          ].join(" ")}
                         >
-                          <td className="px-3 py-1.5 sticky left-0 bg-[var(--surface)] font-semibold">{p.team_code}</td>
+                          <td className="px-3 py-1.5 font-semibold">{p.team_code ?? "—"}</td>
                           <td className="px-3 py-1.5 text-right">{p.number ?? "—"}</td>
-                          <td className="px-3 py-1.5 min-w-[120px]">{p.name ?? "—"}{p.dnp ? " (DNP)" : ""}</td>
+                          <td className="px-3 py-1.5">{p.name ?? "—"}{p.dnp ? " (DNP)" : ""}</td>
+                          <td className="px-3 py-1.5 text-center">
+                            {inDb === null ? (
+                              <span className="text-[var(--text-muted)]">—</span>
+                            ) : inDb ? (
+                              <span className="text-green-600 dark:text-green-400">✓</span>
+                            ) : (
+                              <span className="text-red-500 dark:text-red-400" title="Not found in players table">✗</span>
+                            )}
+                          </td>
                           {STAT_COLS.map((col) => {
                             const val = stats[col];
                             const isNull = val === null || val === undefined;
                             return (
                               <td
                                 key={col}
-                                className={`px-2 py-1.5 text-center ${isNull && !p.dnp ? "text-red-500 dark:text-red-400" : "text-[var(--foreground)]"}`}
+                                className={`px-2 py-1.5 text-center ${isNull && !p.dnp ? "text-amber-500 dark:text-amber-400" : ""}`}
                               >
                                 {isNull ? "—" : String(val)}
                               </td>

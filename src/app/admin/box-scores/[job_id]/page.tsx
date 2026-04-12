@@ -152,6 +152,7 @@ export default async function BoxScoreJobDetailPage({
       <ExtractionDebug
         extractionJson={job.extraction_json as Record<string, unknown> | null}
         imageUrl={imageUrl}
+        resolutionResults={resolutionResults}
       />
 
       {/* Validation checks */}
