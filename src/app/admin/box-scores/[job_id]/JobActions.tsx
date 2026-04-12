@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/client";
 import type { NameResolutionResult } from "@/lib/name-resolution";
 
 type Override = {
@@ -17,7 +18,8 @@ type Props = {
   errorMessage?: string | null;
 };
 
-const TERMINAL_STATUSES = new Set(["approved", "committed", "rejected", "failed"]);
+const TERMINAL_STATUSES = new Set(["approved", "committed", "rejected"]);
+const RETRIABLE_STATUSES = new Set(["pending", "failed", "needs_review"]);
 
 export default function JobActions({
   jobId,
@@ -37,6 +39,28 @@ export default function JobActions({
 
   function setOverride(extractedName: string, playerId: string) {
     setOverrides((prev) => ({ ...prev, [extractedName]: playerId }));
+  }
+
+  async function handleReprocess() {
+    setLoading(true);
+    setActionError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch(`/api/admin/box-scores/jobs/${jobId}/process`, {
+        method: "POST",
+        headers: token ? { authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const body = (await res.json()) as { error?: string };
+        throw new Error(body.error ?? "Re-process failed");
+      }
+      router.refresh();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleApprove() {
@@ -192,6 +216,18 @@ export default function JobActions({
             </p>
           )}
           <div className="flex flex-wrap items-start gap-4">
+            {/* Retry pipeline for stuck/failed jobs */}
+            {RETRIABLE_STATUSES.has(currentStatus) && (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleReprocess}
+                className="rounded-lg px-5 py-2 text-sm font-semibold border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--surface-muted)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? "Processing… (~20 s)" : "↺ Re-process"}
+              </button>
+            )}
+
             {/* Approve */}
             <button
               type="button"
