@@ -10,6 +10,12 @@ type Override = {
   player_id: string;
 };
 
+type NewPlayerDraft = {
+  first_name: string;
+  last_name: string;
+  jersey_number: string;
+};
+
 type Props = {
   jobId: string;
   resolutionResults: NameResolutionResult[];
@@ -30,6 +36,8 @@ export default function JobActions({
 }: Props) {
   const router = useRouter();
   const [overrides, setOverrides] = useState<Record<string, string>>({});
+  // Keyed by extracted_name — holds form data for rows where reviewer chose "new player"
+  const [newPlayers, setNewPlayers] = useState<Record<string, NewPlayerDraft>>({});
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,7 +46,28 @@ export default function JobActions({
   const isTerminal = TERMINAL_STATUSES.has(currentStatus);
 
   function setOverride(extractedName: string, playerId: string) {
+    if (playerId === "new") {
+      // Seed the draft with empty fields; keep override as "new" sentinel
+      setNewPlayers((prev) => ({
+        ...prev,
+        [extractedName]: prev[extractedName] ?? { first_name: "", last_name: "", jersey_number: "" },
+      }));
+    } else {
+      // Clear any pending new-player draft if reviewer switches away
+      setNewPlayers((prev) => {
+        const next = { ...prev };
+        delete next[extractedName];
+        return next;
+      });
+    }
     setOverrides((prev) => ({ ...prev, [extractedName]: playerId }));
+  }
+
+  function updateNewPlayer(extractedName: string, field: keyof NewPlayerDraft, value: string) {
+    setNewPlayers((prev) => ({
+      ...prev,
+      [extractedName]: { ...prev[extractedName], [field]: value },
+    }));
   }
 
   async function handleReprocess() {
@@ -67,9 +96,43 @@ export default function JobActions({
     setLoading(true);
     setActionError(null);
     try {
-      const overrideList: Override[] = Object.entries(overrides).map(
-        ([extracted_name, player_id]) => ({ extracted_name, player_id })
-      );
+      // Validate all "new" rows have at least a last name
+      for (const [extractedName, draft] of Object.entries(newPlayers)) {
+        if (overrides[extractedName] === "new" && !draft.last_name.trim()) {
+          throw new Error(`Enter at least a last name for "${extractedName}"`);
+        }
+      }
+
+      // Find which resolution result owns each new-player draft so we can get the team_code
+      const resultByName = new Map(resolutionResults.map((r) => [r.extracted_name, r]));
+
+      // Create new players first, collect their IDs to use as overrides
+      const resolvedOverrides = { ...overrides };
+      for (const [extractedName, draft] of Object.entries(newPlayers)) {
+        if (overrides[extractedName] !== "new") continue;
+        const r = resultByName.get(extractedName);
+        const res = await fetch("/api/admin/players", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            first_name: draft.first_name.trim() || null,
+            last_name: draft.last_name.trim(),
+            team_code: r?.team_code ?? null,
+            jersey_number: draft.jersey_number.trim() ? Number(draft.jersey_number) : null,
+          }),
+        });
+        if (!res.ok) {
+          const body = (await res.json()) as { error?: string };
+          throw new Error(`Failed to create player "${extractedName}": ${body.error ?? "unknown error"}`);
+        }
+        const { player_id } = (await res.json()) as { player_id: string };
+        resolvedOverrides[extractedName] = player_id;
+      }
+
+      const overrideList: Override[] = Object.entries(resolvedOverrides)
+        .filter(([, player_id]) => player_id && player_id !== "new")
+        .map(([extracted_name, player_id]) => ({ extracted_name, player_id }));
+
       const res = await fetch(`/api/admin/box-scores/jobs/${jobId}/approve`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -129,72 +192,122 @@ export default function JobActions({
                 </tr>
               </thead>
               <tbody>
-                {resolutionResults.map((r) => {
-                  const isUnresolved = r.resolved_player_id === null;
-                  const isAmbiguous = r.method === "manual" || r.method === "number_hint";
-                  const needsInput =
-                    !isTerminal &&
-                    (isUnresolved || isAmbiguous || r.method === "unresolved");
-
-                  let rowBg = "";
-                  if (isUnresolved) {
-                    rowBg = "bg-red-50 dark:bg-red-950/20";
-                  } else if (isAmbiguous) {
-                    rowBg = "bg-amber-50 dark:bg-amber-950/20";
+                {(() => {
+                  // Build a set of resolved_player_ids that appear more than once
+                  // so we can warn the reviewer about collisions
+                  const playerIdCount = new Map<string, number>();
+                  for (const r of resolutionResults) {
+                    const id = overrides[r.extracted_name] ?? r.resolved_player_id;
+                    if (id) playerIdCount.set(id, (playerIdCount.get(id) ?? 0) + 1);
                   }
 
-                  const key = `${r.team_code}-${r.number}-${r.extracted_name}`;
-                  const effectivePlayerId = overrides[r.extracted_name] ?? r.resolved_player_id ?? "";
+                  return resolutionResults.map((r) => {
+                    const effectivePlayerId = overrides[r.extracted_name] ?? r.resolved_player_id ?? "";
+                    const isDuplicate = !!effectivePlayerId && (playerIdCount.get(effectivePlayerId) ?? 0) > 1;
 
-                  return (
-                    <tr
-                      key={key}
-                      className={`border-b border-[var(--border)] last:border-0 ${rowBg}`}
-                    >
-                      <td className="py-2.5 pr-4 font-mono text-xs">{r.team_code ?? "—"}</td>
-                      <td className="py-2.5 pr-4 tabular-nums">{r.number ?? "—"}</td>
-                      <td className="py-2.5 pr-4 font-mono text-xs">{r.extracted_name}</td>
-                      <td className="py-2.5 pr-4">
-                        {needsInput ? (
-                          <select
-                            className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--accent)] min-w-[220px]"
-                            value={effectivePlayerId}
-                            onChange={(e) => setOverride(r.extracted_name, e.target.value)}
+                    const isUnresolved = r.resolved_player_id === null;
+                    const isAmbiguous = r.method === "manual" || r.method === "number_hint";
+                    // Also force review for any row sharing its resolved player with another row
+                    const needsInput =
+                      !isTerminal &&
+                      (isUnresolved || isAmbiguous || r.method === "unresolved" || isDuplicate);
+
+                    let rowBg = "";
+                    if (isDuplicate) {
+                      rowBg = "bg-orange-50 dark:bg-orange-950/20";
+                    } else if (isUnresolved) {
+                      rowBg = "bg-red-50 dark:bg-red-950/20";
+                    } else if (isAmbiguous) {
+                      rowBg = "bg-amber-50 dark:bg-amber-950/20";
+                    }
+
+                    const key = `${r.team_code}-${r.number}-${r.extracted_name}`;
+
+                    return (
+                      <tr
+                        key={key}
+                        className={`border-b border-[var(--border)] last:border-0 ${rowBg}`}
+                      >
+                        <td className="py-2.5 pr-4 font-mono text-xs">{r.team_code ?? "—"}</td>
+                        <td className="py-2.5 pr-4 tabular-nums">{r.number ?? "—"}</td>
+                        <td className="py-2.5 pr-4 font-mono text-xs">{r.extracted_name}</td>
+                        <td className="py-2.5 pr-4">
+                          {needsInput ? (
+                            <div className="flex flex-col gap-1">
+                              <select
+                                className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--accent)] min-w-[220px]"
+                                value={effectivePlayerId}
+                                onChange={(e) => setOverride(r.extracted_name, e.target.value)}
+                              >
+                                <option value="">— pick player —</option>
+                                {(r.candidates ?? []).map((c) => (
+                                  <option key={c.player_id} value={c.player_id}>
+                                    {c.player_id === r.resolved_player_id ? "✓ " : ""}
+                                    {c.name}
+                                    {c.jersey_number != null ? ` #${c.jersey_number}` : ""}
+                                    {` (${Math.round(c.confidence * 100)}%)`}
+                                  </option>
+                                ))}
+                                <option value="new">➕ New player</option>
+                              </select>
+                              {effectivePlayerId === "new" && (
+                                <div className="mt-1 flex flex-wrap gap-1.5 items-center">
+                                  <input
+                                    type="text"
+                                    placeholder="First name"
+                                    value={newPlayers[r.extracted_name]?.first_name ?? ""}
+                                    onChange={(e) => updateNewPlayer(r.extracted_name, "first_name", e.target.value)}
+                                    className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs w-28 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="Last name *"
+                                    value={newPlayers[r.extracted_name]?.last_name ?? ""}
+                                    onChange={(e) => updateNewPlayer(r.extracted_name, "last_name", e.target.value)}
+                                    className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs w-32 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                                  />
+                                  <input
+                                    type="number"
+                                    placeholder="#"
+                                    value={newPlayers[r.extracted_name]?.jersey_number ?? ""}
+                                    onChange={(e) => updateNewPlayer(r.extracted_name, "jersey_number", e.target.value)}
+                                    className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs w-14 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                                  />
+                                  <span className="text-xs text-[var(--text-muted)]">team: {r.team_code ?? "?"}</span>
+                                </div>
+                              )}
+                              {isDuplicate && (
+                                <span className="text-xs text-orange-600 dark:text-orange-400">
+                                  ⚠ Same player as another row — confirm or correct
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-sm">{r.resolved_name ?? r.resolved_player_id ?? "—"}</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 pr-4 tabular-nums text-xs">
+                          {r.confidence > 0 ? `${Math.round(r.confidence * 100)}%` : "—"}
+                        </td>
+                        <td className="py-2.5">
+                          <span
+                            className={`text-xs font-medium ${
+                              isDuplicate
+                                ? "text-orange-600 dark:text-orange-400"
+                                : r.method === "unresolved"
+                                ? "text-red-600 dark:text-red-400"
+                                : isAmbiguous
+                                ? "text-amber-600 dark:text-amber-400"
+                                : "text-[var(--text-muted)]"
+                            }`}
                           >
-                            <option value="">— pick player —</option>
-                            {(r.candidates ?? []).map((c) => (
-                              <option key={c.player_id} value={c.player_id}>
-                                {c.player_id === r.resolved_player_id ? "✓ " : ""}
-                                {c.name}
-                                {c.jersey_number != null ? ` #${c.jersey_number}` : ""}
-                                {` (${Math.round(c.confidence * 100)}%)`}
-                              </option>
-                            ))}
-                            <option value="new">➕ New player</option>
-                          </select>
-                        ) : (
-                          <span className="text-sm">{r.resolved_name ?? r.resolved_player_id ?? "—"}</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 pr-4 tabular-nums text-xs">
-                        {r.confidence > 0 ? `${Math.round(r.confidence * 100)}%` : "—"}
-                      </td>
-                      <td className="py-2.5">
-                        <span
-                          className={`text-xs font-medium ${
-                            r.method === "unresolved"
-                              ? "text-red-600 dark:text-red-400"
-                              : isAmbiguous
-                              ? "text-amber-600 dark:text-amber-400"
-                              : "text-[var(--text-muted)]"
-                          }`}
-                        >
-                          {r.method}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                            {isDuplicate ? "collision" : r.method}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
           </div>
