@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import JobActions from "./JobActions";
 import ExtractionDebug from "./ExtractionDebug";
+import TeamConfirmation from "./TeamConfirmation";
+import { resolveTeamId } from "@/lib/team-codes";
 import type { ValidationCheck } from "@/lib/validation";
 import type { NameResolutionResult } from "@/lib/name-resolution";
 
@@ -59,6 +61,21 @@ export default async function BoxScoreJobDetailPage({
   const away = extraction?.away_team;
   const hasHardFailure = validationChecks.some((c) => c.severity === "hard" && !c.passed);
   const badgeClass = STATUS_BADGE[job.status as string] ?? "bg-gray-100 text-gray-600";
+
+  // Detect unresolvable team codes so TeamConfirmation knows when to show
+  const homeCodeUnresolvable = !!home?.code && !resolveTeamId(home.code);
+  const awayCodeUnresolvable = !!away?.code && !resolveTeamId(away.code);
+  const needsTeamConfirmation = homeCodeUnresolvable || awayCodeUnresolvable;
+
+  // Load team list for the confirmation dropdowns (only when needed)
+  let teamOptions: { team_id: string; name: string | null }[] = [];
+  if (needsTeamConfirmation) {
+    const { data: teamsData } = await supabaseAdmin
+      .from("teams")
+      .select("team_id, name")
+      .order("team_id");
+    teamOptions = (teamsData ?? []) as { team_id: string; name: string | null }[];
+  }
 
   // Generate a short-lived signed URL for the raw box score image
   let imageUrl: string | null = null;
@@ -147,6 +164,17 @@ export default async function BoxScoreJobDetailPage({
           </p>
         )}
       </section>
+
+      {/* Team code confirmation — shown when extracted codes can't be resolved */}
+      {needsTeamConfirmation && (
+        <TeamConfirmation
+          jobId={job_id as string}
+          extractedHomeCode={home?.code ?? null}
+          extractedAwayCode={away?.code ?? null}
+          teams={teamOptions}
+          isTerminal={["approved", "committed", "rejected"].includes(job.status as string)}
+        />
+      )}
 
       {/* Image + extraction debug (collapsible) */}
       <ExtractionDebug
