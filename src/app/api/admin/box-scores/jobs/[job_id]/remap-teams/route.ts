@@ -45,7 +45,7 @@ export async function POST(
   const oldAwayCode = (extraction.away_team as Record<string, unknown> | null)?.code as string | null;
 
   // Update home_team and away_team codes
-  const updatedExtraction = {
+  const updatedExtraction: Record<string, unknown> = {
     ...extraction,
     home_team: { ...(extraction.home_team as object), code: home_code.trim().toUpperCase() },
     away_team: { ...(extraction.away_team as object), code: away_code.trim().toUpperCase() },
