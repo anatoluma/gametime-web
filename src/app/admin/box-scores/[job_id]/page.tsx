@@ -68,13 +68,13 @@ export default async function BoxScoreJobDetailPage({
   const needsTeamConfirmation = homeCodeUnresolvable || awayCodeUnresolvable;
 
   // Load team list for the confirmation dropdowns (only when needed)
-  let teamOptions: { team_id: string; name: string | null }[] = [];
+  let teamOptions: { team_id: string; team_name: string | null }[] = [];
   if (needsTeamConfirmation) {
     const { data: teamsData } = await supabaseAdmin
       .from("teams")
-      .select("team_id, name")
+      .select("team_id, team_name")
       .order("team_id");
-    teamOptions = (teamsData ?? []) as { team_id: string; name: string | null }[];
+    teamOptions = (teamsData ?? []) as { team_id: string; team_name: string | null }[];
   }
 
   // Generate a short-lived signed URL for the raw box score image

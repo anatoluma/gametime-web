@@ -8,8 +8,7 @@ const supabaseAdmin = createClient(
 
 type TeamRow = {
   team_id: string;
-  name: string | null;
-  short_name: string | null;
+  team_name: string | null;
 };
 
 export type TeamResolution = {
@@ -70,10 +69,9 @@ function bestScore(extracted: string, team: TeamRow): number {
   const norm = normalize(extracted);
   const candidates = [
     normalize(team.team_id),
-    team.name ? normalize(team.name) : "",
-    team.short_name ? normalize(team.short_name) : "",
-    // also try just first N chars of team name (abbreviation match)
-    team.name ? normalize(team.name).slice(0, 3) : "",
+    team.team_name ? normalize(team.team_name) : "",
+    // first 3 chars of team name — catches abbreviation-style codes
+    team.team_name ? normalize(team.team_name).slice(0, 3) : "",
   ].filter(Boolean);
 
   return candidates.reduce((best, c) => Math.max(best, jaroWinkler(norm, c)), 0);
@@ -89,7 +87,7 @@ export async function resolveTeamCodes(
 ): Promise<TeamResolution[]> {
   const { data, error } = await supabaseAdmin
     .from("teams")
-    .select("team_id, name, short_name");
+    .select("team_id, team_name");
 
   if (error) throw new Error(`Failed to load teams: ${error.message}`);
   const teams = (data ?? []) as TeamRow[];

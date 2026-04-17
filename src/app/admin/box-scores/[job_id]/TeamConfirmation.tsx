@@ -6,7 +6,7 @@ import { TEAM_CODE_MAP } from "@/lib/team-codes";
 
 type TeamOption = {
   team_id: string;
-  name: string | null;
+  team_name: string | null;
 };
 
 type Props = {
@@ -112,7 +112,7 @@ export default function TeamConfirmation({
             <option value="">— select team —</option>
             {sortedTeams.map((t) => (
               <option key={t.team_id} value={t.team_id}>
-                {t.team_id}{t.name ? ` — ${t.name}` : ""}
+                {t.team_id}{t.team_name ? ` — ${t.team_name}` : ""}
               </option>
             ))}
           </select>
@@ -138,7 +138,7 @@ export default function TeamConfirmation({
             <option value="">— select team —</option>
             {sortedTeams.map((t) => (
               <option key={t.team_id} value={t.team_id}>
-                {t.team_id}{t.name ? ` — ${t.name}` : ""}
+                {t.team_id}{t.team_name ? ` — ${t.team_name}` : ""}
               </option>
             ))}
           </select>
