@@ -270,7 +270,7 @@ export default function JobActions({
                   const playerIdCount = new Map<string, number>();
                   for (const r of resolutionResults) {
                     const id = overrides[r.extracted_name] ?? r.resolved_player_id;
-                    if (id) playerIdCount.set(id, (playerIdCount.get(id) ?? 0) + 1);
+                    if (id && id !== "new") playerIdCount.set(id, (playerIdCount.get(id) ?? 0) + 1);
                   }
 
                   return resolutionResults.map((r) => {
