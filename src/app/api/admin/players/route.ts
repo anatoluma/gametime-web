@@ -8,6 +8,47 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const team_code = searchParams.get("team_code");
+  const jersey_number = searchParams.get("jersey_number");
+
+  if (!team_code || !jersey_number) {
+    return NextResponse.json({ existing: null });
+  }
+
+  const teamCode = team_code.trim().toUpperCase();
+  const team_id = resolveTeamId(teamCode);
+  if (!team_id) {
+    return NextResponse.json({ existing: null });
+  }
+
+  const jerseyNum = Number(jersey_number);
+  if (!Number.isFinite(jerseyNum)) {
+    return NextResponse.json({ existing: null });
+  }
+
+  const { data: player } = await supabaseAdmin
+    .from("players")
+    .select("player_id, first_name, last_name, jersey_number")
+    .eq("team_id", team_id)
+    .eq("jersey_number", jerseyNum)
+    .maybeSingle<{ player_id: string; first_name: string | null; last_name: string; jersey_number: number }>();
+
+  if (!player) {
+    return NextResponse.json({ existing: null });
+  }
+
+  return NextResponse.json({
+    existing: {
+      player_id: player.player_id,
+      first_name: player.first_name,
+      last_name: player.last_name,
+      jersey_number: player.jersey_number,
+    },
+  });
+}
+
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
   try {
@@ -16,7 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { first_name, last_name, team_code, jersey_number } = body;
+  const { first_name, last_name, team_code, jersey_number, clear_existing_jersey } = body;
 
   if (!last_name || typeof last_name !== "string" || !last_name.trim()) {
     return NextResponse.json({ error: "last_name is required" }, { status: 400 });
@@ -38,6 +79,43 @@ export async function POST(request: Request) {
 
   if (jerseyNum !== null && !Number.isFinite(jerseyNum)) {
     return NextResponse.json({ error: "Invalid jersey_number" }, { status: 400 });
+  }
+
+  if (jerseyNum !== null) {
+    const { data: conflictPlayer } = await supabaseAdmin
+      .from("players")
+      .select("player_id, first_name, last_name")
+      .eq("team_id", team_id)
+      .eq("jersey_number", jerseyNum)
+      .maybeSingle<{ player_id: string; first_name: string | null; last_name: string }>();
+
+    if (conflictPlayer) {
+      if (clear_existing_jersey === true) {
+        const { error: clearError } = await supabaseAdmin
+          .from("players")
+          .update({ jersey_number: null })
+          .eq("player_id", conflictPlayer.player_id);
+        if (clearError) {
+          return NextResponse.json(
+            { error: `Failed to clear existing player jersey: ${clearError.message}` },
+            { status: 500 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          {
+            conflict: true,
+            existing: {
+              player_id: conflictPlayer.player_id,
+              first_name: conflictPlayer.first_name,
+              last_name: conflictPlayer.last_name,
+              jersey_number: jerseyNum,
+            },
+          },
+          { status: 409 }
+        );
+      }
+    }
   }
 
   const { data: player, error } = await supabaseAdmin

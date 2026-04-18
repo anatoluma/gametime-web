@@ -16,6 +16,18 @@ type NewPlayerDraft = {
   jersey_number: string;
 };
 
+type ConflictInfo = {
+  player_id: string;
+  first_name: string | null;
+  last_name: string;
+  jersey_number: number;
+};
+
+// a = add new player, clear existing player's jersey number
+// b = add new player with a different number (user edits the field)
+// c = use the existing player instead of creating a new one
+type ConflictChoice = "a" | "b" | "c";
+
 type Props = {
   jobId: string;
   resolutionResults: NameResolutionResult[];
@@ -36,8 +48,9 @@ export default function JobActions({
 }: Props) {
   const router = useRouter();
   const [overrides, setOverrides] = useState<Record<string, string>>({});
-  // Keyed by extracted_name — holds form data for rows where reviewer chose "new player"
   const [newPlayers, setNewPlayers] = useState<Record<string, NewPlayerDraft>>({});
+  const [jerseyConflicts, setJerseyConflicts] = useState<Record<string, ConflictInfo>>({});
+  const [conflictChoices, setConflictChoices] = useState<Record<string, ConflictChoice>>({});
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -47,14 +60,23 @@ export default function JobActions({
 
   function setOverride(extractedName: string, playerId: string) {
     if (playerId === "new") {
-      // Seed the draft with empty fields; keep override as "new" sentinel
       setNewPlayers((prev) => ({
         ...prev,
         [extractedName]: prev[extractedName] ?? { first_name: "", last_name: "", jersey_number: "" },
       }));
     } else {
-      // Clear any pending new-player draft if reviewer switches away
       setNewPlayers((prev) => {
+        const next = { ...prev };
+        delete next[extractedName];
+        return next;
+      });
+      // Clear any conflict state for this row
+      setJerseyConflicts((prev) => {
+        const next = { ...prev };
+        delete next[extractedName];
+        return next;
+      });
+      setConflictChoices((prev) => {
         const next = { ...prev };
         delete next[extractedName];
         return next;
@@ -68,6 +90,19 @@ export default function JobActions({
       ...prev,
       [extractedName]: { ...prev[extractedName], [field]: value },
     }));
+    // Clear conflict state when jersey number changes so we re-check on next approve
+    if (field === "jersey_number") {
+      setJerseyConflicts((prev) => {
+        const next = { ...prev };
+        delete next[extractedName];
+        return next;
+      });
+      setConflictChoices((prev) => {
+        const next = { ...prev };
+        delete next[extractedName];
+        return next;
+      });
+    }
   }
 
   async function handleReprocess() {
@@ -103,14 +138,51 @@ export default function JobActions({
         }
       }
 
-      // Find which resolution result owns each new-player draft so we can get the team_code
       const resultByName = new Map(resolutionResults.map((r) => [r.extracted_name, r]));
 
-      // Create new players first, collect their IDs to use as overrides
+      // Pre-flight: check jersey conflicts for all new player drafts before creating any
+      const preflightConflicts: Record<string, ConflictInfo> = {};
+      for (const [extractedName, draft] of Object.entries(newPlayers)) {
+        if (overrides[extractedName] !== "new") continue;
+        if (!draft.jersey_number.trim()) continue;
+        // Skip if user already chose 'b' (change number) — they edited it, no need to re-block
+        if (conflictChoices[extractedName] === "b") continue;
+
+        const r = resultByName.get(extractedName);
+        const res = await fetch(
+          `/api/admin/players?team_code=${encodeURIComponent(r?.team_code ?? "")}&jersey_number=${encodeURIComponent(draft.jersey_number.trim())}`
+        );
+        const body = (await res.json()) as { existing: ConflictInfo | null };
+        if (body.existing) {
+          preflightConflicts[extractedName] = body.existing;
+        }
+      }
+
+      // If conflicts without chosen resolutions, surface them and stop
+      const unresolvedConflicts = Object.keys(preflightConflicts).filter(
+        (name) => !conflictChoices[name]
+      );
+      if (unresolvedConflicts.length > 0) {
+        setJerseyConflicts(preflightConflicts);
+        throw new Error("Jersey number conflicts detected — choose how to resolve each conflict below before approving");
+      }
+      setJerseyConflicts(preflightConflicts);
+
+      // Create new players, all or nothing approach — conflicts are pre-resolved above
       const resolvedOverrides = { ...overrides };
       for (const [extractedName, draft] of Object.entries(newPlayers)) {
         if (overrides[extractedName] !== "new") continue;
         const r = resultByName.get(extractedName);
+
+        const conflict = preflightConflicts[extractedName];
+        const choice = conflict ? conflictChoices[extractedName] : undefined;
+
+        if (choice === "c") {
+          // Use existing player — no creation needed
+          resolvedOverrides[extractedName] = conflict!.player_id;
+          continue;
+        }
+
         const res = await fetch("/api/admin/players", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -119,6 +191,8 @@ export default function JobActions({
             last_name: draft.last_name.trim(),
             team_code: r?.team_code ?? null,
             jersey_number: draft.jersey_number.trim() ? Number(draft.jersey_number) : null,
+            // 'a' = clear existing player's jersey number first
+            clear_existing_jersey: choice === "a",
           }),
         });
         if (!res.ok) {
@@ -193,8 +267,6 @@ export default function JobActions({
               </thead>
               <tbody>
                 {(() => {
-                  // Build a set of resolved_player_ids that appear more than once
-                  // so we can warn the reviewer about collisions
                   const playerIdCount = new Map<string, number>();
                   for (const r of resolutionResults) {
                     const id = overrides[r.extracted_name] ?? r.resolved_player_id;
@@ -207,7 +279,6 @@ export default function JobActions({
 
                     const isUnresolved = r.resolved_player_id === null;
                     const isAmbiguous = r.method === "manual" || r.method === "number_hint";
-                    // Also force review for any row sharing its resolved player with another row
                     const needsInput =
                       !isTerminal &&
                       (isUnresolved || isAmbiguous || r.method === "unresolved" || isDuplicate);
@@ -222,6 +293,8 @@ export default function JobActions({
                     }
 
                     const key = `${r.team_code}-${r.number}-${r.extracted_name}`;
+                    const conflict = jerseyConflicts[r.extracted_name];
+                    const conflictChoice = conflictChoices[r.extracted_name];
 
                     return (
                       <tr
@@ -251,29 +324,79 @@ export default function JobActions({
                                 <option value="new">➕ New player</option>
                               </select>
                               {effectivePlayerId === "new" && (
-                                <div className="mt-1 flex flex-wrap gap-1.5 items-center">
-                                  <input
-                                    type="text"
-                                    placeholder="First name"
-                                    value={newPlayers[r.extracted_name]?.first_name ?? ""}
-                                    onChange={(e) => updateNewPlayer(r.extracted_name, "first_name", e.target.value)}
-                                    className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs w-28 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                                  />
-                                  <input
-                                    type="text"
-                                    placeholder="Last name *"
-                                    value={newPlayers[r.extracted_name]?.last_name ?? ""}
-                                    onChange={(e) => updateNewPlayer(r.extracted_name, "last_name", e.target.value)}
-                                    className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs w-32 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                                  />
-                                  <input
-                                    type="number"
-                                    placeholder="#"
-                                    value={newPlayers[r.extracted_name]?.jersey_number ?? ""}
-                                    onChange={(e) => updateNewPlayer(r.extracted_name, "jersey_number", e.target.value)}
-                                    className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs w-14 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                                  />
-                                  <span className="text-xs text-[var(--text-muted)]">team: {r.team_code ?? "?"}</span>
+                                <div className="mt-1 flex flex-col gap-2">
+                                  <div className="flex flex-wrap gap-1.5 items-center">
+                                    <input
+                                      type="text"
+                                      placeholder="First name"
+                                      value={newPlayers[r.extracted_name]?.first_name ?? ""}
+                                      onChange={(e) => updateNewPlayer(r.extracted_name, "first_name", e.target.value)}
+                                      className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs w-28 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                                    />
+                                    <input
+                                      type="text"
+                                      placeholder="Last name *"
+                                      value={newPlayers[r.extracted_name]?.last_name ?? ""}
+                                      onChange={(e) => updateNewPlayer(r.extracted_name, "last_name", e.target.value)}
+                                      className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs w-32 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                                    />
+                                    <input
+                                      type="number"
+                                      placeholder="#"
+                                      value={newPlayers[r.extracted_name]?.jersey_number ?? ""}
+                                      onChange={(e) => updateNewPlayer(r.extracted_name, "jersey_number", e.target.value)}
+                                      className={`rounded border px-2 py-1 text-xs w-14 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-[var(--surface)] ${
+                                        conflict && !conflictChoice ? "border-orange-400" : "border-[var(--border)]"
+                                      }`}
+                                    />
+                                    <span className="text-xs text-[var(--text-muted)]">team: {r.team_code ?? "?"}</span>
+                                  </div>
+                                  {/* Jersey conflict resolution */}
+                                  {conflict && (
+                                    <div className="rounded border border-orange-300 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-700 px-3 py-2 text-xs space-y-1.5">
+                                      <p className="font-medium text-orange-700 dark:text-orange-400">
+                                        ⚠ Jersey #{conflict.jersey_number} is already taken by{" "}
+                                        {[conflict.first_name, conflict.last_name].filter(Boolean).join(" ")}
+                                      </p>
+                                      <div className="flex flex-col gap-1">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input
+                                            type="radio"
+                                            name={`conflict-${r.extracted_name}`}
+                                            value="a"
+                                            checked={conflictChoice === "a"}
+                                            onChange={() => setConflictChoices((prev) => ({ ...prev, [r.extracted_name]: "a" }))}
+                                          />
+                                          <span>Add new player, remove #{conflict.jersey_number} from{" "}
+                                            {[conflict.first_name, conflict.last_name].filter(Boolean).join(" ")}
+                                          </span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input
+                                            type="radio"
+                                            name={`conflict-${r.extracted_name}`}
+                                            value="b"
+                                            checked={conflictChoice === "b"}
+                                            onChange={() => setConflictChoices((prev) => ({ ...prev, [r.extracted_name]: "b" }))}
+                                          />
+                                          <span>Add new player with a different jersey number (edit # above)</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input
+                                            type="radio"
+                                            name={`conflict-${r.extracted_name}`}
+                                            value="c"
+                                            checked={conflictChoice === "c"}
+                                            onChange={() => setConflictChoices((prev) => ({ ...prev, [r.extracted_name]: "c" }))}
+                                          />
+                                          <span>
+                                            Use existing player:{" "}
+                                            {[conflict.first_name, conflict.last_name].filter(Boolean).join(" ")} #{conflict.jersey_number}
+                                          </span>
+                                        </label>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                               {isDuplicate && (
@@ -323,7 +446,6 @@ export default function JobActions({
             </p>
           )}
           <div className="flex flex-wrap items-start gap-4">
-            {/* Retry pipeline for stuck/failed jobs */}
             {RETRIABLE_STATUSES.has(currentStatus) && (
               <button
                 type="button"
@@ -335,7 +457,6 @@ export default function JobActions({
               </button>
             )}
 
-            {/* Approve */}
             <button
               type="button"
               disabled={hasHardFailure || loading}
@@ -351,7 +472,6 @@ export default function JobActions({
               </span>
             )}
 
-            {/* Reject */}
             {!showReject ? (
               <button
                 type="button"
@@ -393,7 +513,6 @@ export default function JobActions({
         </section>
       )}
 
-      {/* Committed/rejected notice */}
       {isTerminal && (
         <p className={`text-sm text-center py-2 font-medium ${
           currentStatus === "approved" ? "text-green-600 dark:text-green-400" :
