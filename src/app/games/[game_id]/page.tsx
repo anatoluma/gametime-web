@@ -7,28 +7,77 @@ import { supabase } from "@/lib/supabase/client";
 import TeamLogo from "@/app/components/TeamLogo";
 import GameSharePanel from "@/app/components/GameSharePanel";
 
-// ... Types remain exactly the same ...
 type Game = { game_id: string; season: string | null; tipoff: string | null; venue: string | null; home_team_id: string; away_team_id: string; home_score: number | null; away_score: number | null; };
 type Team = { team_id: string; team_name: string; };
-type PlayerStat = { player_id: string; team_id: string; points: number | null; first_name: string | null; last_name: string | null; jersey_number: number | null; };
+type PlayerStat = {
+  player_id: string;
+  team_id: string;
+  is_starter: boolean | null;
+  points: number | null;
+  minutes: string | null;
+  two_made: number | null;
+  two_att: number | null;
+  three_made: number | null;
+  three_att: number | null;
+  ft_made: number | null;
+  ft_att: number | null;
+  reb_off: number | null;
+  reb_def: number | null;
+  reb_tot: number | null;
+  assists: number | null;
+  turnovers: number | null;
+  steals: number | null;
+  blocks: number | null;
+  fouls_personal: number | null;
+  plus_minus: number | null;
+  efficiency: number | null;
+  first_name: string | null;
+  last_name: string | null;
+  jersey_number: number | null;
+};
 type RawPlayerGameStat = {
   player_id: string;
   team_id: string;
+  is_starter: boolean | null;
   points: number | null;
+  minutes: string | null;
+  two_made: number | null;
+  two_att: number | null;
+  three_made: number | null;
+  three_att: number | null;
+  ft_made: number | null;
+  ft_att: number | null;
+  reb_off: number | null;
+  reb_def: number | null;
+  reb_tot: number | null;
+  assists: number | null;
+  turnovers: number | null;
+  steals: number | null;
+  blocks: number | null;
+  fouls_personal: number | null;
+  plus_minus: number | null;
+  efficiency: number | null;
   players:
-    | {
-        first_name: string | null;
-        last_name: string | null;
-        jersey_number: number | null;
-      }
-    | Array<{
-        first_name: string | null;
-        last_name: string | null;
-        jersey_number: number | null;
-      }>
+    | { first_name: string | null; last_name: string | null; jersey_number: number | null; }
+    | Array<{ first_name: string | null; last_name: string | null; jersey_number: number | null; }>
     | null;
 };
 type DataIssue = { level: "warn" | "error"; message: string; };
+
+function fmtShot(made: number | null, att: number | null): string {
+  if (made === null && att === null) return "—";
+  return `${made ?? 0}/${att ?? 0}`;
+}
+
+function fmtNum(val: number | null): string {
+  if (val === null) return "—";
+  return val > 0 ? String(val) : "0";
+}
+
+function fmtPlusMinus(val: number | null): string {
+  if (val === null) return "—";
+  return val > 0 ? `+${val}` : String(val);
+}
 
 export default function GamePage() {
   const params = useParams<{ game_id?: string | string[] }>();
@@ -68,14 +117,20 @@ export default function GamePage() {
       setGame(gameData as Game);
 
       const { data: teamsData } = await supabase.from("teams").select("team_id, team_name");
-
       const teamMap: Record<string, Team> = {};
       (teamsData ?? []).forEach((t: Team) => { teamMap[t.team_id] = t; });
       setTeams(teamMap);
 
       const { data: statsData, error: statsError } = await supabase
         .from("player_game_stats")
-        .select(`player_id, team_id, points, players (first_name, last_name, jersey_number)`)
+        .select(`
+          player_id, team_id, is_starter, points,
+          minutes, two_made, two_att, three_made, three_att,
+          ft_made, ft_att, reb_off, reb_def, reb_tot,
+          assists, turnovers, steals, blocks, fouls_personal,
+          plus_minus, efficiency,
+          players (first_name, last_name, jersey_number)
+        `)
         .eq("game_id", gameId);
 
       if (cancelled) return;
@@ -83,11 +138,28 @@ export default function GamePage() {
 
       const normalized: PlayerStat[] = ((statsData ?? []) as unknown as RawPlayerGameStat[]).map((s) => {
         const player = Array.isArray(s.players) ? (s.players[0] ?? null) : s.players;
-
         return {
           player_id: s.player_id,
           team_id: s.team_id,
+          is_starter: s.is_starter,
           points: s.points,
+          minutes: s.minutes,
+          two_made: s.two_made,
+          two_att: s.two_att,
+          three_made: s.three_made,
+          three_att: s.three_att,
+          ft_made: s.ft_made,
+          ft_att: s.ft_att,
+          reb_off: s.reb_off,
+          reb_def: s.reb_def,
+          reb_tot: s.reb_tot,
+          assists: s.assists,
+          turnovers: s.turnovers,
+          steals: s.steals,
+          blocks: s.blocks,
+          fouls_personal: s.fouls_personal,
+          plus_minus: s.plus_minus,
+          efficiency: s.efficiency,
           first_name: player?.first_name ?? null,
           last_name: player?.last_name ?? null,
           jersey_number: player?.jersey_number ?? null,
@@ -104,7 +176,7 @@ export default function GamePage() {
       const sumPts = (teamId: string) => normalized.filter((r) => r.team_id === teamId).reduce((s, r) => s + (r.points ?? 0), 0);
       const homeBox = sumPts(homeId);
       const awayBox = sumPts(awayId);
-      
+
       if (gameData.home_score != null && gameData.away_score != null) {
         if (homeBox !== gameData.home_score) newIssues.push({ level: "warn", message: `Home mismatch (Box: ${homeBox} vs Final: ${gameData.home_score})` });
         if (awayBox !== gameData.away_score) newIssues.push({ level: "warn", message: `Away mismatch (Box: ${awayBox} vs Final: ${gameData.away_score})` });
@@ -117,6 +189,8 @@ export default function GamePage() {
     load();
     return () => { cancelled = true; };
   }, [gameId]);
+
+  const hasDetailedStats = useMemo(() => stats.some((s) => s.minutes != null), [stats]);
 
   const topScorer = useMemo(() => {
     if (stats.length === 0) return null;
@@ -139,10 +213,7 @@ export default function GamePage() {
 
   const dateLabel = game.tipoff
     ? new Date(game.tipoff).toLocaleDateString([], {
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-        year: "numeric",
+        weekday: "short", day: "numeric", month: "short", year: "numeric",
       })
     : "Date TBD";
 
@@ -150,38 +221,125 @@ export default function GamePage() {
   const homeWins = hasFinalScore && game.home_score! > game.away_score!;
   const awayWins = hasFinalScore && game.away_score! > game.home_score!;
 
-  // UPDATED: High Contrast Table
-  const renderTable = (rows: PlayerStat[]) => (
-    <div className="bg-white border-4 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] mt-3">
-      <table className="w-full text-left border-collapse">
-        <thead>
-          <tr className="bg-black text-white">
-            <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-orange-500 w-12">#</th>
-            <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-orange-500">Player</th>
-            <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-orange-500 text-right">PTS</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y-2 divide-gray-100">
-          {rows.sort((a,b) => (b.points ?? 0) - (a.points ?? 0)).map((p) => (
-            <tr key={p.player_id} className="hover:bg-orange-50 transition-colors group">
-              <td className="py-3 px-4 text-xs font-black text-gray-400 italic group-hover:text-black">{p.jersey_number ?? "-"}</td>
-              <td className="py-3 px-4">
-                <Link href={`/players/${p.player_id}`} className="text-sm font-black uppercase tracking-tighter text-black group-hover:text-orange-600 block">
-                  {p.first_name} {p.last_name}
-                </Link>
-              </td>
-              <td className="py-3 px-4 text-right text-base font-black text-black tabular-nums italic">
-                {p.points ?? 0}
-              </td>
+  function sortedRows(rows: PlayerStat[]): PlayerStat[] {
+    if (hasDetailedStats) {
+      // Starters first (by jersey number), then bench (by jersey number)
+      const starters = rows.filter((r) => r.is_starter).sort((a, b) => (a.jersey_number ?? 99) - (b.jersey_number ?? 99));
+      const bench = rows.filter((r) => !r.is_starter).sort((a, b) => (a.jersey_number ?? 99) - (b.jersey_number ?? 99));
+      return [...starters, ...bench];
+    }
+    return [...rows].sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
+  }
+
+  function renderSimpleTable(rows: PlayerStat[]) {
+    return (
+      <div className="bg-white border-4 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] mt-3">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-black text-white">
+              <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-orange-500 w-12">#</th>
+              <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-orange-500">Player</th>
+              <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-orange-500 text-right">PTS</th>
             </tr>
-          ))}
-          {rows.length === 0 && (
-            <tr><td colSpan={3} className="p-10 text-xs text-center text-gray-400 font-black uppercase italic tracking-widest">No Stats Recorded</td></tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
+          </thead>
+          <tbody className="divide-y-2 divide-gray-100">
+            {sortedRows(rows).map((p) => (
+              <tr key={p.player_id} className="hover:bg-orange-50 transition-colors group">
+                <td className="py-3 px-4 text-xs font-black text-gray-400 italic group-hover:text-black">{p.jersey_number ?? "-"}</td>
+                <td className="py-3 px-4">
+                  <Link href={`/players/${p.player_id}`} className="text-sm font-black uppercase tracking-tighter text-black group-hover:text-orange-600 block">
+                    {p.first_name} {p.last_name}
+                  </Link>
+                </td>
+                <td className="py-3 px-4 text-right text-base font-black text-black tabular-nums italic">
+                  {p.points ?? 0}
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr><td colSpan={3} className="p-10 text-xs text-center text-gray-400 font-black uppercase italic tracking-widest">No Stats Recorded</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  function renderDetailedTable(rows: PlayerStat[]) {
+    const sorted = sortedRows(rows);
+    const thCls = "py-3 px-2.5 text-[9px] font-black uppercase tracking-widest text-orange-500 text-right whitespace-nowrap";
+    const thLeftCls = "py-3 px-3 text-[9px] font-black uppercase tracking-widest text-orange-500 text-left whitespace-nowrap";
+
+    // Divider index: first bench player
+    const firstBenchIdx = sorted.findIndex((r) => !r.is_starter);
+
+    return (
+      <div className="bg-white border-4 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] mt-3">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse" style={{ minWidth: "700px" }}>
+            <thead>
+              <tr className="bg-black text-white">
+                <th className={`${thLeftCls} w-8`}>#</th>
+                <th className={`${thLeftCls} min-w-[130px]`}>Player</th>
+                <th className={thCls}>MIN</th>
+                <th className={thCls}>2FG</th>
+                <th className={thCls}>3FG</th>
+                <th className={thCls}>FT</th>
+                <th className={thCls}>REB</th>
+                <th className={thCls}>AST</th>
+                <th className={thCls}>TO</th>
+                <th className={thCls}>STL</th>
+                <th className={thCls}>BLK</th>
+                <th className={thCls}>PF</th>
+                <th className={thCls}>+/-</th>
+                <th className={thCls}>EFF</th>
+                <th className={`${thCls} text-white`}>PTS</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {sorted.map((p, idx) => {
+                const isBenchDivider = idx === firstBenchIdx && firstBenchIdx > 0;
+                return (
+                  <tr
+                    key={p.player_id}
+                    className={`hover:bg-orange-50 transition-colors group ${isBenchDivider ? "border-t-2 border-gray-300" : ""}`}
+                  >
+                    <td className="py-2.5 px-3 text-xs font-black text-gray-400 italic group-hover:text-black">{p.jersey_number ?? "-"}</td>
+                    <td className="py-2.5 px-3">
+                      <Link href={`/players/${p.player_id}`} className="text-xs font-black uppercase tracking-tighter text-black group-hover:text-orange-600 block">
+                        {p.first_name} {p.last_name}
+                      </Link>
+                      {p.is_starter && (
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-gray-400">starter</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{p.minutes ?? "—"}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtShot(p.two_made, p.two_att)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtShot(p.three_made, p.three_att)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtShot(p.ft_made, p.ft_att)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums text-gray-800">{fmtNum(p.reb_tot)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums text-gray-800">{fmtNum(p.assists)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtNum(p.turnovers)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtNum(p.steals)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtNum(p.blocks)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtNum(p.fouls_personal)}</td>
+                    <td className={`py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums ${(p.plus_minus ?? 0) > 0 ? "text-green-600" : (p.plus_minus ?? 0) < 0 ? "text-red-600" : "text-gray-400"}`}>
+                      {fmtPlusMinus(p.plus_minus)}
+                    </td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtNum(p.efficiency)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-base font-black text-black tabular-nums italic">{p.points ?? 0}</td>
+                  </tr>
+                );
+              })}
+              {rows.length === 0 && (
+                <tr><td colSpan={15} className="p-10 text-xs text-center text-gray-400 font-black uppercase italic tracking-widest">No Stats Recorded</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="p-4 md:p-8 max-w-5xl mx-auto bg-white min-h-screen border-x border-gray-100">
@@ -199,7 +357,7 @@ export default function GamePage() {
         {/* ── Content ── */}
         <div className="relative z-10 px-6 md:px-10 pt-6 pb-0">
 
-          {/* Header row: branding only (pill moved to score center) */}
+          {/* Header row */}
           <div className="flex items-start justify-end mb-4">
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "1px" }}>
@@ -214,8 +372,6 @@ export default function GamePage() {
           {/* ── MOBILE layout ── */}
           <div className="md:hidden">
             <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
-
-              {/* Home team */}
               <div className="flex flex-col items-center text-center">
                 <div className="relative">
                   <div style={{ width: "64px", height: "64px", borderRadius: "50%", border: homeWins ? "2px solid rgba(255,140,0,0.45)" : "2px solid rgba(255,255,255,0.08)", background: homeWins ? "rgba(255,140,0,0.06)" : "rgba(255,255,255,0.04)", boxShadow: homeWins ? "0 0 20px rgba(255,130,0,0.15)" : "none", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -233,7 +389,6 @@ export default function GamePage() {
                 </p>
               </div>
 
-              {/* Score */}
               <div className="flex flex-col items-center pt-1">
                 <div className="flex items-end">
                   <span className="text-5xl font-black tabular-nums leading-none" style={{ fontFamily: "'Bebas Neue', Impact, serif", color: hasFinalScore ? (homeWins ? "#FF8C00" : "rgba(255,255,255,0.3)") : "white", textShadow: homeWins ? "0 0 40px rgba(255,130,0,0.35)" : "none" }}>{game.home_score ?? "-"}</span>
@@ -245,7 +400,6 @@ export default function GamePage() {
                 </div>
               </div>
 
-              {/* Away team */}
               <div className="flex flex-col items-center text-center">
                 <div className="relative">
                   <div style={{ width: "64px", height: "64px", borderRadius: "50%", border: awayWins ? "2px solid rgba(255,140,0,0.45)" : "2px solid rgba(255,255,255,0.08)", background: awayWins ? "rgba(255,140,0,0.06)" : "rgba(255,255,255,0.04)", boxShadow: awayWins ? "0 0 20px rgba(255,130,0,0.15)" : "none", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -262,14 +416,11 @@ export default function GamePage() {
                   {awayWins ? "AWAY · WINNER" : "AWAY"}
                 </p>
               </div>
-
             </div>
           </div>
 
           {/* ── DESKTOP layout ── */}
           <div className="hidden md:flex items-center justify-between gap-8">
-
-            {/* Home team — left-aligned */}
             <div className="flex-1 flex flex-col items-start">
               <div className="flex items-center gap-5">
                 <div className="relative flex-shrink-0">
@@ -291,7 +442,6 @@ export default function GamePage() {
               </div>
             </div>
 
-            {/* Score — center */}
             <div className="text-center flex flex-col items-center flex-shrink-0">
               <div className="flex items-end">
                 <span className="font-black tabular-nums leading-none text-7xl md:text-8xl" style={{ fontFamily: "'Bebas Neue', Impact, serif", color: hasFinalScore ? (homeWins ? "#FF8C00" : "rgba(255,255,255,0.3)") : "white", textShadow: homeWins ? "0 0 50px rgba(255,130,0,0.4)" : "none" }}>{game.home_score ?? "-"}</span>
@@ -303,7 +453,6 @@ export default function GamePage() {
               </div>
             </div>
 
-            {/* Away team — right-aligned */}
             <div className="flex-1 flex flex-col items-end">
               <div className="flex items-center gap-5 flex-row-reverse">
                 <div className="relative flex-shrink-0">
@@ -324,7 +473,6 @@ export default function GamePage() {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
@@ -364,14 +512,8 @@ export default function GamePage() {
           <div className="absolute bottom-4 right-4 z-20 md:bottom-5 md:right-6">
             <GameSharePanel
               gameId={game.game_id}
-              homeTeam={{
-                name: homeTeam?.team_name ?? "Home Team",
-                logoUrl: `/images/teams/${game.home_team_id.toLowerCase()}.webp`,
-              }}
-              awayTeam={{
-                name: awayTeam?.team_name ?? "Away Team",
-                logoUrl: `/images/teams/${game.away_team_id.toLowerCase()}.webp`,
-              }}
+              homeTeam={{ name: homeTeam?.team_name ?? "Home Team", logoUrl: `/images/teams/${game.home_team_id.toLowerCase()}.webp` }}
+              awayTeam={{ name: awayTeam?.team_name ?? "Away Team", logoUrl: `/images/teams/${game.away_team_id.toLowerCase()}.webp` }}
               homeScore={game.home_score!}
               awayScore={game.away_score!}
               venue={game.venue ?? "Local Arena"}
@@ -386,31 +528,35 @@ export default function GamePage() {
       {/* ISSUES ALERT BOX */}
       {issues.length > 0 && (
         <div className="mt-8 bg-red-50 border-l-8 border-red-600 p-6 shadow-sm">
-            <h3 className="text-[12px] font-black uppercase text-red-600 tracking-widest mb-2">Data Integrity Alert</h3>
-            <ul className="space-y-1">
-              {issues.map((i, idx) => (
-                <li key={idx} className="text-xs font-black text-gray-900">• {i.message}</li>
-              ))}
-            </ul>
+          <h3 className="text-[12px] font-black uppercase text-red-600 tracking-widest mb-2">Data Integrity Alert</h3>
+          <ul className="space-y-1">
+            {issues.map((i, idx) => (
+              <li key={idx} className="text-xs font-black text-gray-900">• {i.message}</li>
+            ))}
+          </ul>
         </div>
       )}
 
-      {/* BOX SCORES GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mt-12">
+      {/* BOX SCORES */}
+      <div className={`mt-12 ${hasDetailedStats ? "space-y-12" : "grid grid-cols-1 lg:grid-cols-2 gap-12"}`}>
         <section>
           <div className="flex items-center gap-4 mb-4">
-            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-black">Home Box Score</h2>
+            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-black">
+              {homeTeam?.team_name ?? "Home"} Box Score
+            </h2>
             <div className="h-1 flex-1 bg-black"></div>
           </div>
-          {renderTable(homeStats)}
+          {hasDetailedStats ? renderDetailedTable(homeStats) : renderSimpleTable(homeStats)}
         </section>
 
         <section>
           <div className="flex items-center gap-4 mb-4">
-            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-black">Away Box Score</h2>
+            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-black">
+              {awayTeam?.team_name ?? "Away"} Box Score
+            </h2>
             <div className="h-1 flex-1 bg-black"></div>
           </div>
-          {renderTable(awayStats)}
+          {hasDetailedStats ? renderDetailedTable(awayStats) : renderSimpleTable(awayStats)}
         </section>
       </div>
     </main>
