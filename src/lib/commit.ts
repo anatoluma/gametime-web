@@ -397,23 +397,33 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
     }
 
     const players = Array.isArray(extraction.players) ? extraction.players : [];
+    console.log(`[COMMIT] Processing ${players.length} extracted players for job ${jobId}`);
+    console.log(`[COMMIT] Resolution map has ${resolvedPlayerByKey.size} entries`);
     const playerStatRows = players
       .map((player) => {
         // DNP players have no stats — skip them entirely rather than inserting null points
-        if (player.dnp === true) return null;
+        if (player.dnp === true) {
+          console.log(`[COMMIT] Skipping DNP player: ${player.name}`);
+          return null;
+        }
 
         const teamCode = normalizeCode(player.team_code);
         const teamId = resolveTeamId(teamCode);
-        if (!teamId) return null;
+        if (!teamId) {
+          console.warn(`[COMMIT] Could not resolve team from code: ${player.team_code}`);
+          return null;
+        }
 
         const playerNumber = toNumber(player.number);
         const playerName = toStringOrNull(player.name);
-        const resolutionId = resolvedPlayerByKey.get(
-          resolutionKey(teamCode, playerNumber, playerName)
-        );
+        const resolutionKey_ = resolutionKey(teamCode, playerNumber, playerName);
+        const resolutionId = resolvedPlayerByKey.get(resolutionKey_);
         const teamRoster = playersByTeam.get(teamId) ?? [];
         const playerId = findPlayerId(player, teamId, teamRoster, resolutionId ?? null);
-        if (!playerId) return null;
+        if (!playerId) {
+          console.warn(`[COMMIT] Could not find player - Name: ${playerName}, Number: ${playerNumber}, Team: ${teamCode}, ResolutionId: ${resolutionId}, RosterSize: ${teamRoster.length}`);
+          return null;
+        }
 
         const stats = player.stats ?? {};
         const twoMade = toNumber(stats.two_made);
@@ -429,7 +439,10 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
         const points = extractedPoints ?? computedPoints;
 
         // Cannot write a row without points — DB has NOT NULL constraint
-        if (points === null) return null;
+        if (points === null) {
+          console.warn(`[COMMIT] Skipping player with null points - Player: ${playerName}, Team: ${teamCode}`);
+          return null;
+        }
 
         const row: PlayerGameStatInsert = {
           game_id: game.game_id,
@@ -472,6 +485,7 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
       seenPlayerIds.set(row.player_id, row);
     }
     const dedupedRows = Array.from(seenPlayerIds.values());
+    console.log(`[COMMIT] After filtering & deduping: ${dedupedRows.length} rows to insert`);
 
     if (dedupedRows.length > 0) {
       const { error: playerStatsError } = await supabaseAdmin
