@@ -65,7 +65,8 @@ export default async function BoxScoreJobDetailPage({
   // Detect unresolvable team codes so TeamConfirmation knows when to show
   const homeCodeUnresolvable = !!home?.code && !resolveTeamId(home.code);
   const awayCodeUnresolvable = !!away?.code && !resolveTeamId(away.code);
-  const needsTeamConfirmation = homeCodeUnresolvable || awayCodeUnresolvable;
+  // Always show team confirmation if job is not yet approved (so user can correct OCR errors)
+  const needsTeamConfirmation = (homeCodeUnresolvable || awayCodeUnresolvable) || !["approved", "committed", "rejected"].includes(job.status as string);
 
   // Load team list for the confirmation dropdowns (only when needed)
   let teamOptions: { team_id: string; team_name: string | null }[] = [];

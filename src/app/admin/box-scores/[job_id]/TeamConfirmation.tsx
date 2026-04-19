@@ -51,8 +51,10 @@ export default function TeamConfirmation({
   const awayMismatch = awayCode !== awayResolved;
   const needsAttention = homeUnknown || awayUnknown;
 
-  if (!needsAttention && !isTerminal) return null;
-  if (!needsAttention && isTerminal) return null;
+  // Show section if there's an error OR if user manually changed a code (to allow override even if valid)
+  const showSection = needsAttention || homeMismatch || awayMismatch;
+
+  if (!showSection && isTerminal) return null;
 
   async function handleRemap() {
     if (!homeCode || !awayCode) {
@@ -84,10 +86,13 @@ export default function TeamConfirmation({
   return (
     <section className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700 px-6 py-5 mb-6">
       <h2 className="text-base font-semibold text-amber-800 dark:text-amber-300 mb-1">
-        ⚠ Team code mismatch — confirm teams before name resolution
+        {needsAttention ? "⚠ Team code mismatch" : "📝 Review team codes"} — confirm teams before name resolution
       </h2>
       <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
-        One or more extracted team codes could not be matched to the database.
+        {needsAttention
+          ? "One or more extracted team codes could not be matched to the database."
+          : "Review the extracted team codes below. If the OCR was incorrect, select the correct teams."
+        }
         Select the correct teams below, then click <strong>Re-resolve names</strong>.
       </p>
 
