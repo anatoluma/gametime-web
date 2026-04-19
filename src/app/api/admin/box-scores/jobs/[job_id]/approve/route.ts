@@ -23,9 +23,9 @@ export async function POST(
 ) {
   const { job_id } = await params;
 
-  let body: { overrides?: unknown };
+  let body: { overrides?: unknown; override_validation?: boolean };
   try {
-    body = (await request.json()) as { overrides?: unknown };
+    body = (await request.json()) as { overrides?: unknown; override_validation?: boolean };
   } catch {
     body = {};
   }
@@ -35,6 +35,7 @@ export async function POST(
         (o) => typeof o?.extracted_name === "string" && typeof o?.player_id === "string"
       )
     : [];
+  const overrideValidation = body?.override_validation === true;
 
   const { data: job, error: fetchError } = await supabaseAdmin
     .from("processing_jobs")
@@ -46,10 +47,10 @@ export async function POST(
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
 
-  // Block approve if any hard validation check failed
+  // Block approve if any hard validation check failed (unless override is set)
   const validationChecks = (job.validation_json ?? []) as ValidationCheck[];
   const hasHardFailure = validationChecks.some((c) => c.severity === "hard" && !c.passed);
-  if (hasHardFailure) {
+  if (hasHardFailure && !overrideValidation) {
     return NextResponse.json(
       { error: "Cannot approve: hard validation failure present" },
       { status: 422 }

@@ -51,6 +51,7 @@ export default function JobActions({
   const [newPlayers, setNewPlayers] = useState<Record<string, NewPlayerDraft>>({});
   const [jerseyConflicts, setJerseyConflicts] = useState<Record<string, ConflictInfo>>({});
   const [conflictChoices, setConflictChoices] = useState<Record<string, ConflictChoice>>({});
+  const [overrideValidation, setOverrideValidation] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -210,7 +211,7 @@ export default function JobActions({
       const res = await fetch(`/api/admin/box-scores/jobs/${jobId}/approve`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ overrides: overrideList }),
+        body: JSON.stringify({ overrides: overrideList, override_validation: overrideValidation }),
       });
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
@@ -457,21 +458,37 @@ export default function JobActions({
               </button>
             )}
 
-            <button
-              type="button"
-              disabled={hasHardFailure || loading}
-              onClick={handleApprove}
-              className="rounded-lg px-5 py-2 text-sm font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? "Saving…" : "Approve"}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                disabled={hasHardFailure ? !overrideValidation : false || loading}
+                onClick={handleApprove}
+                className="rounded-lg px-5 py-2 text-sm font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? "Saving…" : "Approve"}
+              </button>
 
-            {hasHardFailure && (
+              {hasHardFailure && (
+                <label className="flex items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={overrideValidation}
+                    onChange={(e) => setOverrideValidation(e.target.checked)}
+                    disabled={loading}
+                    className="rounded border-[var(--border)]"
+                  />
+                  <span className="text-amber-700 dark:text-amber-400">I&apos;ve manually verified the data</span>
+                </label>
+              )}
+            </div>
+
+            {hasHardFailure && !overrideValidation && (
               <span className="self-center text-xs text-red-600 dark:text-red-400">
-                Hard validation failure — cannot approve
+                Check the box above to approve despite validation errors
               </span>
             )}
 
+            {/* Reject */}
             {!showReject ? (
               <button
                 type="button"
