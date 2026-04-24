@@ -192,16 +192,42 @@ export default function GamePage() {
 
   const hasDetailedStats = useMemo(() => stats.some((s) => s.minutes != null), [stats]);
 
-  const topScorer = useMemo(() => {
-    if (stats.length === 0) return null;
-    const best = [...stats].sort((a, b) => (b.points ?? 0) - (a.points ?? 0))[0];
-    if (!best || (best.points ?? 0) === 0) return null;
-    return {
-      name: `${best.first_name ?? ""} ${best.last_name ?? ""}`.trim(),
-      points: best.points ?? 0,
-      teamName: teams[best.team_id]?.team_name ?? "",
+  // Calculate highlight score combining multiple stats
+  const calculateHighlightScore = (player: PlayerStat): number => {
+    // Use efficiency if available, otherwise calculate a composite score
+    if (player.efficiency !== null) {
+      return player.efficiency;
+    }
+    // Fallback: points + rebounds + assists + steals + blocks - turnovers
+    return (player.points ?? 0) + (player.reb_tot ?? 0) + (player.assists ?? 0) + 
+           (player.steals ?? 0) + (player.blocks ?? 0) - (player.turnovers ?? 0);
+  };
+
+  const topPlayers = useMemo(() => {
+    if (stats.length === 0 || !game) return { home: null, away: null };
+
+    const homeStats = stats.filter((s) => s.team_id === game.home_team_id);
+    const awayStats = stats.filter((s) => s.team_id === game.away_team_id);
+
+    const getTopPlayer = (teamStats: PlayerStat[]) => {
+      if (teamStats.length === 0) return null;
+      const best = [...teamStats].sort((a, b) => calculateHighlightScore(b) - calculateHighlightScore(a))[0];
+      if (!best || calculateHighlightScore(best) <= 0) return null;
+      return {
+        name: `${best.first_name ?? ""} ${best.last_name ?? ""}`.trim(),
+        teamName: teams[best.team_id]?.team_name ?? "",
+        points: best.points ?? 0,
+        rebounds: best.reb_tot ?? 0,
+        assists: best.assists ?? 0,
+        efficiency: best.efficiency ?? calculateHighlightScore(best),
+      };
     };
-  }, [stats, teams]);
+
+    return {
+      home: getTopPlayer(homeStats),
+      away: getTopPlayer(awayStats),
+    };
+  }, [stats, teams, game]);
 
   if (loading) return <main className="p-8 text-center font-black uppercase italic text-gray-500">Loading Game...</main>;
   if (error || !game) return <main className="p-8 text-center text-red-500 font-bold uppercase">Game not found</main>;
@@ -476,18 +502,61 @@ export default function GamePage() {
           </div>
         </div>
 
-        {/* ── Top Scorer strip ── */}
-        {topScorer && (
-          <div className="relative z-10 mx-6 md:mx-10 mt-5 rounded-2xl flex items-center justify-between gap-4 px-5 py-4" style={{ background: "linear-gradient(135deg, rgba(255,140,0,0.1) 0%, rgba(255,140,0,0.04) 100%)", border: "1px solid rgba(255,140,0,0.22)" }}>
-            <div className="flex items-center gap-4 min-w-0">
-              <span className="text-[8px] font-bold uppercase tracking-[2.5px] flex-shrink-0" style={{ color: "#FF8C00", opacity: 0.8 }}>★ Top Scorer</span>
-              <span className="font-black leading-none truncate" style={{ fontFamily: "'Bebas Neue', Impact, serif", fontSize: "28px", color: "#fff", letterSpacing: "1px" }}>{topScorer.name}</span>
-              <span className="text-[10px] font-semibold uppercase tracking-[1.5px] truncate hidden sm:block" style={{ color: "rgba(255,255,255,0.3)" }}>{topScorer.teamName}</span>
-            </div>
-            <div className="flex items-baseline gap-1.5 flex-shrink-0">
-              <span className="font-black leading-none" style={{ fontFamily: "'Bebas Neue', Impact, serif", fontSize: "40px", color: "#FF8C00", textShadow: "0 0 24px rgba(255,130,0,0.4)" }}>{topScorer.points}</span>
-              <span className="text-[8px] font-bold uppercase tracking-[2px]" style={{ color: "rgba(255,140,0,0.5)" }}>PTS</span>
-            </div>
+        {/* ── Top Players strip ── */}
+        {(topPlayers.home || topPlayers.away) && (
+          <div className="relative z-10 mx-6 md:mx-10 mt-5 space-y-3">
+            {topPlayers.home && (
+              <div className="rounded-2xl flex items-center justify-between gap-4 px-5 py-4" style={{ background: "linear-gradient(135deg, rgba(255,140,0,0.1) 0%, rgba(255,140,0,0.04) 100%)", border: "1px solid rgba(255,140,0,0.22)" }}>
+                <div className="flex items-center gap-4 min-w-0">
+                  <span className="text-[8px] font-bold uppercase tracking-[2.5px] flex-shrink-0" style={{ color: "#FF8C00", opacity: 0.8 }}>★ {homeTeam?.team_name ?? "Home"} Top Player</span>
+                  <span className="font-black leading-none truncate" style={{ fontFamily: "'Bebas Neue', Impact, serif", fontSize: "24px", color: "#fff", letterSpacing: "1px" }}>{topPlayers.home.name}</span>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="text-center">
+                    <span className="font-black leading-none block" style={{ fontFamily: "'Bebas Neue', Impact, serif", fontSize: "32px", color: "#FF8C00", textShadow: "0 0 24px rgba(255,130,0,0.4)" }}>{topPlayers.home.points}</span>
+                    <span className="text-[7px] font-bold uppercase tracking-[1px]" style={{ color: "rgba(255,140,0,0.5)" }}>PTS</span>
+                  </div>
+                  {topPlayers.home.rebounds > 0 && (
+                    <div className="text-center">
+                      <span className="font-black leading-none block" style={{ fontFamily: "'Bebas Neue', Impact, serif", fontSize: "24px", color: "#fff" }}>{topPlayers.home.rebounds}</span>
+                      <span className="text-[7px] font-bold uppercase tracking-[1px]" style={{ color: "rgba(255,255,255,0.5)" }}>REB</span>
+                    </div>
+                  )}
+                  {topPlayers.home.assists > 0 && (
+                    <div className="text-center">
+                      <span className="font-black leading-none block" style={{ fontFamily: "'Bebas Neue', Impact, serif", fontSize: "24px", color: "#fff" }}>{topPlayers.home.assists}</span>
+                      <span className="text-[7px] font-bold uppercase tracking-[1px]" style={{ color: "rgba(255,255,255,0.5)" }}>AST</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {topPlayers.away && (
+              <div className="rounded-2xl flex items-center justify-between gap-4 px-5 py-4" style={{ background: "linear-gradient(135deg, rgba(255,140,0,0.1) 0%, rgba(255,140,0,0.04) 100%)", border: "1px solid rgba(255,140,0,0.22)" }}>
+                <div className="flex items-center gap-4 min-w-0">
+                  <span className="text-[8px] font-bold uppercase tracking-[2.5px] flex-shrink-0" style={{ color: "#FF8C00", opacity: 0.8 }}>★ {awayTeam?.team_name ?? "Away"} Top Player</span>
+                  <span className="font-black leading-none truncate" style={{ fontFamily: "'Bebas Neue', Impact, serif", fontSize: "24px", color: "#fff", letterSpacing: "1px" }}>{topPlayers.away.name}</span>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="text-center">
+                    <span className="font-black leading-none block" style={{ fontFamily: "'Bebas Neue', Impact, serif", fontSize: "32px", color: "#FF8C00", textShadow: "0 0 24px rgba(255,130,0,0.4)" }}>{topPlayers.away.points}</span>
+                    <span className="text-[7px] font-bold uppercase tracking-[1px]" style={{ color: "rgba(255,140,0,0.5)" }}>PTS</span>
+                  </div>
+                  {topPlayers.away.rebounds > 0 && (
+                    <div className="text-center">
+                      <span className="font-black leading-none block" style={{ fontFamily: "'Bebas Neue', Impact, serif", fontSize: "24px", color: "#fff" }}>{topPlayers.away.rebounds}</span>
+                      <span className="text-[7px] font-bold uppercase tracking-[1px]" style={{ color: "rgba(255,255,255,0.5)" }}>REB</span>
+                    </div>
+                  )}
+                  {topPlayers.away.assists > 0 && (
+                    <div className="text-center">
+                      <span className="font-black leading-none block" style={{ fontFamily: "'Bebas Neue', Impact, serif", fontSize: "24px", color: "#fff" }}>{topPlayers.away.assists}</span>
+                      <span className="text-[7px] font-bold uppercase tracking-[1px]" style={{ color: "rgba(255,255,255,0.5)" }}>AST</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -519,7 +588,7 @@ export default function GamePage() {
               venue={game.venue ?? "Local Arena"}
               date={dateLabel}
               season={game.season ?? "2025-2026"}
-              topScorer={topScorer}
+              topPlayers={topPlayers}
             />
           </div>
         )}

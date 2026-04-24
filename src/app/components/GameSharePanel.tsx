@@ -17,12 +17,156 @@ export type GameSharePanelProps = {
   venue: string;
   date: string;
   season: string;
-  topScorer: { name: string; points: number; teamName: string } | null;
+  topPlayers: { home: TopPlayer | null; away: TopPlayer | null };
+};
+
+type TopPlayer = {
+  name: string;
+  teamName: string;
+  points: number;
+  rebounds: number;
+  assists: number;
+  efficiency: number;
 };
 
 type ShareCardProps = Omit<GameSharePanelProps, "gameId">;
 
-// ─── Team Column ──────────────────────────────────────────────────────────────
+// ─── Top Player Spotlight ──────────────────────────────────────────────────────
+function TopPlayerSpotlight({
+  player,
+  teamName,
+}: {
+  player: TopPlayer;
+  teamName: string;
+}) {
+  return (
+    <div
+      style={{
+        borderRadius: "12px",
+        background: "linear-gradient(135deg, rgba(255,140,0,0.08) 0%, rgba(255,140,0,0.03) 100%)",
+        border: "1px solid rgba(255,140,0,0.18)",
+        padding: "12px 16px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "8px",
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+        <div
+          style={{
+            fontFamily: BARLOW,
+            fontSize: "7px",
+            fontWeight: 700,
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+            color: "#FF8C00",
+            opacity: 0.8,
+          }}
+        >
+          ★ {teamName} Top Player
+        </div>
+        <div
+          style={{
+            fontFamily: BEBAS,
+            fontSize: "24px",
+            color: "#fff",
+            letterSpacing: "0.5px",
+            lineHeight: 1,
+          }}
+        >
+          {player.name}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <span
+            style={{
+              fontFamily: BEBAS,
+              fontSize: "36px",
+              color: "#FF8C00",
+              lineHeight: "0.8",
+              display: "block",
+              textShadow: "0 0 20px rgba(255,130,0,0.3)",
+            }}
+          >
+            {player.points}
+          </span>
+          <span
+            style={{
+              fontFamily: BARLOW,
+              fontSize: "6px",
+              fontWeight: 700,
+              letterSpacing: "1px",
+              textTransform: "uppercase",
+              color: "rgba(255,140,0,0.5)",
+              display: "block",
+            }}
+          >
+            PTS
+          </span>
+        </div>
+        {player.rebounds > 0 && (
+          <div style={{ textAlign: "center" }}>
+            <span
+              style={{
+                fontFamily: BEBAS,
+                fontSize: "24px",
+                color: "#fff",
+                lineHeight: "0.8",
+                display: "block",
+              }}
+            >
+              {player.rebounds}
+            </span>
+            <span
+              style={{
+                fontFamily: BARLOW,
+                fontSize: "6px",
+                fontWeight: 700,
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.5)",
+                display: "block",
+              }}
+            >
+              REB
+            </span>
+          </div>
+        )}
+        {player.assists > 0 && (
+          <div style={{ textAlign: "center" }}>
+            <span
+              style={{
+                fontFamily: BEBAS,
+                fontSize: "24px",
+                color: "#fff",
+                lineHeight: "0.8",
+                display: "block",
+              }}
+            >
+              {player.assists}
+            </span>
+            <span
+              style={{
+                fontFamily: BARLOW,
+                fontSize: "6px",
+                fontWeight: 700,
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.5)",
+                display: "block",
+              }}
+            >
+              AST
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 function TeamColumn({
   team,
   isWinner,
@@ -132,7 +276,7 @@ function ShareCard({
   venue,
   date,
   season,
-  topScorer,
+  topPlayers,
 }: ShareCardProps) {
   const homeWins = homeScore > awayScore;
   const margin = Math.abs(homeScore - awayScore);
@@ -369,86 +513,21 @@ function ShareCard({
           <TeamColumn team={awayTeam} isWinner={!homeWins} role="AWAY" />
         </div>
 
-        {/* SECTION 4 — TOP SCORER SPOTLIGHT */}
-        {topScorer && (
-          <div
-            style={{
-              margin: "26px 24px 0",
-              borderRadius: "16px",
-              background: "linear-gradient(135deg, rgba(255,140,0,0.1) 0%, rgba(255,140,0,0.04) 100%)",
-              border: "1px solid rgba(255,140,0,0.22)",
-              padding: "16px 20px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-              <div
-                style={{
-                  fontFamily: BARLOW,
-                  fontSize: "8px",
-                  fontWeight: 700,
-                  letterSpacing: "2.5px",
-                  textTransform: "uppercase",
-                  color: "#FF8C00",
-                  opacity: 0.8,
-                }}
-              >
-                ★ Top Scorer
-              </div>
-              <div
-                style={{
-                  fontFamily: BEBAS,
-                  fontSize: "32px",
-                  color: "#fff",
-                  letterSpacing: "1px",
-                  lineHeight: 1,
-                }}
-              >
-                {topScorer.name}
-              </div>
-              <div
-                style={{
-                  fontFamily: BARLOW,
-                  fontSize: "10px",
-                  fontWeight: 600,
-                  letterSpacing: "1.5px",
-                  textTransform: "uppercase",
-                  color: "rgba(255,255,255,0.3)",
-                }}
-              >
-                {topScorer.teamName}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, gap: "2px" }}>
-              <span
-                style={{
-                  fontFamily: BEBAS,
-                  fontSize: "56px",
-                  color: "#FF8C00",
-                  lineHeight: "0.85",
-                  display: "block",
-                  textShadow: "0 0 30px rgba(255,130,0,0.4)",
-                }}
-              >
-                {topScorer.points}
-              </span>
-              <span
-                style={{
-                  fontFamily: BARLOW,
-                  fontSize: "8px",
-                  fontWeight: 700,
-                  letterSpacing: "2px",
-                  textTransform: "uppercase",
-                  color: "rgba(255,140,0,0.5)",
-                  display: "block",
-                }}
-              >
-                POINTS
-              </span>
-            </div>
+        {/* SECTION 4 — TOP PLAYERS SPOTLIGHT */}
+        {(topPlayers.home || topPlayers.away) && (
+          <div style={{ margin: "20px 24px 0" }}>
+            {topPlayers.home && (
+              <TopPlayerSpotlight
+                player={topPlayers.home}
+                teamName={homeTeam.name}
+              />
+            )}
+            {topPlayers.away && (
+              <TopPlayerSpotlight
+                player={topPlayers.away}
+                teamName={awayTeam.name}
+              />
+            )}
           </div>
         )}
 
@@ -605,7 +684,7 @@ export default function GameSharePanel({
   venue,
   date,
   season,
-  topScorer,
+  topPlayers,
 }: GameSharePanelProps) {
   const [status, setStatus] = useState("");
   const [isExporting, setIsExporting] = useState(false);
@@ -693,7 +772,7 @@ export default function GameSharePanel({
             venue={venue}
             date={date}
             season={season}
-            topScorer={topScorer}
+            topPlayers={topPlayers}
           />
         </div>
       </div>
