@@ -259,7 +259,7 @@ export default function GamePage() {
 
   function renderSimpleTable(rows: PlayerStat[]) {
     return (
-      <div className="bg-white border-4 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] mt-3">
+      <div className="bg-white border-4 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] mt-3" style={{ color: "#111" }}>
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-black text-white">
@@ -271,19 +271,23 @@ export default function GamePage() {
           <tbody className="divide-y-2 divide-gray-100">
             {sortedRows(rows).map((p) => (
               <tr key={p.player_id} className="hover:bg-orange-50 transition-colors group">
-                <td className="py-3 px-4 text-xs font-black text-black italic group-hover:text-black">{p.jersey_number ?? "-"}</td>
+                <td className="py-3 px-4 text-xs font-black italic group-hover:text-black" style={{ color: "#111", opacity: 1 }}>{p.jersey_number ?? "-"}</td>
                 <td className="py-3 px-4">
-                  <Link href={`/players/${p.player_id}`} className="text-sm font-black uppercase tracking-tighter text-black group-hover:text-orange-600 block">
+                  <Link
+                    href={`/players/${p.player_id}`}
+                    className="text-sm font-black uppercase tracking-tighter group-hover:text-orange-600 block"
+                    style={{ color: "#111", opacity: 1 }}
+                  >
                     {p.first_name} {p.last_name}
                   </Link>
                 </td>
-                <td className="py-3 px-4 text-right text-base font-black text-black tabular-nums italic">
+                <td className="py-3 px-4 text-right text-base font-black tabular-nums italic" style={{ color: "#111", opacity: 1 }}>
                   {p.points ?? 0}
                 </td>
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={3} className="p-10 text-xs text-center text-black font-black uppercase italic tracking-widest">No Stats Recorded</td></tr>
+              <tr><td colSpan={3} className="p-10 text-xs text-center font-black uppercase italic tracking-widest" style={{ color: "#111" }}>No Stats Recorded</td></tr>
             )}
           </tbody>
         </table>
@@ -300,7 +304,7 @@ export default function GamePage() {
     const firstBenchIdx = sorted.findIndex((r) => !r.is_starter);
 
     return (
-      <div className="bg-white border-4 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] mt-3">
+      <div className="bg-white border-4 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] mt-3" style={{ color: "#111" }}>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse" style={{ minWidth: "700px" }}>
             <thead>
@@ -330,13 +334,17 @@ export default function GamePage() {
                     key={p.player_id}
                     className={`hover:bg-orange-50 transition-colors group ${isBenchDivider ? "border-t-2 border-gray-300" : ""}`}
                   >
-                    <td className="py-2.5 px-3 text-xs font-black text-black italic group-hover:text-black">{p.jersey_number ?? "-"}</td>
+                    <td className="py-2.5 px-3 text-xs font-black italic group-hover:text-black" style={{ color: "#111", opacity: 1 }}>{p.jersey_number ?? "-"}</td>
                     <td className="py-2.5 px-3">
-                      <Link href={`/players/${p.player_id}`} className="text-xs font-black uppercase tracking-tighter text-black group-hover:text-orange-600 block">
+                      <Link
+                        href={`/players/${p.player_id}`}
+                        className="text-xs font-black uppercase tracking-tighter group-hover:text-orange-600 block"
+                        style={{ color: "#111", opacity: 1 }}
+                      >
                         {p.first_name} {p.last_name}
                       </Link>
                       {p.is_starter && (
-                        <span className="text-[8px] font-bold uppercase tracking-wider text-gray-700">starter</span>
+                        <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: "#4b5563", opacity: 1 }}>starter</span>
                       )}
                     </td>
                     <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{p.minutes ?? "—"}</td>
