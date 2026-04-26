@@ -515,9 +515,9 @@ export default function GamePage() {
           <div className="relative z-10 mx-6 md:mx-10 mt-5 space-y-3">
             {topPlayers.home && (
               <div className="rounded-2xl flex items-center justify-between gap-4 px-5 py-4" style={{ background: "linear-gradient(135deg, rgba(255,140,0,0.1) 0%, rgba(255,140,0,0.04) 100%)", border: "1px solid rgba(255,140,0,0.22)" }}>
-                <div className="flex items-center gap-4 min-w-0">
-                  <span className="text-[8px] font-bold uppercase tracking-[2.5px] flex-shrink-0" style={{ color: "#FF8C00", opacity: 0.8 }}>★ {homeTeam?.team_name ?? "Home"} Top Player</span>
-                  <span className="font-black leading-none max-w-full break-words whitespace-normal" style={{ display: "block", fontFamily: "'Bebas Neue', Impact, serif", fontSize: "24px", color: "#fff", letterSpacing: "1px" }}>{topPlayers.home.name}</span>
+                <div className="flex-1 min-w-0 flex flex-col gap-2">
+                  <span className="text-[8px] font-bold uppercase tracking-[2.5px]" style={{ color: "#FF8C00", opacity: 0.8 }}>★ {homeTeam?.team_name ?? "Home"} Top Player</span>
+                  <span className="font-black leading-none break-words whitespace-normal" style={{ display: "block", fontFamily: "'Bebas Neue', Impact, serif", fontSize: "24px", color: "#fff", letterSpacing: "1px" }}>{topPlayers.home.name}</span>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <div className="text-center">
@@ -541,9 +541,9 @@ export default function GamePage() {
             )}
             {topPlayers.away && (
               <div className="rounded-2xl flex items-center justify-between gap-4 px-5 py-4" style={{ background: "linear-gradient(135deg, rgba(255,140,0,0.1) 0%, rgba(255,140,0,0.04) 100%)", border: "1px solid rgba(255,140,0,0.22)" }}>
-                <div className="flex items-center gap-4 min-w-0">
-                  <span className="text-[8px] font-bold uppercase tracking-[2.5px] flex-shrink-0" style={{ color: "#FF8C00", opacity: 0.8 }}>★ {awayTeam?.team_name ?? "Away"} Top Player</span>
-                  <span className="font-black leading-none max-w-full break-words whitespace-normal" style={{ display: "block", fontFamily: "'Bebas Neue', Impact, serif", fontSize: "24px", color: "#fff", letterSpacing: "1px" }}>{topPlayers.away.name}</span>
+                <div className="flex-1 min-w-0 flex flex-col gap-2">
+                  <span className="text-[8px] font-bold uppercase tracking-[2.5px]" style={{ color: "#FF8C00", opacity: 0.8 }}>★ {awayTeam?.team_name ?? "Away"} Top Player</span>
+                  <span className="font-black leading-none break-words whitespace-normal" style={{ display: "block", fontFamily: "'Bebas Neue', Impact, serif", fontSize: "24px", color: "#fff", letterSpacing: "1px" }}>{topPlayers.away.name}</span>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <div className="text-center">
