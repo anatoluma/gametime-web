@@ -1,11 +1,13 @@
-/* eslint-disable @next/next/no-img-element */
+﻿/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useRef, useState } from "react";
 
+// ─── Font stacks (loaded globally via Google Fonts in layout.tsx) ─────────────
 const BEBAS = '"Bebas Neue", Impact, serif';
 const BARLOW = '"Barlow Condensed", "Arial Narrow", Arial, sans-serif';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 export type GameSharePanelProps = {
   gameId: string;
   homeTeam: { name: string; logoUrl: string };
@@ -29,82 +31,243 @@ type TopPlayer = {
 
 type ShareCardProps = Omit<GameSharePanelProps, "gameId">;
 
-// ─── Compact Player Card ───────────────────────────────────────────────────────
-function PlayerCard({ player, teamName }: { player: TopPlayer; teamName: string }) {
+// ─── Top Player Spotlight ──────────────────────────────────────────────────────
+function TopPlayerSpotlight({
+  player,
+  teamName,
+}: {
+  player: TopPlayer;
+  teamName: string;
+}) {
   return (
     <div
       style={{
-        flex: 1,
-        padding: "28px 32px",
-        borderRadius: "20px",
-        background: "rgba(255,255,255,0.06)",
+        borderRadius: "12px",
+        background: "linear-gradient(135deg, rgba(255,140,0,0.08) 0%, rgba(255,140,0,0.03) 100%)",
+        border: "1px solid rgba(255,140,0,0.18)",
+        padding: "12px 16px",
         display: "flex",
-        flexDirection: "column",
         justifyContent: "space-between",
-        gap: "16px",
+        alignItems: "center",
+        marginBottom: "8px",
       }}
     >
-      <div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
         <div
           style={{
             fontFamily: BARLOW,
-            fontSize: "14px",
+            fontSize: "7px",
             fontWeight: 700,
-            letterSpacing: "1.5px",
+            letterSpacing: "2px",
             textTransform: "uppercase",
-            color: "#F97316",
+            color: "#FF8C00",
+            opacity: 0.8,
           }}
         >
-          {teamName}
+          ★ {teamName} Top Player
         </div>
         <div
           style={{
-            fontFamily: BARLOW,
-            fontSize: "22px",
-            fontWeight: 600,
+            fontFamily: BEBAS,
+            fontSize: "24px",
             color: "#fff",
-            lineHeight: 1.2,
-            marginTop: "6px",
+            letterSpacing: "0.5px",
+            lineHeight: 1,
           }}
         >
           {player.name}
         </div>
       </div>
 
+      <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <span
+            style={{
+              fontFamily: BEBAS,
+              fontSize: "36px",
+              color: "#FF8C00",
+              lineHeight: "0.8",
+              display: "block",
+              textShadow: "0 0 20px rgba(255,130,0,0.3)",
+            }}
+          >
+            {player.points}
+          </span>
+          <span
+            style={{
+              fontFamily: BARLOW,
+              fontSize: "6px",
+              fontWeight: 700,
+              letterSpacing: "1px",
+              textTransform: "uppercase",
+              color: "rgba(255,140,0,0.5)",
+              display: "block",
+            }}
+          >
+            PTS
+          </span>
+        </div>
+        {player.rebounds > 0 && (
+          <div style={{ textAlign: "center" }}>
+            <span
+              style={{
+                fontFamily: BEBAS,
+                fontSize: "24px",
+                color: "#fff",
+                lineHeight: "0.8",
+                display: "block",
+              }}
+            >
+              {player.rebounds}
+            </span>
+            <span
+              style={{
+                fontFamily: BARLOW,
+                fontSize: "6px",
+                fontWeight: 700,
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.5)",
+                display: "block",
+              }}
+            >
+              REB
+            </span>
+          </div>
+        )}
+        {player.assists > 0 && (
+          <div style={{ textAlign: "center" }}>
+            <span
+              style={{
+                fontFamily: BEBAS,
+                fontSize: "24px",
+                color: "#fff",
+                lineHeight: "0.8",
+                display: "block",
+              }}
+            >
+              {player.assists}
+            </span>
+            <span
+              style={{
+                fontFamily: BARLOW,
+                fontSize: "6px",
+                fontWeight: 700,
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.5)",
+                display: "block",
+              }}
+            >
+              AST
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+function TeamColumn({
+  team,
+  isWinner,
+  role,
+}: {
+  team: { name: string; logoUrl: string };
+  isWinner: boolean;
+  role: "HOME" | "AWAY";
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "9px" }}>
+      {/* Outer wrapper keeps badge from being clipped by overflow:hidden */}
+      <div style={{ position: "relative", width: "74px", height: "74px", flexShrink: 0 }}>
+        {/* Logo circle */}
+        <div
+          style={{
+            width: "74px",
+            height: "74px",
+            borderRadius: "50%",
+            border: isWinner
+              ? "2px solid rgba(255,140,0,0.45)"
+              : "2px solid rgba(255,255,255,0.08)",
+            background: isWinner ? "rgba(255,140,0,0.06)" : "rgba(255,255,255,0.04)",
+            boxShadow: isWinner ? "0 0 28px rgba(255,130,0,0.18)" : "none",
+            overflow: "hidden",
+          }}
+        >
+          <img
+            src={team.logoUrl}
+            alt={team.name}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: "50%",
+              display: "block",
+            }}
+          />
+        </div>
+
+        {/* Winner checkmark badge */}
+        {isWinner && (
+          <div
+            style={{
+              position: "absolute",
+              top: "-3px",
+              right: "-3px",
+              width: "20px",
+              height: "20px",
+              borderRadius: "50%",
+              background: "#FF8C00",
+              border: "2px solid #0d0d14",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "9px",
+              fontWeight: 900,
+              color: "#000",
+              fontFamily: BARLOW,
+              lineHeight: 1,
+            }}
+          >
+            ✓
+          </div>
+        )}
+      </div>
+
+      {/* Team name */}
       <div
         style={{
-          display: "inline-flex",
-          alignItems: "baseline",
-          gap: "6px",
+          fontFamily: BARLOW,
+          fontSize: "13px",
+          fontWeight: 800,
+          letterSpacing: "2px",
+          textTransform: "uppercase",
+          color: "rgba(255,255,255,0.85)",
+          textAlign: "center",
+          lineHeight: 1.25,
         }}
       >
-        <span
-          style={{
-            fontFamily: BEBAS,
-            fontSize: "56px",
-            lineHeight: 1,
-            color: "#F97316",
-          }}
-        >
-          {player.points}
-        </span>
-        <span
-          style={{
-            fontFamily: BARLOW,
-            fontSize: "17px",
-            fontWeight: 700,
-            letterSpacing: "1px",
-            color: "rgba(249,115,22,0.8)",
-          }}
-        >
-          PTS
-        </span>
+        {team.name}
+      </div>
+
+      {/* Role label */}
+      <div
+        style={{
+          fontFamily: BARLOW,
+          fontSize: "8.5px",
+          fontWeight: 700,
+          letterSpacing: "1.8px",
+          textTransform: "uppercase",
+          color: isWinner ? "rgba(255,140,0,0.6)" : "rgba(255,255,255,0.22)",
+        }}
+      >
+        {isWinner ? `${role} · WINNER` : role}
       </div>
     </div>
   );
 }
 
-// ─── Share Card (1080×1920 export canvas) ─────────────────────────────────────
+// ─── Share Card (420×720 export canvas) ───────────────────────────────────────
 function ShareCard({
   homeTeam,
   awayTeam,
@@ -116,110 +279,139 @@ function ShareCard({
   topPlayers,
 }: ShareCardProps) {
   const homeWins = homeScore > awayScore;
+  const margin = Math.abs(homeScore - awayScore);
 
   return (
     <div
       id="share-card"
       style={{
         position: "relative",
-        width: "1080px",
-        height: "1920px",
-        background: "linear-gradient(170deg, #121826 0%, #0B0F1A 100%)",
+        width: "420px",
+        height: "720px",
+        backgroundColor: "#0d0d14",
+        borderRadius: "24px",
+        overflow: "hidden",
         fontFamily: BARLOW,
         color: "#fff",
-        overflow: "hidden",
       }}
     >
-      {/* Radial center glow */}
+      {/* ── Background layers (z-index 0, pointer-events none) ── */}
+
+      {/* Court circle outer */}
       <div
         style={{
           position: "absolute",
-          top: "42%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "1000px",
-          height: "1000px",
+          width: "420px",
+          height: "420px",
           borderRadius: "50%",
-          background:
-            "radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 65%)",
+          border: "1px solid rgba(255,140,0,0.06)",
+          top: "40px",
+          left: "50%",
+          transform: "translateX(-50%)",
           pointerEvents: "none",
           zIndex: 0,
         }}
       />
-
-      {/* Top accent line */}
+      {/* Court circle inner */}
+      <div
+        style={{
+          position: "absolute",
+          width: "340px",
+          height: "340px",
+          borderRadius: "50%",
+          border: "1px solid rgba(255,140,0,0.06)",
+          top: "80px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+      {/* Top glow */}
       <div
         style={{
           position: "absolute",
           top: 0,
           left: 0,
           right: 0,
-          height: "4px",
+          height: "280px",
+          background: "radial-gradient(ellipse at top center, rgba(255,130,0,0.09), transparent)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+      {/* Bottom fade */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: "220px",
+          background: "linear-gradient(to top, rgba(5,5,12,0.98), transparent)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+      {/* Top accent line (animation defined in globals.css) */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "3px",
           background:
-            "linear-gradient(90deg, transparent, #F97316 30%, #F97316 70%, transparent)",
-          opacity: 0.8,
+            "linear-gradient(90deg, transparent, #FF8C00 25%, #FFB800 50%, #FF8C00 75%, transparent)",
+          animation: "accentPulse 2.5s ease-in-out infinite",
           zIndex: 20,
+          pointerEvents: "none",
         }}
       />
 
-      {/* Content */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 10,
-          width: "100%",
-          height: "100%",
-          padding: "80px",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {/* ── HEADER ── */}
+      {/* ── Content (z-index 10) ── */}
+      <div style={{ position: "relative", zIndex: 10, height: "100%" }}>
+
+        {/* SECTION 1 — HEADER */}
         <div
           style={{
+            padding: "20px 24px 0",
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "center",
+            alignItems: "flex-start",
           }}
         >
           <div
             style={{
-              background: "rgba(249,115,22,0.12)",
-              border: "1px solid rgba(249,115,22,0.3)",
-              borderRadius: "24px",
-              padding: "10px 28px",
+              background: "rgba(255,140,0,0.12)",
+              border: "1px solid rgba(255,140,0,0.3)",
+              borderRadius: "20px",
+              padding: "5px 13px",
               fontFamily: BARLOW,
-              fontSize: "18px",
+              fontSize: "9px",
               fontWeight: 700,
               letterSpacing: "2.5px",
               textTransform: "uppercase",
-              color: "#F97316",
+              color: "#FF8C00",
             }}
           >
-            Final Result
+            ⚡ Final Result
           </div>
 
           <div style={{ textAlign: "right" }}>
-            <div
-              style={{
-                fontFamily: BARLOW,
-                fontSize: "28px",
-                fontWeight: 700,
-                letterSpacing: "1px",
-              }}
-            >
+            <div style={{ fontFamily: BARLOW, fontSize: "14px", fontWeight: 700, letterSpacing: "1px" }}>
               <span style={{ color: "rgba(255,255,255,0.85)" }}>liga</span>
-              <span style={{ color: "#F97316" }}>basket</span>
+              <span style={{ color: "#FF8C00" }}>basket</span>
               <span style={{ color: "rgba(255,255,255,0.85)" }}>.md</span>
             </div>
             <div
               style={{
                 fontFamily: BARLOW,
-                fontSize: "14px",
+                fontSize: "8px",
                 fontWeight: 600,
                 letterSpacing: "2px",
                 textTransform: "uppercase",
-                color: "rgba(255,255,255,0.35)",
+                color: "rgba(255,255,255,0.25)",
               }}
             >
               Basketball League
@@ -227,276 +419,255 @@ function ShareCard({
           </div>
         </div>
 
-        {/* ── SCORE — CENTERPIECE ── */}
+        {/* SECTION 2 — SCORE */}
         <div
           style={{
-            marginTop: "100px",
+            paddingTop: "8px",
             display: "flex",
             justifyContent: "center",
-            alignItems: "center",
-            gap: "48px",
+            alignItems: "flex-end",
           }}
         >
-          {/* Home score */}
           <span
             style={{
               fontFamily: BEBAS,
-              fontSize: "180px",
+              fontSize: "124px",
               lineHeight: 1,
-              color: homeWins ? "#F97316" : "#E5E7EB",
-              display: "inline-block",
-              transform: homeWins ? "scale(1.05)" : "scale(1)",
-              textShadow: homeWins
-                ? "0 4px 20px rgba(249,115,22,0.25), 0 0 60px rgba(249,115,22,0.15)"
-                : "none",
+              color: homeWins ? "#FF8C00" : "rgba(255,255,255,0.35)",
+              textShadow: homeWins ? "0 0 60px rgba(255,130,0,0.35)" : "none",
             }}
           >
             {homeScore}
           </span>
-
-          {/* VS divider with soft glow line */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <div
-              style={{
-                width: "1px",
-                height: "72px",
-                background:
-                  "linear-gradient(180deg, transparent, rgba(249,115,22,0.2), rgba(255,255,255,0.08))",
-              }}
-            />
-            <span
-              style={{
-                fontFamily: BARLOW,
-                fontSize: "40px",
-                fontWeight: 700,
-                letterSpacing: "4px",
-                color: "rgba(255,255,255,0.3)",
-                lineHeight: 1,
-                padding: "8px 0",
-              }}
-            >
-              vs
-            </span>
-            <div
-              style={{
-                width: "1px",
-                height: "72px",
-                background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(249,115,22,0.2), transparent)",
-              }}
-            />
-          </div>
-
-          {/* Away score */}
           <span
             style={{
               fontFamily: BEBAS,
-              fontSize: "180px",
+              fontSize: "76px",
               lineHeight: 1,
-              color: !homeWins ? "#F97316" : "#E5E7EB",
-              display: "inline-block",
-              transform: !homeWins ? "scale(1.05)" : "scale(1)",
-              textShadow: !homeWins
-                ? "0 4px 20px rgba(249,115,22,0.25), 0 0 60px rgba(249,115,22,0.15)"
-                : "none",
+              color: "rgba(255,255,255,0.13)",
+              padding: "0 6px 6px",
+            }}
+          >
+            :
+          </span>
+          <span
+            style={{
+              fontFamily: BEBAS,
+              fontSize: "124px",
+              lineHeight: 1,
+              color: !homeWins ? "#FF8C00" : "rgba(255,255,255,0.35)",
+              textShadow: !homeWins ? "0 0 60px rgba(255,130,0,0.35)" : "none",
             }}
           >
             {awayScore}
           </span>
         </div>
 
-        {/* ── TEAMS ── */}
+        {/* SECTION 3 — TEAMS */}
         <div
           style={{
-            marginTop: "72px",
             display: "grid",
-            gridTemplateColumns: "1fr 80px 1fr",
-            alignItems: "flex-start",
+            gridTemplateColumns: "1fr 40px 1fr",
+            padding: "2px 32px 0",
           }}
         >
-          {/* Home */}
+          <TeamColumn team={homeTeam} isWinner={homeWins} role="HOME" />
+
+          {/* VS divider */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: "20px",
+              justifyContent: "center",
+              gap: "5px",
             }}
           >
             <div
               style={{
-                width: "130px",
-                height: "130px",
-                borderRadius: "50%",
-                border: homeWins
-                  ? "2px solid rgba(249,115,22,0.5)"
-                  : "2px solid rgba(255,255,255,0.1)",
-                background: homeWins
-                  ? "rgba(249,115,22,0.08)"
-                  : "rgba(255,255,255,0.04)",
-                boxShadow: homeWins
-                  ? "0 0 40px rgba(249,115,22,0.18)"
-                  : "none",
-                overflow: "hidden",
-                flexShrink: 0,
+                width: "1px",
+                height: "22px",
+                background: "linear-gradient(180deg, transparent, rgba(255,255,255,0.1), transparent)",
               }}
-            >
-              <img
-                src={homeTeam.logoUrl}
-                alt={homeTeam.name}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                }}
-              />
-            </div>
-            <div
+            />
+            <span
               style={{
                 fontFamily: BARLOW,
-                fontSize: "32px",
-                fontWeight: 800,
-                letterSpacing: "2px",
-                textTransform: "uppercase",
-                color: homeWins
-                  ? "rgba(255,255,255,0.95)"
-                  : "rgba(255,255,255,0.6)",
-                textAlign: "center",
-                lineHeight: 1.2,
-              }}
-            >
-              {homeTeam.name}
-            </div>
-            <div
-              style={{
-                fontFamily: BARLOW,
-                fontSize: "13px",
+                fontSize: "10px",
                 fontWeight: 700,
                 letterSpacing: "2px",
-                textTransform: "uppercase",
-                color: homeWins
-                  ? "rgba(249,115,22,0.7)"
-                  : "rgba(255,255,255,0.25)",
+                color: "rgba(255,255,255,0.16)",
               }}
             >
-              {homeWins ? "HOME · WINNER" : "HOME"}
-            </div>
+              VS
+            </span>
+            <div
+              style={{
+                width: "1px",
+                height: "22px",
+                background: "linear-gradient(180deg, transparent, rgba(255,255,255,0.1), transparent)",
+              }}
+            />
           </div>
 
-          {/* Center spacer */}
-          <div />
-
-          {/* Away */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "20px",
-            }}
-          >
-            <div
-              style={{
-                width: "130px",
-                height: "130px",
-                borderRadius: "50%",
-                border: !homeWins
-                  ? "2px solid rgba(249,115,22,0.5)"
-                  : "2px solid rgba(255,255,255,0.1)",
-                background: !homeWins
-                  ? "rgba(249,115,22,0.08)"
-                  : "rgba(255,255,255,0.04)",
-                boxShadow: !homeWins
-                  ? "0 0 40px rgba(249,115,22,0.18)"
-                  : "none",
-                overflow: "hidden",
-                flexShrink: 0,
-              }}
-            >
-              <img
-                src={awayTeam.logoUrl}
-                alt={awayTeam.name}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                }}
-              />
-            </div>
-            <div
-              style={{
-                fontFamily: BARLOW,
-                fontSize: "32px",
-                fontWeight: 800,
-                letterSpacing: "2px",
-                textTransform: "uppercase",
-                color: !homeWins
-                  ? "rgba(255,255,255,0.95)"
-                  : "rgba(255,255,255,0.6)",
-                textAlign: "center",
-                lineHeight: 1.2,
-              }}
-            >
-              {awayTeam.name}
-            </div>
-            <div
-              style={{
-                fontFamily: BARLOW,
-                fontSize: "13px",
-                fontWeight: 700,
-                letterSpacing: "2px",
-                textTransform: "uppercase",
-                color: !homeWins
-                  ? "rgba(249,115,22,0.7)"
-                  : "rgba(255,255,255,0.25)",
-              }}
-            >
-              {!homeWins ? "AWAY · WINNER" : "AWAY"}
-            </div>
-          </div>
+          <TeamColumn team={awayTeam} isWinner={!homeWins} role="AWAY" />
         </div>
 
-        {/* ── FLEX SPACER (pushes players to bottom third) ── */}
-        <div style={{ flex: 1 }} />
-
-        {/* ── TOP PLAYERS — bottom third, side-by-side compact cards ── */}
+        {/* SECTION 4 — TOP PLAYERS SPOTLIGHT */}
         {(topPlayers.home || topPlayers.away) && (
-          <div
-            style={{
-              display: "flex",
-              gap: "24px",
-              marginBottom: "48px",
-            }}
-          >
+          <div style={{ margin: "20px 24px 0" }}>
             {topPlayers.home && (
-              <PlayerCard player={topPlayers.home} teamName={homeTeam.name} />
+              <TopPlayerSpotlight
+                player={topPlayers.home}
+                teamName={homeTeam.name}
+              />
             )}
             {topPlayers.away && (
-              <PlayerCard player={topPlayers.away} teamName={awayTeam.name} />
+              <TopPlayerSpotlight
+                player={topPlayers.away}
+                teamName={awayTeam.name}
+              />
             )}
           </div>
         )}
 
-        {/* ── METADATA — single line ── */}
+        {/* SECTION 5 — INFO STRIP */}
         <div
           style={{
-            fontFamily: BARLOW,
-            fontSize: "18px",
-            fontWeight: 600,
-            letterSpacing: "1.5px",
-            color: "rgba(255,255,255,0.7)",
-            textAlign: "center",
+            margin: "16px 24px 0",
+            borderRadius: "14px",
+            overflow: "hidden",
+            border: "1px solid rgba(255,255,255,0.07)",
+            background: "rgba(255,255,255,0.025)",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
           }}
         >
-          {date} · {venue} · Season {season}
+          <div style={{ padding: "12px 8px", textAlign: "center" }}>
+            <div
+              style={{
+                fontFamily: BARLOW,
+                fontSize: "8px",
+                fontWeight: 700,
+                letterSpacing: "2px",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.25)",
+              }}
+            >
+              VENUE
+            </div>
+            <div
+              style={{
+                fontFamily: BARLOW,
+                fontSize: "13px",
+                fontWeight: 700,
+                color: "rgba(255,255,255,0.8)",
+                marginTop: "2px",
+              }}
+            >
+              {venue}
+            </div>
+          </div>
+
+          <div
+            style={{
+              padding: "12px 8px",
+              textAlign: "center",
+              borderLeft: "1px solid rgba(255,255,255,0.07)",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: BARLOW,
+                fontSize: "8px",
+                fontWeight: 700,
+                letterSpacing: "2px",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.25)",
+              }}
+            >
+              MARGIN
+            </div>
+            <div
+              style={{
+                fontFamily: BARLOW,
+                fontSize: "13px",
+                fontWeight: 700,
+                color: "#FF8C00",
+                marginTop: "2px",
+              }}
+            >
+              +{margin} pts
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 6 — FOOTER */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: "20px 24px 24px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+              <div
+                style={{
+                  width: "4px",
+                  height: "4px",
+                  borderRadius: "50%",
+                  background: "#FF8C00",
+                  opacity: 0.5,
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontFamily: BARLOW, fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>
+                {date}
+              </span>
+              <span style={{ fontFamily: BARLOW, fontSize: "11px", fontWeight: 500, color: "rgba(255,255,255,0.35)" }}>
+                · {venue}
+              </span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+              <div
+                style={{
+                  width: "4px",
+                  height: "4px",
+                  borderRadius: "50%",
+                  background: "#FF8C00",
+                  opacity: 0.5,
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontFamily: BARLOW, fontSize: "11px", fontWeight: 500, color: "rgba(255,255,255,0.35)" }}>
+                Season {season}
+              </span>
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: "rgba(255,140,0,0.1)",
+              border: "1px solid rgba(255,140,0,0.22)",
+              color: "#FF8C00",
+              fontFamily: BARLOW,
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "1px",
+              padding: "6px 13px",
+              borderRadius: "10px",
+              flexShrink: 0,
+            }}
+          >
+            ligabasket.md
+          </div>
         </div>
       </div>
     </div>
@@ -528,12 +699,12 @@ export default function GameSharePanel({
       await document.fonts.ready;
       const html2canvas = (await import("html2canvas")).default;
       const canvas = await html2canvas(cardRef.current, {
-        width: 1080,
-        height: 1920,
-        scale: 1,
+        width: 420,
+        height: 720,
+        scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: "#0B0F1A",
+        backgroundColor: "#0d0d14",
         logging: false,
       });
 
