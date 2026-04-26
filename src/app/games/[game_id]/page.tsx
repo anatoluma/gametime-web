@@ -271,7 +271,7 @@ export default function GamePage() {
           <tbody className="divide-y-2 divide-gray-100">
             {sortedRows(rows).map((p) => (
               <tr key={p.player_id} className="hover:bg-orange-50 transition-colors group">
-                <td className="py-3 px-4 text-xs font-black text-gray-400 italic group-hover:text-black">{p.jersey_number ?? "-"}</td>
+                <td className="py-3 px-4 text-xs font-black text-gray-700 italic group-hover:text-black">{p.jersey_number ?? "-"}</td>
                 <td className="py-3 px-4">
                   <Link href={`/players/${p.player_id}`} className="text-sm font-black uppercase tracking-tighter text-black group-hover:text-orange-600 block">
                     {p.first_name} {p.last_name}
@@ -330,29 +330,29 @@ export default function GamePage() {
                     key={p.player_id}
                     className={`hover:bg-orange-50 transition-colors group ${isBenchDivider ? "border-t-2 border-gray-300" : ""}`}
                   >
-                    <td className="py-2.5 px-3 text-xs font-black text-gray-400 italic group-hover:text-black">{p.jersey_number ?? "-"}</td>
+                    <td className="py-2.5 px-3 text-xs font-black text-gray-700 italic group-hover:text-black">{p.jersey_number ?? "-"}</td>
                     <td className="py-2.5 px-3">
                       <Link href={`/players/${p.player_id}`} className="text-xs font-black uppercase tracking-tighter text-black group-hover:text-orange-600 block">
                         {p.first_name} {p.last_name}
                       </Link>
                       {p.is_starter && (
-                        <span className="text-[8px] font-bold uppercase tracking-wider text-gray-400">starter</span>
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-gray-600">starter</span>
                       )}
                     </td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{p.minutes ?? "—"}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtShot(p.two_made, p.two_att)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtShot(p.three_made, p.three_att)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtShot(p.ft_made, p.ft_att)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums text-gray-800">{fmtNum(p.reb_tot)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums text-gray-800">{fmtNum(p.assists)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtNum(p.turnovers)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtNum(p.steals)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtNum(p.blocks)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtNum(p.fouls_personal)}</td>
-                    <td className={`py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums ${(p.plus_minus ?? 0) > 0 ? "text-green-600" : (p.plus_minus ?? 0) < 0 ? "text-red-600" : "text-gray-400"}`}>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-900">{p.minutes ?? "—"}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-900">{fmtShot(p.two_made, p.two_att)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-900">{fmtShot(p.three_made, p.three_att)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-900">{fmtShot(p.ft_made, p.ft_att)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums text-gray-900">{fmtNum(p.reb_tot)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums text-gray-900">{fmtNum(p.assists)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-900">{fmtNum(p.turnovers)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-900">{fmtNum(p.steals)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-900">{fmtNum(p.blocks)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-900">{fmtNum(p.fouls_personal)}</td>
+                    <td className={`py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums ${(p.plus_minus ?? 0) > 0 ? "text-green-600" : (p.plus_minus ?? 0) < 0 ? "text-red-600" : "text-gray-600"}`}>
                       {fmtPlusMinus(p.plus_minus)}
                     </td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-600">{fmtNum(p.efficiency)}</td>
+                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-gray-900">{fmtNum(p.efficiency)}</td>
                     <td className="py-2.5 px-2.5 text-right text-base font-black text-black tabular-nums italic">{p.points ?? 0}</td>
                   </tr>
                 );
