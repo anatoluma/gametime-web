@@ -138,33 +138,33 @@ export default async function Home() {
                 </div>
                 
                 {/* Teams layout */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {/* Home Team */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <TeamLogo teamId={game.home_team_id} size={18} className="shrink-0" />
-                      <span className="text-[10px] font-black uppercase">{teamMap.get(game.home_team_id) ?? game.home_team_id}</span>
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1 flex-1">
+                      <TeamLogo teamId={game.home_team_id} size={16} className="shrink-0" />
+                      <span className="text-[9px] font-black uppercase leading-tight">{teamMap.get(game.home_team_id) ?? game.home_team_id}</span>
                     </div>
                     {isFinished ? (
-                      <span className="text-[11px] font-black">{game.home_score}</span>
+                      <span className="text-[10px] font-black shrink-0 ml-1">{game.home_score}</span>
                     ) : null}
                   </div>
 
                   {/* VS indicator for scheduled games */}
                   {!isFinished && (
-                    <div className="text-center">
-                      <div className="px-2 py-0.5 bg-gray-100 rounded text-[9px] font-medium text-gray-600 tracking-wide inline-block">VS</div>
+                    <div className="text-center py-0.5">
+                      <div className="px-1.5 py-0.5 bg-gray-100 rounded text-[8px] font-medium text-gray-600 tracking-wide inline-block">VS</div>
                     </div>
                   )}
 
                   {/* Away Team */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <TeamLogo teamId={game.away_team_id} size={18} className="shrink-0" />
-                      <span className="text-[10px] font-black uppercase">{teamMap.get(game.away_team_id) ?? game.away_team_id}</span>
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1 flex-1">
+                      <TeamLogo teamId={game.away_team_id} size={16} className="shrink-0" />
+                      <span className="text-[9px] font-black uppercase leading-tight">{teamMap.get(game.away_team_id) ?? game.away_team_id}</span>
                     </div>
                     {isFinished ? (
-                      <span className="text-[11px] font-black">{game.away_score}</span>
+                      <span className="text-[10px] font-black shrink-0 ml-1">{game.away_score}</span>
                     ) : null}
                   </div>
                 </div>
