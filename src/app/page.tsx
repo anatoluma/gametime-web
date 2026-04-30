@@ -121,37 +121,49 @@ export default async function Home() {
             const dateObj = game.tipoff ? new Date(game.tipoff) : null;
             const now = new Date();
             const isFinished = game.home_score !== null && game.away_score !== null && dateObj && dateObj < now;
-            const timeText = dateObj ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "TBD";
+            const timeText = dateObj ? dateObj.toLocaleTimeString('ro-RO', { timeZone: 'Europe/Chisinau', hour: '2-digit', minute: '2-digit' }) : "TBD";
             
             return (
               <Link key={game.game_id} href={`/games/${game.game_id}`} className="bg-white border-2 border-black p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all">
-                <div className="flex items-center justify-between gap-1 mb-1">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <TeamLogo teamId={game.home_team_id} size={18} className="shrink-0" />
+                {/* Date/Time header */}
+                <div className="flex items-center justify-between mb-2 text-[9px] font-medium text-gray-500">
+                  <div className="flex items-center gap-1">
+                    <span>{dateObj ? dateObj.toLocaleDateString('ro-RO', { timeZone: 'Europe/Chisinau', month: 'short', day: 'numeric' }) : ""}</span>
+                    <span>•</span>
+                    <span className="text-gray-700">{timeText}</span>
+                  </div>
+                  <span className={isFinished ? "text-emerald-600" : "text-orange-500"}>
+                    {isFinished ? "Final" : "Scheduled"}
+                  </span>
+                </div>
+                
+                {/* Teams layout */}
+                <div className="flex items-center justify-between gap-2">
+                  {/* Home Team */}
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    <TeamLogo teamId={game.home_team_id} size={20} className="shrink-0" />
                     <span className="text-[10px] font-black uppercase truncate">{teamMap.get(game.home_team_id) ?? game.home_team_id}</span>
                   </div>
-                  {isFinished ? (
-                    <span className="text-[11px] font-black shrink-0 ml-1">{game.home_score}</span>
-                  ) : (
-                    <span className="text-[9px] text-gray-500 shrink-0 ml-1">{timeText}</span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between gap-1">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <TeamLogo teamId={game.away_team_id} size={18} className="shrink-0" />
-                    <span className="text-[10px] font-black uppercase truncate">{teamMap.get(game.away_team_id) ?? game.away_team_id}</span>
+
+                  {/* Center Score/VS Area */}
+                  <div className="flex flex-col items-center min-w-[40px]">
+                    {isFinished ? (
+                      <div className="text-sm font-bold flex items-center gap-1">
+                        <span>{game.home_score}</span>
+                        <span className="text-gray-400 text-xs">-</span>
+                        <span>{game.away_score}</span>
+                      </div>
+                    ) : (
+                      <div className="px-1.5 py-0.5 bg-gray-100 rounded text-[9px] font-medium text-gray-600 tracking-wide">VS</div>
+                    )}
                   </div>
-                  {isFinished ? (
-                    <span className="text-[11px] font-black shrink-0 ml-1">{game.away_score}</span>
-                  ) : (
-                    <span className="text-[9px] text-orange-500 font-medium shrink-0 ml-1">VS</span>
-                  )}
-                </div>
-                {!isFinished && (
-                  <div className="mt-1 text-center">
-                    <span className="text-[8px] text-gray-400 font-medium uppercase tracking-wider">Scheduled</span>
+
+                  {/* Away Team */}
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end">
+                    <span className="text-[10px] font-black uppercase truncate text-right">{teamMap.get(game.away_team_id) ?? game.away_team_id}</span>
+                    <TeamLogo teamId={game.away_team_id} size={20} className="shrink-0" />
                   </div>
-                )}
+                </div>
               </Link>
             );
           })}
