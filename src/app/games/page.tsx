@@ -100,7 +100,11 @@ export default function GamesPage() {
     const lastMonday = new Date(thisMonday);
     lastMonday.setDate(thisMonday.getDate() - 7);
 
-    const isFinished = (g: GameRow) => g.home_score != null && g.away_score != null;
+    const isFinished = (g: GameRow) => {
+      const gameDate = g.tipoff ? new Date(g.tipoff) : null;
+      const now = new Date();
+      return g.home_score != null && g.away_score != null && gameDate && gameDate < now;
+    };
     
     // 1. Current Week Games (Today + Future this week)
     const upcomingThisWeek = games.filter(g => 
@@ -128,8 +132,9 @@ export default function GamesPage() {
   }, [games]);
 
   const GameCard = ({ g }: { g: GameRow }) => {
-    const isFinished = g.home_score != null && g.away_score != null;
     const dateObj = g.tipoff ? new Date(g.tipoff) : null;
+    const now = new Date();
+    const isFinished = g.home_score != null && g.away_score != null && dateObj && dateObj < now;
     const timeText = dateObj ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "TBD";
     const dateText = dateObj ? dateObj.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : "";
 

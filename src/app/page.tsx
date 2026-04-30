@@ -118,8 +118,9 @@ export default async function Home() {
       <section className="bg-gray-100 border-b-2 border-black py-4 px-3 sm:px-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {recentGames.map((game) => {
-            const isFinished = game.home_score !== null && game.away_score !== null;
             const dateObj = game.tipoff ? new Date(game.tipoff) : null;
+            const now = new Date();
+            const isFinished = game.home_score !== null && game.away_score !== null && dateObj && dateObj < now;
             const timeText = dateObj ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "TBD";
             
             return (
