@@ -138,7 +138,7 @@ export default async function Home() {
                 </div>
                 
                 {/* Teams layout */}
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   {/* Home Team */}
                   <div className="flex items-center justify-between gap-1">
                     <div className="flex items-center gap-1 flex-1">
@@ -149,13 +149,6 @@ export default async function Home() {
                       <span className="text-[10px] font-black shrink-0 ml-1">{game.home_score}</span>
                     ) : null}
                   </div>
-
-                  {/* VS indicator for scheduled games */}
-                  {!isFinished && (
-                    <div className="text-center py-0.5">
-                      <div className="px-1.5 py-0.5 bg-gray-100 rounded text-[8px] font-medium text-gray-600 tracking-wide inline-block">VS</div>
-                    </div>
-                  )}
 
                   {/* Away Team */}
                   <div className="flex items-center justify-between gap-1">
