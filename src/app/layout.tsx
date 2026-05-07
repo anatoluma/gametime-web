@@ -26,18 +26,18 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-gray-100 antialiased">
+      <body className="min-h-screen bg-[var(--background)] antialiased">
         <AuthHashHandler />
         <Nav />
 
         {/* CONTENT CONTAINER */}
-        <div className="max-w-5xl mx-auto bg-white min-h-screen border-x border-gray-200">
+        <div className="max-w-5xl mx-auto bg-[var(--surface)] min-h-screen border-x border-[var(--border)]">
           {children}
         </div>
 
-        <footer className="max-w-5xl mx-auto py-6 text-center bg-white border-x border-gray-200 space-y-2">
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">© 2026 LBM Stats</p>
-          <p className="text-[9px] text-gray-400 uppercase tracking-widest">
+        <footer className="max-w-5xl mx-auto py-6 text-center bg-[var(--surface)] border-x border-[var(--border)] space-y-2">
+          <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">© 2026 LBM Stats</p>
+          <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-widest">
             Want to play? Find pickup games at{" "}
             <a
               href="https://gametime.md"
