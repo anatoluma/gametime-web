@@ -736,8 +736,8 @@ export default function GameSharePanel({
           onClick={handleDownload}
           disabled={isExporting}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/70 text-white shadow-lg backdrop-blur-sm transition hover:border-orange-500 hover:text-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
-          title="Save result image"
-          aria-label="Save result image"
+          title="Share result image"
+          aria-label="Share result image"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -751,12 +751,12 @@ export default function GameSharePanel({
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <path d="M12 3v12" />
-            <path d="m7 10 5 5 5-5" />
-            <path d="M5 21h14" />
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+            <path d="M16 6l-4-4-4 4" />
+            <path d="M12 2v13" />
           </svg>
           <span className="sr-only">
-            {isExporting ? "Exporting…" : "Save result image"}
+            {isExporting ? "Exporting…" : "Share result image"}
           </span>
         </button>
       </div>

@@ -190,7 +190,23 @@ export default function GamePage() {
     return () => { cancelled = true; };
   }, [gameId]);
 
-  const hasDetailedStats = useMemo(() => stats.some((s) => s.minutes != null), [stats]);
+  const hasDetailedStats = useMemo(() => {
+    // Check if any player has detailed stats beyond just points
+    return stats.some((s) => 
+      s.minutes != null || 
+      s.reb_tot != null || 
+      s.assists != null || 
+      s.turnovers != null || 
+      s.steals != null || 
+      s.blocks != null || 
+      s.fouls_personal != null || 
+      s.plus_minus != null || 
+      s.efficiency != null ||
+      s.two_made != null ||
+      s.three_made != null ||
+      s.ft_made != null
+    );
+  }, [stats]);
 
   // Calculate highlight score combining multiple stats
   const calculateHighlightScore = (player: PlayerStat): number => {
@@ -249,10 +265,20 @@ export default function GamePage() {
 
   function sortedRows(rows: PlayerStat[]): PlayerStat[] {
     if (hasDetailedStats) {
-      // Starters first (by jersey number), then bench (by jersey number)
-      const starters = rows.filter((r) => r.is_starter).sort((a, b) => (a.jersey_number ?? 99) - (b.jersey_number ?? 99));
-      const bench = rows.filter((r) => !r.is_starter).sort((a, b) => (a.jersey_number ?? 99) - (b.jersey_number ?? 99));
-      return [...starters, ...bench];
+      // If we have minutes data, sort by starters first, then by points
+      const hasMinutes = rows.some(r => r.minutes != null);
+      if (hasMinutes) {
+        const starters = rows.filter((r) => r.is_starter).sort((a, b) => (a.jersey_number ?? 99) - (b.jersey_number ?? 99));
+        const bench = rows.filter((r) => !r.is_starter).sort((a, b) => (a.jersey_number ?? 99) - (b.jersey_number ?? 99));
+        return [...starters, ...bench];
+      } else {
+        // No minutes data, sort by points (descending) then by jersey number
+        return [...rows].sort((a, b) => {
+          const pointsDiff = (b.points ?? 0) - (a.points ?? 0);
+          if (pointsDiff !== 0) return pointsDiff;
+          return (a.jersey_number ?? 99) - (b.jersey_number ?? 99);
+        });
+      }
     }
     return [...rows].sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
   }
@@ -300,29 +326,62 @@ export default function GamePage() {
     const thCls = "py-3 px-2.5 text-[9px] font-black uppercase tracking-widest text-orange-500 text-right whitespace-nowrap";
     const thLeftCls = "py-3 px-3 text-[9px] font-black uppercase tracking-widest text-orange-500 text-left whitespace-nowrap";
 
-    // Divider index: first bench player
-    const firstBenchIdx = sorted.findIndex((r) => !r.is_starter);
+    // Check if we have minutes data
+    const hasMinutes = rows.some(r => r.minutes != null);
+    
+    // Check which shooting stats are available
+    const hasTwoPoint = rows.some(r => r.two_made != null || r.two_att != null);
+    const hasThreePoint = rows.some(r => r.three_made != null || r.three_att != null);
+    const hasFreeThrow = rows.some(r => r.ft_made != null || r.ft_att != null);
+    
+    // Check which other stats are available
+    const hasRebounds = rows.some(r => r.reb_tot != null);
+    const hasAssists = rows.some(r => r.assists != null);
+    const hasTurnovers = rows.some(r => r.turnovers != null);
+    const hasSteals = rows.some(r => r.steals != null);
+    const hasBlocks = rows.some(r => r.blocks != null);
+    const hasFouls = rows.some(r => r.fouls_personal != null);
+    const hasPlusMinus = rows.some(r => r.plus_minus != null);
+    const hasEfficiency = rows.some(r => r.efficiency != null);
+
+    // Divider index: first bench player (only when we have minutes data)
+    const firstBenchIdx = hasMinutes ? sorted.findIndex((r) => !r.is_starter) : -1;
+
+    // Calculate column span for empty state
+    const totalColumns = 3 + // #, Player, PTS
+      (hasMinutes ? 1 : 0) +
+      (hasTwoPoint ? 1 : 0) +
+      (hasThreePoint ? 1 : 0) +
+      (hasFreeThrow ? 1 : 0) +
+      (hasRebounds ? 1 : 0) +
+      (hasAssists ? 1 : 0) +
+      (hasTurnovers ? 1 : 0) +
+      (hasSteals ? 1 : 0) +
+      (hasBlocks ? 1 : 0) +
+      (hasFouls ? 1 : 0) +
+      (hasPlusMinus ? 1 : 0) +
+      (hasEfficiency ? 1 : 0);
 
     return (
       <div className="bg-white border-4 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] mt-3" style={{ color: "#111" }}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse" style={{ minWidth: "700px" }}>
+          <table className="w-full text-left border-collapse" style={{ minWidth: "600px" }}>
             <thead>
               <tr className="bg-black text-white">
                 <th className={`${thLeftCls} w-8`}>#</th>
                 <th className={`${thLeftCls} min-w-[130px]`}>Player</th>
-                <th className={thCls}>MIN</th>
-                <th className={thCls}>2FG</th>
-                <th className={thCls}>3FG</th>
-                <th className={thCls}>FT</th>
-                <th className={thCls}>REB</th>
-                <th className={thCls}>AST</th>
-                <th className={thCls}>TO</th>
-                <th className={thCls}>STL</th>
-                <th className={thCls}>BLK</th>
-                <th className={thCls}>PF</th>
-                <th className={thCls}>+/-</th>
-                <th className={thCls}>EFF</th>
+                {hasMinutes && <th className={thCls}>MIN</th>}
+                {hasTwoPoint && <th className={thCls}>2FG</th>}
+                {hasThreePoint && <th className={thCls}>3FG</th>}
+                {hasFreeThrow && <th className={thCls}>FT</th>}
+                {hasRebounds && <th className={thCls}>REB</th>}
+                {hasAssists && <th className={thCls}>AST</th>}
+                {hasTurnovers && <th className={thCls}>TO</th>}
+                {hasSteals && <th className={thCls}>STL</th>}
+                {hasBlocks && <th className={thCls}>BLK</th>}
+                {hasFouls && <th className={thCls}>PF</th>}
+                {hasPlusMinus && <th className={thCls}>+/-</th>}
+                {hasEfficiency && <th className={thCls}>EFF</th>}
                 <th className={`${thCls} text-white`}>PTS</th>
               </tr>
             </thead>
@@ -343,30 +402,32 @@ export default function GamePage() {
                       >
                         {p.first_name} {p.last_name}
                       </Link>
-                      {p.is_starter && (
+                      {p.is_starter && hasMinutes && (
                         <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: "#4b5563", opacity: 1 }}>starter</span>
                       )}
                     </td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{p.minutes ?? "—"}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtShot(p.two_made, p.two_att)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtShot(p.three_made, p.three_att)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtShot(p.ft_made, p.ft_att)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums text-black">{fmtNum(p.reb_tot)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums text-black">{fmtNum(p.assists)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtNum(p.turnovers)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtNum(p.steals)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtNum(p.blocks)}</td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtNum(p.fouls_personal)}</td>
-                    <td className={`py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums ${(p.plus_minus ?? 0) > 0 ? "text-green-600" : (p.plus_minus ?? 0) < 0 ? "text-red-600" : "text-gray-700"}`}>
-                      {fmtPlusMinus(p.plus_minus)}
-                    </td>
-                    <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtNum(p.efficiency)}</td>
+                    {hasMinutes && <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{p.minutes ?? "—"}</td>}
+                    {hasTwoPoint && <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtShot(p.two_made, p.two_att)}</td>}
+                    {hasThreePoint && <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtShot(p.three_made, p.three_att)}</td>}
+                    {hasFreeThrow && <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtShot(p.ft_made, p.ft_att)}</td>}
+                    {hasRebounds && <td className="py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums text-black">{fmtNum(p.reb_tot)}</td>}
+                    {hasAssists && <td className="py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums text-black">{fmtNum(p.assists)}</td>}
+                    {hasTurnovers && <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtNum(p.turnovers)}</td>}
+                    {hasSteals && <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtNum(p.steals)}</td>}
+                    {hasBlocks && <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtNum(p.blocks)}</td>}
+                    {hasFouls && <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtNum(p.fouls_personal)}</td>}
+                    {hasPlusMinus && (
+                      <td className={`py-2.5 px-2.5 text-right text-xs font-semibold tabular-nums ${(p.plus_minus ?? 0) > 0 ? "text-green-600" : (p.plus_minus ?? 0) < 0 ? "text-red-600" : "text-gray-700"}`}>
+                        {fmtPlusMinus(p.plus_minus)}
+                      </td>
+                    )}
+                    {hasEfficiency && <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{fmtNum(p.efficiency)}</td>}
                     <td className="py-2.5 px-2.5 text-right text-base font-black text-black tabular-nums italic">{p.points ?? 0}</td>
                   </tr>
                 );
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={15} className="p-10 text-xs text-center text-black font-black uppercase italic tracking-widest">No Stats Recorded</td></tr>
+                <tr><td colSpan={totalColumns} className="p-10 text-xs text-center text-black font-black uppercase italic tracking-widest">No Stats Recorded</td></tr>
               )}
             </tbody>
           </table>
