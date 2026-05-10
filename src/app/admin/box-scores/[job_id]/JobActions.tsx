@@ -217,6 +217,8 @@ export default function JobActions({
         const body = (await res.json()) as { error?: string };
         throw new Error(body.error ?? "Approve failed");
       }
+      // Small delay to ensure database commit completes before refresh
+      await new Promise(resolve => setTimeout(resolve, 500));
       router.refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Unknown error");
