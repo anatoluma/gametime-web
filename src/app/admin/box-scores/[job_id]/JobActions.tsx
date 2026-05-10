@@ -217,8 +217,30 @@ export default function JobActions({
         const body = (await res.json()) as { error?: string };
         throw new Error(body.error ?? "Approve failed");
       }
-      // Small delay to ensure database commit completes before refresh
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // The API should return status "committed" if successful
+      const response = (await res.json()) as { status: string };
+      if (response.status !== "committed") {
+        throw new Error(`Expected committed status but got: ${response.status}`);
+      }
+      router.refresh();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCommit() {
+    setLoading(true);
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/admin/box-scores/jobs/${jobId}/commit`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const body = (await res.json()) as { error?: string };
+        throw new Error(body.error ?? "Commit failed");
+      }
       router.refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Unknown error");
@@ -533,16 +555,28 @@ export default function JobActions({
       )}
 
       {isTerminal && (
-        <p className={`text-sm text-center py-2 font-medium ${
-          currentStatus === "approved" ? "text-green-600 dark:text-green-400" :
-          currentStatus === "committed" ? "text-emerald-600 dark:text-emerald-400" :
-          "text-[var(--text-muted)]"
-        }`}>
-          {currentStatus === "approved" && "✓ Job approved — ready to commit."}
-          {currentStatus === "committed" && "✓ Job committed to the database."}
-          {currentStatus === "rejected" && `Job rejected${errorMessage ? `: ${errorMessage}` : "."}`}
-          {currentStatus === "failed" && "Job failed during processing."}
-        </p>
+        <div className="text-center space-y-3">
+          <p className={`text-sm text-center py-2 font-medium ${
+            currentStatus === "approved" ? "text-green-600 dark:text-green-400" :
+            currentStatus === "committed" ? "text-emerald-600 dark:text-emerald-400" :
+            "text-[var(--text-muted)]"
+          }`}>
+            {currentStatus === "approved" && "✓ Job approved — ready to commit."}
+            {currentStatus === "committed" && "✓ Job committed to the database."}
+            {currentStatus === "rejected" && `Job rejected${errorMessage ? `: ${errorMessage}` : "."}`}
+            {currentStatus === "failed" && "Job failed during processing."}
+          </p>
+          {currentStatus === "approved" && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleCommit}
+              className="rounded-lg px-5 py-2 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? "Committing…" : "Commit to Database"}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
