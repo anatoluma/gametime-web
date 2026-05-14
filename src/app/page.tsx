@@ -64,64 +64,14 @@ export default async function Home() {
     <main className="min-h-screen bg-white text-black">
       {/* PLAYOFFS BANNER */}
       <section className="relative w-full overflow-hidden">
-        <img 
-          src="/images/playoffs/playoff mobile.png" 
-          alt="Playoffs 2026 - Liga Basket Moldova"
-          className="w-full h-auto object-cover"
-        />
-      </section>
-
-      {/* HERO BANNER */}
-      <section className="relative overflow-hidden bg-gray-950 text-white border-b-4 border-orange-500">
-        {/* Decorative radial glows */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-20 top-0 h-full w-1/2 rounded-full bg-orange-500/10 blur-3xl" />
-          <div className="absolute -right-20 bottom-0 h-full w-1/2 rounded-full bg-blue-800/20 blur-3xl" />
-        </div>
-        {/* Decorative basketball circle */}
-        <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 hidden sm:block">
-          <div className="h-48 w-48 md:h-64 md:w-64 rounded-full border-[16px] border-orange-500/10 opacity-60" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-28 w-28 md:h-40 md:w-40 rounded-full border-[10px] border-orange-500/8" />
-          </div>
-        </div>
-
-        <div className="relative mx-auto max-w-screen-xl px-4 sm:px-6 py-8 sm:py-10 md:py-14">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-
-            {/* Left: branding + CTAs */}
-            <div>
-              <div className="mb-3 flex items-center gap-2">
-                <span className="text-orange-400 text-[10px] font-black uppercase tracking-[0.2em]">Official Stats Platform</span>
-                <span className="h-px w-8 bg-orange-400/60 inline-block" />
-                <span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Season 2025/26</span>
-              </div>
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase leading-none tracking-tight">
-                Liga Basket<br />
-                <span className="text-orange-400">Moldova</span>
-              </h1>
-              <p className="mt-3 text-sm text-gray-400 max-w-xs">
-                Scores, standings, and player stats for every game of the season.
-              </p>
-            </div>
-
-            {/* Right: stat tiles + leader card */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-xl bg-white/8 border border-white/10 p-4 text-center">
-                <div className="text-3xl font-black">{teams.length}</div>
-                <div className="mt-1 text-[10px] uppercase tracking-widest text-gray-400">Teams</div>
-              </div>
-              <div className="rounded-xl bg-white/8 border border-white/10 p-4 text-center">
-                <div className="text-3xl font-black">{gamesPlayed}</div>
-                <div className="mt-1 text-[10px] uppercase tracking-widest text-gray-400">Games</div>
-              </div>
-              <div className="rounded-xl bg-white/8 border border-white/10 p-4 text-center">
-                <div className="text-3xl font-black text-orange-400">{allGames.length}</div>
-                <div className="mt-1 text-[10px] uppercase tracking-widest text-gray-400">Total Games</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <picture>
+          <source media="(max-width: 767px)" srcSet="/images/playoffs/playoff_bracket_square.webp" />
+          <img 
+            src="/images/playoffs/playoff mobile.png" 
+            alt="Playoffs 2026 - Liga Basket Moldova"
+            className="w-full h-auto object-cover"
+          />
+        </picture>
       </section>
 
       <section className="bg-gray-100 border-b-2 border-black py-4 px-3 sm:px-6">
