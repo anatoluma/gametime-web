@@ -62,6 +62,15 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-white text-black">
+      {/* PLAYOFFS BANNER */}
+      <section className="relative w-full overflow-hidden">
+        <img 
+          src="/images/playoffs/playoff mobile.png" 
+          alt="Playoffs 2026 - Liga Basket Moldova"
+          className="w-full h-auto object-cover"
+        />
+      </section>
+
       {/* HERO BANNER */}
       <section className="relative overflow-hidden bg-gray-950 text-white border-b-4 border-orange-500">
         {/* Decorative radial glows */}
