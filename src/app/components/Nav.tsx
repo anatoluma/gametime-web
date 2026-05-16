@@ -43,6 +43,7 @@ export default function Nav() {
     { href: "/games", label: "Games" },
     { href: "/leaders", label: "Leaders" },
     { href: "/standings", label: "Standings" },
+    { href: "/playoffs", label: "Playoffs" },
   ];
 
   return (

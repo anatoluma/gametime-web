@@ -64,14 +64,16 @@ export default async function Home() {
     <main className="min-h-screen bg-white text-black">
       {/* PLAYOFFS BANNER */}
       <section className="relative w-full overflow-hidden">
-        <picture>
-          <source media="(max-width: 767px)" srcSet="/images/playoffs/playoff_bracket_square.webp" />
-          <img 
-            src="/images/playoffs/playoff mobile.png" 
-            alt="Playoffs 2026 - Liga Basket Moldova"
-            className="w-full h-auto object-cover"
-          />
-        </picture>
+        <Link href="/playoffs" className="block hover:opacity-90 transition-opacity">
+          <picture>
+            <source media="(max-width: 767px)" srcSet="/images/playoffs/playoff_bracket_square.webp" />
+            <img 
+              src="/images/playoffs/playoff mobile.png" 
+              alt="Playoffs 2026 - Liga Basket Moldova"
+              className="w-full h-auto object-cover"
+            />
+          </picture>
+        </Link>
       </section>
 
       <section className="bg-gray-100 border-b-2 border-black py-4 px-3 sm:px-6">
