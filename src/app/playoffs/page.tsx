@@ -10,39 +10,59 @@ const initialBracket = {
     { 
       team1: { id: "hitech", name: "HITECH SUCLEIA" }, 
       team2: { id: "brici", name: "BRICI BASKET" }, 
-      team1Wins: 1, 
+      team1Wins: 2, 
       team2Wins: 0, 
       games: [
-        { id: "game1", homeScore: 85, awayScore: 78, finished: true }
+        { id: "game1", homeScore: 85, awayScore: 78, finished: true },
+        { id: "game2", homeScore: 88, awayScore: 82, finished: true }
       ]
     },
     { 
       team1: { id: "usmf", name: "USMF" }, 
       team2: { id: "blades", name: "BLADES" }, 
+      team1Wins: 2, 
+      team2Wins: 0, 
+      games: [
+        { id: "game3", homeScore: 82, awayScore: 78, finished: true },
+        { id: "game4", homeScore: 90, awayScore: 85, finished: true }
+      ]
+    },
+    { 
+      team1: { id: "drochia", name: "DROCHIA BC" }, 
+      team2: { id: "edin", name: "EDIN BASKET" }, 
+      team1Wins: 2, 
+      team2Wins: 0, 
+      games: [
+        { id: "game6", homeScore: 92, awayScore: 87, finished: true },
+        { id: "game7", homeScore: 89, awayScore: 84, finished: true }
+      ]
+    },
+    { 
+      team1: { id: "gametime", name: "GAME TIME" }, 
+      team2: { id: "white-wolves", name: "WHITE WOLVES" }, 
+      team1Wins: 1, 
+      team2Wins: 1, 
+      games: [
+        { id: "game8", homeScore: 76, awayScore: 79, finished: true },
+        { id: "game9", homeScore: 83, awayScore: 80, finished: true }
+      ]
+    }
+  ],
+  semifinals: [
+    { 
+      team1: { id: "hitech", name: "HITECH SUCLEIA" }, 
+      team2: { id: "usmf", name: "USMF" }, 
       team1Wins: 0, 
       team2Wins: 0, 
       games: []
     },
     { 
       team1: { id: "drochia", name: "DROCHIA BC" }, 
-      team2: { id: "edin", name: "EDIN BASKET" }, 
-      team1Wins: 1, 
-      team2Wins: 0, 
-      games: [
-        { id: "game2", homeScore: 92, awayScore: 87, finished: true }
-      ]
-    },
-    { 
-      team1: { id: "gametime", name: "GAME TIME" }, 
-      team2: { id: "white-wolves", name: "WHITE WOLVES" }, 
+      team2: null, 
       team1Wins: 0, 
       team2Wins: 0, 
       games: []
     }
-  ],
-  semifinals: [
-    { team1: null, team2: null, team1Wins: 0, team2Wins: 0, games: [] },
-    { team1: null, team2: null, team1Wins: 0, team2Wins: 0, games: [] }
   ],
   finals: [
     { team1: null, team2: null, team1Wins: 0, team2Wins: 0, games: [] }
