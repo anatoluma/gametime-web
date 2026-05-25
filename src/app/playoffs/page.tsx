@@ -208,14 +208,14 @@ export default function PlayoffsPage() {
           <div className="min-w-[800px]">
             
             {/* Visual Bracket Layout */}
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-8">
               
               {/* Quarterfinals Column */}
               <div className="flex-1">
                 <h2 className="text-lg font-black uppercase italic mb-4">Quarterfinals</h2>
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {bracket.quarterfinals.map((matchup, index) => (
-                    <div key={`qf-${index}`}>
+                    <div key={`qf-${index}`} className="relative">
                       <MatchupCard 
                         matchup={matchup} 
                         round="quarterfinals" 
@@ -226,8 +226,8 @@ export default function PlayoffsPage() {
                       />
                       {/* Bracket lines */}
                       {index < 2 && (
-                        <div className="flex justify-center">
-                          <div className="w-0.5 h-8 bg-black"></div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+                          <div className="w-0.5 h-6 bg-black"></div>
                         </div>
                       )}
                     </div>
@@ -236,16 +236,18 @@ export default function PlayoffsPage() {
               </div>
 
               {/* Connector Lines */}
-              <div className="flex items-center justify-center">
-                <div className="space-y-8">
+              <div className="flex items-center justify-center w-24">
+                <div className="space-y-20">
+                  {/* First semifinal connector */}
                   <div className="flex items-center">
                     <div className="w-8 h-0.5 bg-black"></div>
-                    <div className="w-0.5 h-16 bg-black"></div>
+                    <div className="w-0.5 h-12 bg-black"></div>
                     <div className="w-8 h-0.5 bg-black"></div>
                   </div>
+                  {/* Second semifinal connector */}
                   <div className="flex items-center">
                     <div className="w-8 h-0.5 bg-black"></div>
-                    <div className="w-0.5 h-16 bg-black"></div>
+                    <div className="w-0.5 h-12 bg-black"></div>
                     <div className="w-8 h-0.5 bg-black"></div>
                   </div>
                 </div>
@@ -254,9 +256,9 @@ export default function PlayoffsPage() {
               {/* Semifinals Column */}
               <div className="flex-1">
                 <h2 className="text-lg font-black uppercase italic mb-4">Semifinals</h2>
-                <div className="space-y-8">
+                <div className="space-y-16">
                   {bracket.semifinals.map((matchup, index) => (
-                    <div key={`sf-${index}`}>
+                    <div key={`sf-${index}`} className="relative">
                       {matchup.team1 && matchup.team2 ? (
                         <MatchupCard matchup={matchup} round="semifinals" />
                       ) : (
@@ -270,7 +272,7 @@ export default function PlayoffsPage() {
                       )}
                       {/* Bracket line to finals */}
                       {index === 0 && (
-                        <div className="flex justify-center mt-4">
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2">
                           <div className="w-0.5 h-8 bg-black"></div>
                         </div>
                       )}
@@ -280,10 +282,10 @@ export default function PlayoffsPage() {
               </div>
 
               {/* Connector Lines to Finals */}
-              <div className="flex items-center justify-center">
+              <div className="flex items-center justify-center w-24">
                 <div className="flex items-center">
                   <div className="w-8 h-0.5 bg-black"></div>
-                  <div className="w-0.5 h-16 bg-black"></div>
+                  <div className="w-0.5 h-20 bg-black"></div>
                   <div className="w-8 h-0.5 bg-black"></div>
                 </div>
               </div>
@@ -291,7 +293,7 @@ export default function PlayoffsPage() {
               {/* Finals Column */}
               <div className="flex-1">
                 <h2 className="text-lg font-black uppercase italic mb-4">Division B Finals</h2>
-                <div className="mt-8">
+                <div className="mt-12">
                   {bracket.finals[0].team1 && bracket.finals[0].team2 ? (
                     <MatchupCard matchup={bracket.finals[0]} round="finals" />
                   ) : (
