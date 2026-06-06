@@ -25,6 +25,8 @@ export async function POST(request: Request) {
   const file = formData.get("file");
   const seasonIdRaw = formData.get("season_id");
   const competitionIdRaw = formData.get("competition_id");
+  const homeTeamId = formData.get("home_team_id");
+  const awayTeamId = formData.get("away_team_id");
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "file is required" }, { status: 400 });
@@ -76,6 +78,8 @@ export async function POST(request: Request) {
       season_id: seasonId,
       competition_id: competitionId,
       raw_file_path: storagePath,
+      home_team_id: homeTeamId ? String(homeTeamId) : null,
+      away_team_id: awayTeamId ? String(awayTeamId) : null,
     })
     .select("id, status, created_at")
     .single();

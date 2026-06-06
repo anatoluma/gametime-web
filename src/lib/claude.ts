@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { EXTRACTION_PROMPT } from "@/lib/extraction-prompt";
+import { generateContextualPrompt } from "@/lib/extraction-prompt";
 
 const supabaseAdmin = createClient(
 	process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,6 +12,8 @@ const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
 type ProcessingJobRow = {
 	id: string;
 	raw_file_path: string;
+	home_team_id: string | null;
+	away_team_id: string | null;
 };
 
 type AnthropicTextContent = {
@@ -56,7 +58,7 @@ export async function extractBoxScore(jobId: string): Promise<Record<string, unk
 
 		const { data: job, error: jobError } = await supabaseAdmin
 			.from("processing_jobs")
-			.select("id, raw_file_path")
+			.select("id, raw_file_path, home_team_id, away_team_id")
 			.eq("id", jobId)
 			.single<ProcessingJobRow>();
 
@@ -89,6 +91,9 @@ export async function extractBoxScore(jobId: string): Promise<Record<string, unk
 		const base64Image = Buffer.from(imageArrayBuffer).toString("base64");
 		const mediaType = inferMediaType(job.raw_file_path);
 
+		// Generate contextual prompt with team information
+		const prompt = generateContextualPrompt(job.home_team_id, job.away_team_id);
+
 		const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
 			method: "POST",
 			headers: {
@@ -113,7 +118,7 @@ export async function extractBoxScore(jobId: string): Promise<Record<string, unk
 							},
 							{
 								type: "text",
-								text: EXTRACTION_PROMPT,
+								text: prompt,
 							},
 						],
 					},

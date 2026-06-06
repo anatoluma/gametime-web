@@ -91,3 +91,20 @@ General:
 - Extract names exactly as printed, including initials and spacing
 - Do not correct spelling or normalise names
 - Never skip a player row — extract every row including bench players with 0 stats`;
+
+export function generateContextualPrompt(homeTeamId?: string | null, awayTeamId?: string | null): string {
+  if (!homeTeamId && !awayTeamId) {
+    return EXTRACTION_PROMPT;
+  }
+
+  let teamContext = "";
+  if (homeTeamId && awayTeamId) {
+    teamContext = `TEAM CONTEXT: The teams playing are ${homeTeamId} (home) and ${awayTeamId} (away). Use these team codes as ground truth when extracting team information.\n\n`;
+  } else if (homeTeamId) {
+    teamContext = `TEAM CONTEXT: The home team is ${homeTeamId}. Use this team code as ground truth when extracting team information.\n\n`;
+  } else if (awayTeamId) {
+    teamContext = `TEAM CONTEXT: The away team is ${awayTeamId}. Use this team code as ground truth when extracting team information.\n\n`;
+  }
+
+  return teamContext + EXTRACTION_PROMPT;
+}

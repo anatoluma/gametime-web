@@ -14,6 +14,17 @@ const AUTO_ACCEPT_THRESHOLD = 0.92;
 
 export async function runPipeline(jobId: string): Promise<void> {
 	try {
+		// Fetch job data with team information
+		const { data: job, error: jobError } = await supabaseAdmin
+			.from("processing_jobs")
+			.select("id, home_team_id, away_team_id")
+			.eq("id", jobId)
+			.single();
+
+		if (jobError || !job) {
+			throw new Error(jobError?.message ?? `Processing job ${jobId} not found`);
+		}
+
 		// Step 1: Extract — sets status to "extracting", returns extraction_json
 		let extractionJson = await extractBoxScore(jobId);
 
@@ -22,29 +33,35 @@ export async function runPipeline(jobId: string): Promise<void> {
 		extractionJson = normalizeExtractionJson(extractionJson);
 
 		// Step 1c: Resolve extracted team codes → canonical DB team IDs
-		// Fuzzy-matches against all teams so "MED" → "USM" etc. are corrected automatically.
+		// Use upfront team hints when available, otherwise fall back to fuzzy matching
 		const homeCode = (extractionJson.home_team as Record<string, unknown> | null)?.code as string | null;
 		const awayCode = (extractionJson.away_team as Record<string, unknown> | null)?.code as string | null;
+		
+		// Use upfront team hints when available
+		const newHomeCode = job.home_team_id ?? homeCode;
+		const newAwayCode = job.away_team_id ?? awayCode;
+		
+		// Only run team resolution if we don't have upfront team hints
 		const codesToResolve = [homeCode, awayCode].filter((c): c is string => !!c);
-		if (codesToResolve.length > 0) {
+		if (codesToResolve.length > 0 && !job.home_team_id && !job.away_team_id) {
 			const teamResolutions = await resolveTeamCodes(codesToResolve);
 			const resolvedHome = teamResolutions.find((r) => r.extracted_code === homeCode);
 			const resolvedAway = teamResolutions.find((r) => r.extracted_code === awayCode);
-			const newHomeCode = resolvedHome?.resolved_id ?? homeCode;
-			const newAwayCode = resolvedAway?.resolved_id ?? awayCode;
+			const finalHomeCode = resolvedHome?.resolved_id ?? homeCode;
+			const finalAwayCode = resolvedAway?.resolved_id ?? awayCode;
 
-			if (newHomeCode !== homeCode || newAwayCode !== awayCode) {
+			if (finalHomeCode !== homeCode || finalAwayCode !== awayCode) {
 				// Patch home_team, away_team, and every player/team_total row
 				extractionJson = {
 					...extractionJson,
-					home_team: { ...(extractionJson.home_team as object), code: newHomeCode },
-					away_team: { ...(extractionJson.away_team as object), code: newAwayCode },
+					home_team: { ...(extractionJson.home_team as object), code: finalHomeCode },
+					away_team: { ...(extractionJson.away_team as object), code: finalAwayCode },
 					players: Array.isArray(extractionJson.players)
 						? (extractionJson.players as Record<string, unknown>[]).map((p) => ({
 								...p,
 								team_code:
-									p.team_code === homeCode ? newHomeCode
-									: p.team_code === awayCode ? newAwayCode
+									p.team_code === homeCode ? finalHomeCode
+									: p.team_code === awayCode ? finalAwayCode
 									: p.team_code,
 						  }))
 						: extractionJson.players,
@@ -52,13 +69,38 @@ export async function runPipeline(jobId: string): Promise<void> {
 						? (extractionJson.team_totals as Record<string, unknown>[]).map((t) => ({
 								...t,
 								team_code:
-									t.team_code === homeCode ? newHomeCode
-									: t.team_code === awayCode ? newAwayCode
+									t.team_code === homeCode ? finalHomeCode
+									: t.team_code === awayCode ? finalAwayCode
 									: t.team_code,
 						  }))
 						: extractionJson.team_totals,
 				};
 			}
+		} else if (job.home_team_id || job.away_team_id) {
+			// Apply upfront team hints to extraction data
+			extractionJson = {
+				...extractionJson,
+				home_team: { ...(extractionJson.home_team as object), code: newHomeCode },
+				away_team: { ...(extractionJson.away_team as object), code: newAwayCode },
+				players: Array.isArray(extractionJson.players)
+					? (extractionJson.players as Record<string, unknown>[]).map((p) => ({
+							...p,
+							team_code:
+								p.team_code === homeCode ? newHomeCode
+								: p.team_code === awayCode ? newAwayCode
+								: p.team_code,
+					  }))
+					: extractionJson.players,
+				team_totals: Array.isArray(extractionJson.team_totals)
+					? (extractionJson.team_totals as Record<string, unknown>[]).map((t) => ({
+							...t,
+							team_code:
+								t.team_code === homeCode ? newHomeCode
+								: t.team_code === awayCode ? newAwayCode
+								: t.team_code,
+					  }))
+					: extractionJson.team_totals,
+			};
 		}
 
 		await supabaseAdmin
