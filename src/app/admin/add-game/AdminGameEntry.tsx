@@ -263,6 +263,30 @@ export default function AdminGameEntry({
     window.location.reload();
   };
 
+  const handleDeleteGame = async () => {
+    if (!editingGameId) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this game? This action cannot be undone.\n\nGame: ${getGameLabel(existingGames.find(g => g.game_id === editingGameId))}`
+    );
+
+    if (!confirmed) return;
+
+    const response = await fetch(`/api/admin/game?game_id=${encodeURIComponent(editingGameId)}`, {
+      method: "DELETE",
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.error) {
+      alert(`Delete Error: ${result?.error || response.statusText}`);
+      return;
+    }
+
+    alert("Game deleted successfully!");
+    window.location.reload();
+  };
+
   return (
     <main className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto min-h-screen text-[var(--foreground)] bg-[var(--surface)]">
       <h1 className="text-2xl sm:text-3xl font-semibold mb-8 pb-3 border-b border-[var(--border)]">
@@ -289,13 +313,22 @@ export default function AdminGameEntry({
                   ))}
                 </select>
                 {editingGameId && (
-                  <button
-                    type="button"
-                    onClick={resetToNewGame}
-                    className="px-4 py-3 rounded-lg border border-[var(--border)] font-semibold bg-[var(--surface)] hover:bg-slate-100 dark:hover:bg-slate-700"
-                  >
-                    New
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={resetToNewGame}
+                      className="px-4 py-3 rounded-lg border border-[var(--border)] font-semibold bg-[var(--surface)] hover:bg-slate-100 dark:hover:bg-slate-700"
+                    >
+                      New
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteGame}
+                      className="px-4 py-3 rounded-lg border border-red-500 font-semibold bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                    >
+                      Delete
+                    </button>
+                  </>
                 )}
               </div>
             </div>

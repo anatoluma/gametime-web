@@ -41,6 +41,37 @@ export async function GET(request: Request) {
   return NextResponse.json({ game, stats });
 }
 
+export async function DELETE(request: Request) {
+  const url = new URL(request.url);
+  const gameId = url.searchParams.get("game_id");
+
+  if (!gameId) {
+    return NextResponse.json({ error: "game_id is required" }, { status: 400 });
+  }
+
+  // Delete player stats first (foreign key constraint)
+  const { error: statsError } = await supabaseAdmin
+    .from("player_game_stats")
+    .delete()
+    .eq("game_id", gameId);
+
+  if (statsError) {
+    return NextResponse.json({ error: statsError.message }, { status: 500 });
+  }
+
+  // Delete the game
+  const { error: gameError } = await supabaseAdmin
+    .from("games")
+    .delete()
+    .eq("game_id", gameId);
+
+  if (gameError) {
+    return NextResponse.json({ error: gameError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ message: "Game deleted successfully" });
+}
+
 export async function POST(request: Request) {
   const body = await request.json();
   const { gamePayload, homePlayers, awayPlayers, editingGameId } = body;
