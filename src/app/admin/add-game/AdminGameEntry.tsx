@@ -389,13 +389,24 @@ export default function AdminGameEntry({
       {step === 2 && (
         <section className="space-y-8">
           <div className="flex justify-between items-center">
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] font-medium py-2.5 px-4 hover:bg-slate-100 dark:hover:bg-slate-700"
-            >
-              Back to Game Info
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] font-medium py-2.5 px-4 hover:bg-slate-100 dark:hover:bg-slate-700"
+              >
+                Back to Game Info
+              </button>
+              {editingGameId && (
+                <button
+                  type="button"
+                  onClick={handleDeleteGame}
+                  className="rounded-lg border border-red-500 font-semibold bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 py-2.5 px-4"
+                >
+                  Delete Game
+                </button>
+              )}
+            </div>
             {editingGameId && (
               <span className="text-sm font-medium tracking-wide text-[var(--text-muted)]">
                 Editing game: {editingGameId}
