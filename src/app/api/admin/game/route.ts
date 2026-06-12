@@ -115,7 +115,7 @@ export async function POST(request: Request) {
       (existingStats ?? []).map((stat: any) => [stat.player_id, stat])
     );
 
-    // Merge existing stats with updated points
+    // Merge existing stats with updated comprehensive stats
     const allStats = [...homePlayers, ...awayPlayers]
       .filter((p: any) => p.played)
       .map((p: any) => {
@@ -125,25 +125,25 @@ export async function POST(request: Request) {
           player_id: p.player_id,
           points: p.points,
           team_id: p.team_id,
-          // Preserve all existing detailed stats if they exist
-          is_starter: existing?.is_starter ?? null,
-          minutes: existing?.minutes ?? null,
-          two_made: existing?.two_made ?? null,
-          two_att: existing?.two_att ?? null,
-          three_made: existing?.three_made ?? null,
-          three_att: existing?.three_att ?? null,
-          ft_made: existing?.ft_made ?? null,
-          ft_att: existing?.ft_att ?? null,
-          reb_off: existing?.reb_off ?? null,
-          reb_def: existing?.reb_def ?? null,
-          reb_tot: existing?.reb_tot ?? null,
-          assists: existing?.assists ?? null,
-          turnovers: existing?.turnovers ?? null,
-          steals: existing?.steals ?? null,
-          blocks: existing?.blocks ?? null,
-          fouls_personal: existing?.fouls_personal ?? null,
-          plus_minus: existing?.plus_minus ?? null,
-          efficiency: existing?.efficiency ?? null,
+          // Use updated stats if provided, otherwise preserve existing ones
+          is_starter: p.is_starter ?? existing?.is_starter ?? null,
+          minutes: p.minutes ?? existing?.minutes ?? null,
+          two_made: p.two_made ?? existing?.two_made ?? null,
+          two_att: p.two_att ?? existing?.two_att ?? null,
+          three_made: p.three_made ?? existing?.three_made ?? null,
+          three_att: p.three_att ?? existing?.three_att ?? null,
+          ft_made: p.ft_made ?? existing?.ft_made ?? null,
+          ft_att: p.ft_att ?? existing?.ft_att ?? null,
+          reb_off: p.reb_off ?? existing?.reb_off ?? null,
+          reb_def: p.reb_def ?? existing?.reb_def ?? null,
+          reb_tot: p.reb_tot ?? existing?.reb_tot ?? null,
+          assists: p.assists ?? existing?.assists ?? null,
+          turnovers: p.turnovers ?? existing?.turnovers ?? null,
+          steals: p.steals ?? existing?.steals ?? null,
+          blocks: p.blocks ?? existing?.blocks ?? null,
+          fouls_personal: p.fouls_personal ?? existing?.fouls_personal ?? null,
+          plus_minus: p.plus_minus ?? existing?.plus_minus ?? null,
+          efficiency: p.efficiency ?? existing?.efficiency ?? null,
         };
       });
 

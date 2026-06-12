@@ -35,6 +35,7 @@ export default function AdminGameEntry({
     away_team_id: "",
     tipoff: "",
     season: "",
+    venue: "",
     home_score: 0,
     away_score: 0
   });
@@ -77,6 +78,7 @@ export default function AdminGameEntry({
       away_team_id: "",
       tipoff: "",
       season: "",
+      venue: "",
       home_score: 0,
       away_score: 0
     });
@@ -104,6 +106,7 @@ export default function AdminGameEntry({
       away_team_id: game.away_team_id,
       tipoff: game.tipoff ?? "",
       season: game.season ?? "",
+      venue: game.venue ?? "",
       home_score: game.home_score ?? 0,
       away_score: game.away_score ?? 0
     });
@@ -132,7 +135,25 @@ export default function AdminGameEntry({
           ?.map(p => ({
             ...p,
             played: Boolean(mapStat[p.player_id]),
-            points: mapStat[p.player_id]?.points ?? 0
+            points: mapStat[p.player_id]?.points ?? 0,
+            is_starter: mapStat[p.player_id]?.is_starter ?? null,
+            minutes: mapStat[p.player_id]?.minutes ?? null,
+            two_made: mapStat[p.player_id]?.two_made ?? null,
+            two_att: mapStat[p.player_id]?.two_att ?? null,
+            three_made: mapStat[p.player_id]?.three_made ?? null,
+            three_att: mapStat[p.player_id]?.three_att ?? null,
+            ft_made: mapStat[p.player_id]?.ft_made ?? null,
+            ft_att: mapStat[p.player_id]?.ft_att ?? null,
+            reb_off: mapStat[p.player_id]?.reb_off ?? null,
+            reb_def: mapStat[p.player_id]?.reb_def ?? null,
+            reb_tot: mapStat[p.player_id]?.reb_tot ?? null,
+            assists: mapStat[p.player_id]?.assists ?? null,
+            turnovers: mapStat[p.player_id]?.turnovers ?? null,
+            steals: mapStat[p.player_id]?.steals ?? null,
+            blocks: mapStat[p.player_id]?.blocks ?? null,
+            fouls_personal: mapStat[p.player_id]?.fouls_personal ?? null,
+            plus_minus: mapStat[p.player_id]?.plus_minus ?? null,
+            efficiency: mapStat[p.player_id]?.efficiency ?? null,
           }))
         ) || []
       )
@@ -144,7 +165,25 @@ export default function AdminGameEntry({
           ?.map(p => ({
             ...p,
             played: Boolean(mapStat[p.player_id]),
-            points: mapStat[p.player_id]?.points ?? 0
+            points: mapStat[p.player_id]?.points ?? 0,
+            is_starter: mapStat[p.player_id]?.is_starter ?? null,
+            minutes: mapStat[p.player_id]?.minutes ?? null,
+            two_made: mapStat[p.player_id]?.two_made ?? null,
+            two_att: mapStat[p.player_id]?.two_att ?? null,
+            three_made: mapStat[p.player_id]?.three_made ?? null,
+            three_att: mapStat[p.player_id]?.three_att ?? null,
+            ft_made: mapStat[p.player_id]?.ft_made ?? null,
+            ft_att: mapStat[p.player_id]?.ft_att ?? null,
+            reb_off: mapStat[p.player_id]?.reb_off ?? null,
+            reb_def: mapStat[p.player_id]?.reb_def ?? null,
+            reb_tot: mapStat[p.player_id]?.reb_tot ?? null,
+            assists: mapStat[p.player_id]?.assists ?? null,
+            turnovers: mapStat[p.player_id]?.turnovers ?? null,
+            steals: mapStat[p.player_id]?.steals ?? null,
+            blocks: mapStat[p.player_id]?.blocks ?? null,
+            fouls_personal: mapStat[p.player_id]?.fouls_personal ?? null,
+            plus_minus: mapStat[p.player_id]?.plus_minus ?? null,
+            efficiency: mapStat[p.player_id]?.efficiency ?? null,
           }))
         ) || []
       )
@@ -225,7 +264,7 @@ export default function AdminGameEntry({
       home_team_id: gameData.home_team_id,
       away_team_id: gameData.away_team_id,
       tipoff: new Date(gameData.tipoff).toISOString(),
-      venue: getVenueFromHomeTeam(gameData.home_team_id),
+      venue: gameData.venue || getVenueFromHomeTeam(gameData.home_team_id),
       season,
       home_score: homeScore,
       away_score: awayScore
@@ -414,6 +453,54 @@ export default function AdminGameEntry({
             )}
           </div>
 
+          {/* Game Info Editing Section */}
+          {editingGameId && (
+            <div className="border border-[var(--border)] bg-[var(--surface-muted)] p-4 rounded-xl">
+              <h3 className="font-semibold mb-4 pb-2 border-b border-[var(--border)]">Game Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold mb-1 text-[var(--text-muted)] tracking-wide">
+                    Game Date & Time
+                  </label>
+                  <input 
+                    type="datetime-local" 
+                    className="w-full rounded-lg border border-[var(--border)] p-3 text-base font-medium bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    value={gameData.tipoff}
+                    onChange={(e) => {
+                      const tipoffValue = e.target.value;
+                      const computedSeason = computeSeasonFromTipoff(tipoffValue);
+                      setGameData({...gameData, tipoff: tipoffValue, season: computedSeason});
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1 text-[var(--text-muted)] tracking-wide">
+                    Season
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g., 2025/26"
+                    className="w-full rounded-lg border border-[var(--border)] p-3 text-base font-medium bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    value={gameData.season}
+                    onChange={(e) => setGameData({...gameData, season: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1 text-[var(--text-muted)] tracking-wide">
+                    Venue
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g., Edilitate"
+                    className="w-full rounded-lg border border-[var(--border)] p-3 text-base font-medium bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    value={gameData.venue || getVenueFromHomeTeam(gameData.home_team_id)}
+                    onChange={(e) => setGameData({...gameData, venue: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Home Stats */}
             <TeamStatEntry
@@ -565,25 +652,89 @@ function TeamStatEntry({ title, teamId, players, setPlayers, onCreatePlayer }: a
 
       <div className="space-y-2">
         {players.map((p: any) => (
-          <div key={p.player_id} className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={p.played}
-              onChange={(e) => updatePlayer(p.player_id, 'played', e.target.checked)}
-              className="w-5 h-5 accent-[var(--accent)]"
-            />
-            <span className="w-12 text-sm font-semibold text-[var(--text-muted)]">
-              #{p.jersey_number ?? p.number ?? p.shirt_number ?? "-"}
-            </span>
-            <span className="flex-1 font-medium text-sm truncate">{p.first_name} {p.last_name}</span>
-            {p.played && (
+          <div key={p.player_id}>
+            <div className="flex items-center gap-3 mb-2">
               <input
-                type="number"
-                placeholder="PTS"
-                value={p.points || ""}
-                className="w-16 rounded-md border border-[var(--border)] p-1 text-center font-semibold bg-[var(--surface)] text-[var(--foreground)]"
-                onChange={(e) => updatePlayer(p.player_id, 'points', parseInt(e.target.value) || 0)}
+                type="checkbox"
+                checked={p.played}
+                onChange={(e) => updatePlayer(p.player_id, 'played', e.target.checked)}
+                className="w-5 h-5 accent-[var(--accent)]"
               />
+              <span className="w-12 text-sm font-semibold text-[var(--text-muted)]">
+                #{p.jersey_number ?? p.number ?? p.shirt_number ?? "-"}
+              </span>
+              <span className="flex-1 font-medium text-sm truncate">{p.first_name} {p.last_name}</span>
+            </div>
+            
+            {p.played && (
+              <div className="ml-7 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-3">
+                {/* Basic Stats */}
+                <div className="flex flex-col">
+                  <label className="text-xs text-[var(--text-muted)]">PTS</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={p.points || ""}
+                    className="w-full rounded-md border border-[var(--border)] p-1 text-center text-sm bg-[var(--surface)] text-[var(--foreground)]"
+                    onChange={(e) => updatePlayer(p.player_id, 'points', parseInt(e.target.value) || 0)}
+                  />
+                </div>
+                
+                <div className="flex flex-col">
+                  <label className="text-xs text-[var(--text-muted)]">AST</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={p.assists || ""}
+                    className="w-full rounded-md border border-[var(--border)] p-1 text-center text-sm bg-[var(--surface)] text-[var(--foreground)]"
+                    onChange={(e) => updatePlayer(p.player_id, 'assists', parseInt(e.target.value) || 0)}
+                  />
+                </div>
+                
+                <div className="flex flex-col">
+                  <label className="text-xs text-[var(--text-muted)]">REB</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={p.reb_tot || ""}
+                    className="w-full rounded-md border border-[var(--border)] p-1 text-center text-sm bg-[var(--surface)] text-[var(--foreground)]"
+                    onChange={(e) => updatePlayer(p.player_id, 'reb_tot', parseInt(e.target.value) || 0)}
+                  />
+                </div>
+                
+                <div className="flex flex-col">
+                  <label className="text-xs text-[var(--text-muted)]">STL</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={p.steals || ""}
+                    className="w-full rounded-md border border-[var(--border)] p-1 text-center text-sm bg-[var(--surface)] text-[var(--foreground)]"
+                    onChange={(e) => updatePlayer(p.player_id, 'steals', parseInt(e.target.value) || 0)}
+                  />
+                </div>
+                
+                <div className="flex flex-col">
+                  <label className="text-xs text-[var(--text-muted)]">BLK</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={p.blocks || ""}
+                    className="w-full rounded-md border border-[var(--border)] p-1 text-center text-sm bg-[var(--surface)] text-[var(--foreground)]"
+                    onChange={(e) => updatePlayer(p.player_id, 'blocks', parseInt(e.target.value) || 0)}
+                  />
+                </div>
+                
+                <div className="flex flex-col">
+                  <label className="text-xs text-[var(--text-muted)]">TO</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={p.turnovers || ""}
+                    className="w-full rounded-md border border-[var(--border)] p-1 text-center text-sm bg-[var(--surface)] text-[var(--foreground)]"
+                    onChange={(e) => updatePlayer(p.player_id, 'turnovers', parseInt(e.target.value) || 0)}
+                  />
+                </div>
+              </div>
             )}
           </div>
         ))}
