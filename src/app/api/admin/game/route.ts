@@ -100,6 +100,54 @@ export async function POST(request: Request) {
   }
 
   if (editingGameId) {
+    // For editing, preserve existing detailed stats and only update points
+    const { data: existingStats, error: fetchError } = await supabaseAdmin
+      .from("player_game_stats")
+      .select("*")
+      .eq("game_id", gameId);
+
+    if (fetchError) {
+      return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    }
+
+    // Create a map of existing stats by player_id for quick lookup
+    const existingStatsMap = new Map(
+      (existingStats ?? []).map((stat: any) => [stat.player_id, stat])
+    );
+
+    // Merge existing stats with updated points
+    const allStats = [...homePlayers, ...awayPlayers]
+      .filter((p: any) => p.played)
+      .map((p: any) => {
+        const existing = existingStatsMap.get(p.player_id);
+        return {
+          game_id: gameId,
+          player_id: p.player_id,
+          points: p.points,
+          team_id: p.team_id,
+          // Preserve all existing detailed stats if they exist
+          is_starter: existing?.is_starter ?? null,
+          minutes: existing?.minutes ?? null,
+          two_made: existing?.two_made ?? null,
+          two_att: existing?.two_att ?? null,
+          three_made: existing?.three_made ?? null,
+          three_att: existing?.three_att ?? null,
+          ft_made: existing?.ft_made ?? null,
+          ft_att: existing?.ft_att ?? null,
+          reb_off: existing?.reb_off ?? null,
+          reb_def: existing?.reb_def ?? null,
+          reb_tot: existing?.reb_tot ?? null,
+          assists: existing?.assists ?? null,
+          turnovers: existing?.turnovers ?? null,
+          steals: existing?.steals ?? null,
+          blocks: existing?.blocks ?? null,
+          fouls_personal: existing?.fouls_personal ?? null,
+          plus_minus: existing?.plus_minus ?? null,
+          efficiency: existing?.efficiency ?? null,
+        };
+      });
+
+    // Delete existing stats and insert merged ones
     const { error: deleteError } = await supabaseAdmin
       .from("player_game_stats")
       .delete()
@@ -108,23 +156,32 @@ export async function POST(request: Request) {
     if (deleteError) {
       return NextResponse.json({ error: deleteError.message }, { status: 500 });
     }
-  }
 
-  const allStats = [...homePlayers, ...awayPlayers]
-    .filter((p: any) => p.played)
-    .map((p: any) => ({
-      game_id: gameId,
-      player_id: p.player_id,
-      points: p.points,
-      team_id: p.team_id,
-    }));
+    const { error: statsError2 } = await supabaseAdmin
+      .from("player_game_stats")
+      .insert(allStats);
 
-  const { error: statsError2 } = await supabaseAdmin
-    .from("player_game_stats")
-    .insert(allStats);
+    if (statsError2) {
+      return NextResponse.json({ error: statsError2.message }, { status: 500 });
+    }
+  } else {
+    // For new games, only points are available (original behavior)
+    const allStats = [...homePlayers, ...awayPlayers]
+      .filter((p: any) => p.played)
+      .map((p: any) => ({
+        game_id: gameId,
+        player_id: p.player_id,
+        points: p.points,
+        team_id: p.team_id,
+      }));
 
-  if (statsError2) {
-    return NextResponse.json({ error: statsError2.message }, { status: 500 });
+    const { error: statsError2 } = await supabaseAdmin
+      .from("player_game_stats")
+      .insert(allStats);
+
+    if (statsError2) {
+      return NextResponse.json({ error: statsError2.message }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ game });

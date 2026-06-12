@@ -65,7 +65,7 @@ export default async function Home() {
       {/* PLAYOFFS BANNER */}
       <section className="relative w-full overflow-hidden">
         <img 
-          src="/images/playoffs/round2.webp" 
+          src="/images/playoffs/playoffbracket2.webp" 
           alt="Playoffs 2026 - Liga Basket Moldova"
           className="w-full h-auto object-cover"
         />
