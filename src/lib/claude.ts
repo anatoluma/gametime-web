@@ -30,6 +30,9 @@ type AnthropicResponse = {
 
 function inferMediaType(path: string): string {
 	const lower = path.toLowerCase();
+	if (lower.endsWith(".pdf")) {
+		return "application/pdf";
+	}
 	if (lower.endsWith(".png")) {
 		return "image/png";
 	}
@@ -94,6 +97,26 @@ export async function extractBoxScore(jobId: string): Promise<Record<string, unk
 		// Generate contextual prompt with team information
 		const prompt = generateContextualPrompt(job.home_team_id, job.away_team_id);
 
+		const isPdf = mediaType === "application/pdf";
+
+		const contentBlock = isPdf
+			? {
+					type: "document" as const,
+					source: {
+						type: "base64" as const,
+						media_type: "application/pdf" as const,
+						data: base64Image,
+					},
+				}
+			: {
+					type: "image" as const,
+					source: {
+						type: "base64" as const,
+						media_type: mediaType as "image/jpeg" | "image/png" | "image/webp",
+						data: base64Image,
+					},
+				};
+
 		const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
 			method: "POST",
 			headers: {
@@ -108,14 +131,7 @@ export async function extractBoxScore(jobId: string): Promise<Record<string, unk
 					{
 						role: "user",
 						content: [
-							{
-								type: "image",
-								source: {
-									type: "base64",
-									media_type: mediaType,
-									data: base64Image,
-								},
-							},
+							contentBlock,
 							{
 								type: "text",
 								text: prompt,

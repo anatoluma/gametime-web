@@ -7,10 +7,20 @@ const filePath = process.argv[2] || "AdmiralsMetalurg.jpg";
 const seasonId = process.argv[3] || "1";
 const competitionId = process.argv[4] || "1";
 
+const ext = path.extname(filePath).toLowerCase();
+const contentTypeMap = {
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+  ".pdf": "application/pdf",
+};
+const contentType = contentTypeMap[ext] || "image/jpeg";
+
 const form = new FormData();
 form.append("file", fs.createReadStream(filePath), {
   filename: path.basename(filePath),
-  contentType: "image/jpeg",
+  contentType: contentType,
 });
 form.append("season_id", seasonId);
 form.append("competition_id", competitionId);

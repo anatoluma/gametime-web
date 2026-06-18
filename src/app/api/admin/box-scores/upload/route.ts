@@ -11,6 +11,7 @@ const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
+  "application/pdf": "pdf",
 };
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
   const ext = ALLOWED_TYPES[file.type];
   if (!ext) {
     return NextResponse.json(
-      { error: "Unsupported file type. Accepted: image/jpeg, image/png, image/webp" },
+      { error: "Unsupported file type. Accepted: image/jpeg, image/png, image/webp, application/pdf" },
       { status: 415 }
     );
   }
