@@ -14,6 +14,7 @@ type Player = {
 type Props = {
   extractionJson: Record<string, unknown> | null;
   imageUrl: string | null;
+  isPdf?: boolean;
   resolutionResults: NameResolutionResult[];
 };
 
@@ -31,7 +32,7 @@ const SHORT: Record<string, string> = {
   plus_minus: "+/-", efficiency: "EF", points: "PTS",
 };
 
-export default function ExtractionDebug({ extractionJson, imageUrl, resolutionResults }: Props) {
+export default function ExtractionDebug({ extractionJson, imageUrl, isPdf = false, resolutionResults }: Props) {
   const [showImage, setShowImage] = useState(true);
   const [showTable, setShowTable] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
@@ -66,16 +67,34 @@ export default function ExtractionDebug({ extractionJson, imageUrl, resolutionRe
             onClick={() => setShowImage((v) => !v)}
             className="w-full flex items-center justify-between px-6 py-3 text-sm font-medium hover:bg-[var(--surface-muted)] transition-colors"
           >
-            <span>Box score image</span>
+            <span>{isPdf ? "Box score PDF" : "Box score image"}</span>
             <span className="text-[var(--text-muted)]">{showImage ? "▲" : "▼"}</span>
           </button>
           {showImage && (
             <div className="px-6 pb-6">
-              <img
-                src={imageUrl}
-                alt="Box score"
-                className="w-full rounded border border-[var(--border)] object-contain max-h-[600px]"
-              />
+              {isPdf ? (
+                <div className="space-y-2">
+                  <iframe
+                    src={imageUrl}
+                    title="Box score PDF"
+                    className="w-full rounded border border-[var(--border)] h-[600px]"
+                  />
+                  <a
+                    href={imageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-sm text-[var(--accent)] underline"
+                  >
+                    Open PDF in new tab
+                  </a>
+                </div>
+              ) : (
+                <img
+                  src={imageUrl}
+                  alt="Box score"
+                  className="w-full rounded border border-[var(--border)] object-contain max-h-[600px]"
+                />
+              )}
             </div>
           )}
         </section>

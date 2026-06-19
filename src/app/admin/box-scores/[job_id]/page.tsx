@@ -181,6 +181,7 @@ export default async function BoxScoreJobDetailPage({
       <ExtractionDebug
         extractionJson={job.extraction_json as Record<string, unknown> | null}
         imageUrl={imageUrl}
+        isPdf={(job.raw_file_path as string | null)?.toLowerCase().endsWith(".pdf") ?? false}
         resolutionResults={resolutionResults}
       />
 

@@ -48,13 +48,9 @@ export default function LoginPage() {
     setMessage('')
 
     try {
-      const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-      const normalizedSiteUrl = rawSiteUrl
-        .trim()
-        .replace(/^https?:\/\//, '')
-        .replace(/^https?\//, '')
-        .replace(/\/$/, '')
-      const redirectTo = `https://${normalizedSiteUrl}/login`
+      // Redirect back to the origin the user is actually on, so the magic link
+      // works on localhost during development as well as in production.
+      const redirectTo = `${window.location.origin}/login`
 
       const { error } = await supabase.auth.signInWithOtp({
         email,

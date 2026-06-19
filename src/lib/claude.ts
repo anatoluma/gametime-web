@@ -7,7 +7,7 @@ const supabaseAdmin = createClient(
 );
 
 const STORAGE_BUCKET = process.env.BOX_SCORES_STORAGE_BUCKET ?? "uploads";
-const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
+const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 
 type ProcessingJobRow = {
 	id: string;
@@ -145,7 +145,8 @@ export async function extractBoxScore(jobId: string): Promise<Record<string, unk
 		const body = (await anthropicResponse.json()) as AnthropicResponse;
 
 		if (!anthropicResponse.ok) {
-			throw new Error(body.error?.message ?? "Claude API request failed");
+			const fullError = body.error?.message ?? JSON.stringify(body.error ?? body);
+			throw new Error(`Claude API error (${anthropicResponse.status}): ${fullError}`);
 		}
 
 		const outputText = body.content?.find((item) => item.type === "text")?.text;

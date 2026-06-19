@@ -115,7 +115,7 @@ export default function BoxScoreUpload() {
         <input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
           className="sr-only"
           onChange={onFileChange}
         />
@@ -126,10 +126,10 @@ export default function BoxScoreUpload() {
           <p className="text-sm font-medium text-[var(--foreground)]">{file.name}</p>
         ) : (
           <p className="text-sm text-[var(--text-muted)]">
-            Drop a FIBA box score image or <span className="text-[var(--accent)] underline">browse</span>
+            Drop a FIBA box score image or PDF or <span className="text-[var(--accent)] underline">browse</span>
           </p>
         )}
-        <p className="text-xs text-[var(--text-muted)]">JPEG · PNG · WebP · max 10 MB</p>
+        <p className="text-xs text-[var(--text-muted)]">JPEG · PNG · WebP · PDF · max 10 MB</p>
       </div>
 
       {/* Team Selection */}
