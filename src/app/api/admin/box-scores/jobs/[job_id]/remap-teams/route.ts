@@ -7,10 +7,15 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const AUTO_ACCEPT_THRESHOLD = 0.92;
+
 type ExtractionPlayer = {
   team_code?: string | null;
   [key: string]: unknown;
 };
+
+type ValidationCheck = { passed: boolean; severity?: string };
+type ResolutionResult = { confidence?: number };
 
 export async function POST(
   request: Request,
@@ -32,7 +37,7 @@ export async function POST(
 
   const { data: job, error: fetchError } = await supabaseAdmin
     .from("processing_jobs")
-    .select("id, status, extraction_json")
+    .select("id, status, extraction_json, validation_json")
     .eq("id", job_id)
     .single();
 
@@ -84,12 +89,34 @@ export async function POST(
   }
 
   // Re-run name resolution with the corrected team codes
+  let resolutionResults: ResolutionResult[] = [];
   try {
-    await resolvePlayerNames(job_id);
+    resolutionResults = (await resolvePlayerNames(job_id)) as ResolutionResult[];
   } catch (err) {
     const message = err instanceof Error ? err.message : "Name resolution failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  // Recompute the final status (mirrors the pipeline) so the job progresses out
+  // of "resolving" instead of looping back to team confirmation.
+  const validationChecks = (job.validation_json ?? []) as ValidationCheck[];
+  const allValidationPassed = validationChecks.every((c) => c.passed);
+  const allHighConfidence = resolutionResults.every(
+    (r) => (r.confidence ?? 0) >= AUTO_ACCEPT_THRESHOLD
+  );
+  const finalStatus = allValidationPassed && allHighConfidence ? "approved" : "needs_review";
+
+  const { error: statusError } = await supabaseAdmin
+    .from("processing_jobs")
+    .update({
+      status: finalStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", job_id);
+
+  if (statusError) {
+    return NextResponse.json({ error: statusError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, status: finalStatus });
 }
