@@ -82,7 +82,7 @@ export default async function Home() {
               </Link>
               <Link 
                 href="/leaders" 
-                className="inline-flex items-center justify-center px-8 py-3 bg-transparent text-white font-bold text-sm uppercase tracking-wider border-2 border-white hover:bg-white hover:text-gray-900 transition-all"
+                className="inline-flex items-center justify-center px-8 py-3 bg-gray-700 text-white font-bold text-sm uppercase tracking-wider border-2 border-gray-600 hover:bg-gray-600 hover:border-gray-500 transition-all"
               >
                 See Player Leaders
               </Link>
