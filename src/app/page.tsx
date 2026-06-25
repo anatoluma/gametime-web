@@ -45,6 +45,7 @@ export default async function Home() {
 
   // --- LEADERS LOGIC ---
   const statsData = statsRes.data ?? [];
+  const totalPlayers = new Set(statsData.map((s: any) => s.player_id)).size;
   const ptsByPlayer: Record<string, { name: string; teamId: string; gp: number; pts: number }> = {};
   statsData.forEach((s: any) => {
     if (!s.player_id || !s.players) return;
@@ -62,13 +63,52 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-white text-black">
-      {/* PLAYOFFS BANNER */}
-      <section className="relative w-full overflow-hidden">
-        <img 
-          src="/images/playoffs/playoffbracket2.webp" 
-          alt="Playoffs 2026 - Liga Basket Moldova"
-          className="w-full h-auto object-cover"
-        />
+      {/* SEASON COMPLETE BANNER */}
+      <section className="relative w-full bg-gray-900 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tight mb-4">
+              2025/26 <span className="text-orange-500">Season Hub</span>
+            </h1>
+            <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
+              The season is complete. Explore final standings, playoff results, box scores and player stats.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+              <Link 
+                href="/games" 
+                className="inline-flex items-center justify-center px-8 py-3 bg-orange-500 text-white font-bold text-sm uppercase tracking-wider border-2 border-orange-500 hover:bg-orange-600 hover:border-orange-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none"
+              >
+                View Results
+              </Link>
+              <Link 
+                href="/leaders" 
+                className="inline-flex items-center justify-center px-8 py-3 bg-transparent text-white font-bold text-sm uppercase tracking-wider border-2 border-white hover:bg-white hover:text-gray-900 transition-all"
+              >
+                See Player Leaders
+              </Link>
+            </div>
+            
+            {/* Stat Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+              <div className="bg-gray-800 border-2 border-gray-700 p-4 rounded-lg">
+                <div className="text-3xl md:text-4xl font-black text-orange-500">{teams.length}</div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Teams</div>
+              </div>
+              <div className="bg-gray-800 border-2 border-gray-700 p-4 rounded-lg">
+                <div className="text-3xl md:text-4xl font-black text-orange-500">{gamesPlayed}</div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Games Played</div>
+              </div>
+              <div className="bg-gray-800 border-2 border-gray-700 p-4 rounded-lg">
+                <div className="text-3xl md:text-4xl font-black text-orange-500">{totalPlayers}</div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Player Stats</div>
+              </div>
+              <div className="bg-gray-800 border-2 border-gray-700 p-4 rounded-lg">
+                <div className="text-3xl md:text-4xl font-black text-orange-500">Playoffs</div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Complete</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="bg-gray-100 border-b-2 border-black py-4 px-3 sm:px-6">
