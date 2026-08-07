@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import TeamLogo from "@/app/components/TeamLogo";
+import { useT } from "@/app/components/LanguageProvider";
 
 type GameRow = {
   game_id: string;
@@ -56,6 +57,7 @@ export default function GamesPage() {
   const [teamsById, setTeamsById] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
+  const { t } = useT();
 
   useEffect(() => {
     let cancelled = false;
@@ -147,7 +149,7 @@ export default function GamesPage() {
             <span className="text-[var(--foreground)]">{timeText}</span>
           </div>
           <span className={isFinished ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--accent)]"}>
-            {isFinished ? "● Final" : "○ Scheduled"}
+            {isFinished ? `● ${t("status_final")}` : `○ ${t("status_scheduled")}`}
           </span>
         </div>
         
@@ -192,12 +194,12 @@ export default function GamesPage() {
     );
   };
 
-  if (loading) return <main className="p-8 max-w-2xl mx-auto font-semibold text-2xl">Updating Schedule...</main>;
+  if (loading) return <main className="p-8 max-w-2xl mx-auto font-semibold text-2xl">{t("games_loading")}</main>;
 
   return (
     <main className="p-4 max-w-2xl mx-auto bg-[var(--surface)] min-h-screen pb-20">
       <div className="flex items-center justify-between mb-6 pt-4">
-        <h1 className="text-3xl font-semibold tracking-tight">Schedule</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("games_title")}</h1>
         <div className="w-10 h-1 bg-[var(--accent)]"></div>
       </div>
 
@@ -205,14 +207,14 @@ export default function GamesPage() {
       <section className="mb-10">
         <div className="flex justify-between items-end mb-4 px-1">
           <div>
-            <h2 className="text-base font-semibold tracking-tight">This Week's Games</h2>
+            <h2 className="text-base font-semibold tracking-tight">{t("games_this_week")}</h2>
             <p className="text-[11px] font-medium text-[var(--accent)]">{computed.thisWeekLabel}</p>
           </div>
         </div>
         <div className="grid gap-3">
           {computed.upcomingThisWeek.map(g => <GameCard key={g.game_id} g={g} />)}
           {computed.upcomingThisWeek.length === 0 && (
-            <p className="text-[var(--text-muted)] text-sm p-4 bg-[var(--surface-muted)] rounded-lg border border-dashed border-[var(--border)] text-center">No more games scheduled for this week.</p>
+            <p className="text-[var(--text-muted)] text-sm p-4 bg-[var(--surface-muted)] rounded-lg border border-dashed border-[var(--border)] text-center">{t("games_no_upcoming")}</p>
           )}
         </div>
         {/* ... Keep your "All Scheduled" details tag here ... */}
@@ -222,8 +224,8 @@ export default function GamesPage() {
       <section>
         <div className="flex justify-between items-end mb-4 px-1">
           <div>
-            <h2 className="text-base font-semibold tracking-tight">Recent Results</h2>
-            <p className="text-[11px] font-medium text-[var(--text-muted)]">Latest scores from this and last week</p>
+            <h2 className="text-base font-semibold tracking-tight">{t("games_recent")}</h2>
+            <p className="text-[11px] font-medium text-[var(--text-muted)]">{t("games_recent_sub")}</p>
           </div>
         </div>
         <div className="grid gap-3">

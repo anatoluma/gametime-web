@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import PlayerAvatar from "@/app/components/PlayerAvatar";
+import { useT } from "@/app/components/LanguageProvider";
 
 type StatRow = {
   player_id: string;
@@ -30,6 +31,7 @@ export default function LeadersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
   const [sortMode, setSortMode] = useState<"PTS" | "PPG">("PTS");
+  const { t } = useT();
 
   useEffect(() => {
     let cancelled = false;
@@ -105,14 +107,14 @@ export default function LeadersPage() {
 
   const top = useMemo(() => sorted.slice(0, 50), [sorted]);
 
-  if (loading) return <main className="py-6 text-black px-2 max-w-4xl mx-auto"><h1 className="text-3xl font-black italic uppercase">Leaders</h1><p className="mt-4 animate-pulse font-bold text-gray-400">LOADING STATS...</p></main>;
+  if (loading) return <main className="py-6 text-black px-2 max-w-4xl mx-auto"><h1 className="text-3xl font-black italic uppercase">{t("leaders_title")}</h1><p className="mt-4 animate-pulse font-bold text-gray-400">{t("leaders_loading")}</p></main>;
 
   return (
     <main className="py-4 text-black px-2 max-w-4xl mx-auto min-h-screen bg-white">
       <div className="flex items-baseline justify-between gap-2 flex-wrap mb-6 border-b-4 border-black pb-4">
-        <h1 className="text-3xl font-black italic uppercase tracking-tighter text-black">League Leaders</h1>
+        <h1 className="text-3xl font-black italic uppercase tracking-tighter text-black">{t("leaders_title")}</h1>
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Sort By</span>
+          <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">{t("leaders_sort_by")}</span>
           <button onClick={() => setSortMode("PTS")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PTS" ? "bg-black !text-white" : "bg-gray-100 !text-gray-500 hover:bg-gray-200"}`}>PTS</button>
           <button onClick={() => setSortMode("PPG")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PPG" ? "bg-black !text-white" : "bg-gray-100 !text-gray-500 hover:bg-gray-200"}`}>PPG</button>
         </div>
@@ -170,7 +172,7 @@ export default function LeadersPage() {
           </Link>
         ))}
 
-        {top.length === 0 && <div className="text-center py-20 font-black text-gray-200 uppercase italic text-2xl">No data yet</div>}
+        {top.length === 0 && <div className="text-center py-20 font-black text-gray-200 uppercase italic text-2xl">{t("leaders_no_data")}</div>}
       </div>
     </main>
   );

@@ -3,6 +3,11 @@ import "./globals.css";
 import type { ReactNode } from "react";
 import AuthHashHandler from "./components/AuthHashHandler";
 import Nav from "./components/Nav";
+import { LanguageProvider } from "./components/LanguageProvider";
+import FooterCta from "./components/FooterCta";
+import { cookies } from "next/headers";
+import type { Locale } from "@/lib/i18n";
+import { LOCALE_COOKIE } from "@/lib/i18n";
 
 export const metadata = {
   title: 'Liga Basket Moldova | Stats & Scores',
@@ -15,9 +20,13 @@ export const viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(LOCALE_COOKIE)?.value;
+  const locale: Locale = raw === 'ro' || raw === 'ru' ? raw : 'en';
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -27,28 +36,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-screen bg-[var(--background)] antialiased">
-        <AuthHashHandler />
-        <Nav />
+        <LanguageProvider>
+          <AuthHashHandler />
+          <Nav />
 
-        {/* CONTENT CONTAINER */}
-        <div className="max-w-5xl mx-auto bg-[var(--surface)] min-h-screen border-x border-[var(--border)]">
-          {children}
-        </div>
+          {/* CONTENT CONTAINER */}
+          <div className="max-w-5xl mx-auto bg-[var(--surface)] min-h-screen border-x border-[var(--border)]">
+            {children}
+          </div>
 
-        <footer className="max-w-5xl mx-auto py-6 text-center bg-[var(--surface)] border-x border-[var(--border)] space-y-2">
-          <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">© 2026 LBM Stats</p>
-          <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-widest">
-            Want to play? Find pickup games at{" "}
-            <a
-              href="https://gametime.md"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold text-orange-500 hover:text-orange-600 transition-colors"
-            >
-              gametime.md
-            </a>
-          </p>
-        </footer>
+          <FooterCta />
+        </LanguageProvider>
       </body>
     </html>
   );

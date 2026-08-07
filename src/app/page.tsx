@@ -1,10 +1,12 @@
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import TeamLogo from "@/app/components/TeamLogo";
+import { getServerT } from "@/lib/i18n/server";
 
 export const revalidate = 0;
 
 export default async function Home() {
+  const t = await getServerT();
   const [teamsRes, gamesRes, statsRes] = await Promise.all([
     supabase.from("teams").select("team_id, team_name").eq("is_active", true),
     supabase.from("games").select("*").order("tipoff", { ascending: false }),
@@ -68,23 +70,23 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tight mb-4">
-              2025/26 <span className="text-orange-500">Season Hub</span>
+              {t("home_title")}
             </h1>
             <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
-              The season is complete. Explore final standings, playoff results, box scores and player stats.
+              {t("home_subtitle")}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Link 
                 href="/games" 
                 className="inline-flex items-center justify-center px-8 py-3 bg-orange-500 text-white font-bold text-sm uppercase tracking-wider border-2 border-orange-500 hover:bg-orange-600 hover:border-orange-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none"
               >
-                View Results
+                {t("home_cta_results")}
               </Link>
               <Link 
                 href="/leaders" 
                 className="inline-flex items-center justify-center px-8 py-3 bg-gray-700 text-white font-bold text-sm uppercase tracking-wider border-2 border-gray-600 hover:bg-gray-600 hover:border-gray-500 transition-all"
               >
-                See Player Leaders
+                {t("home_cta_leaders")}
               </Link>
             </div>
             
@@ -92,19 +94,19 @@ export default async function Home() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
               <div className="bg-gray-800 border-2 border-gray-700 p-4 rounded-lg">
                 <div className="text-3xl md:text-4xl font-black text-orange-500">{teams.length}</div>
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Teams</div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{t("home_stat_teams")}</div>
               </div>
               <div className="bg-gray-800 border-2 border-gray-700 p-4 rounded-lg">
                 <div className="text-3xl md:text-4xl font-black text-orange-500">{gamesPlayed}</div>
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Games Played</div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{t("home_stat_games")}</div>
               </div>
               <div className="bg-gray-800 border-2 border-gray-700 p-4 rounded-lg">
                 <div className="text-3xl md:text-4xl font-black text-orange-500">{totalPlayers}</div>
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Player Stats</div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{t("home_stat_players")}</div>
               </div>
               <div className="bg-gray-800 border-2 border-gray-700 p-4 rounded-lg">
-                <div className="text-3xl md:text-4xl font-black text-orange-500">Playoffs</div>
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Complete</div>
+                <div className="text-3xl md:text-4xl font-black text-orange-500">{t("home_stat_playoffs")}</div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{t("home_stat_playoffs_sub")}</div>
               </div>
             </div>
           </div>
@@ -129,7 +131,7 @@ export default async function Home() {
                     <span className="text-gray-700">{timeText}</span>
                   </div>
                   <span className={isFinished ? "text-emerald-600" : "text-orange-500"}>
-                    {isFinished ? "Final" : "Scheduled"}
+                    {isFinished ? t("status_final") : t("status_scheduled")}
                   </span>
                 </div>
                 
@@ -169,14 +171,14 @@ export default async function Home() {
         {/* STANDINGS */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black uppercase italic">Standings</h2>
-            <Link href="/standings" className="text-xs font-bold border-b-2 border-black text-black">Full Table</Link>
+            <h2 className="text-lg font-black uppercase italic">{t("home_section_standings")}</h2>
+            <Link href="/standings" className="text-xs font-bold border-b-2 border-black text-black">{t("home_standings_full")}</Link>
           </div>
           <div className="border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] min-h-[360px]">
             <table className="w-full text-left bg-white">
               <thead className="bg-gray-900 text-white text-[9px] uppercase tracking-widest">
                 <tr>
-                  <th className="p-3">Team</th>
+                  <th className="p-3">{t("home_standings_team")}</th>
                   <th className="p-3 text-center">W-L</th>
                   <th className="p-3 text-center">PTS</th>
                 </tr>
@@ -203,14 +205,14 @@ export default async function Home() {
         {/* LEADERS */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black uppercase italic">Top Scorers</h2>
-            <Link href="/leaders" className="text-xs font-bold border-b-2 border-black text-black">Full Leaders</Link>
+            <h2 className="text-lg font-black uppercase italic">{t("home_section_leaders")}</h2>
+            <Link href="/leaders" className="text-xs font-bold border-b-2 border-black text-black">{t("home_leaders_full")}</Link>
           </div>
           <div className="border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] min-h-[360px]">
             <table className="w-full text-left bg-white">
               <thead className="bg-gray-900 text-white text-[9px] uppercase tracking-widest">
                 <tr>
-                  <th className="p-3">Player</th>
+                  <th className="p-3">{t("home_leaders_player")}</th>
                   <th className="p-3 text-center">GP</th>
                   <th className="p-3 text-center">PPG</th>
                   <th className="p-3 text-center">PTS</th>

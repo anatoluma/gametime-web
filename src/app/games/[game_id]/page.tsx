@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import TeamLogo from "@/app/components/TeamLogo";
 import GameSharePanel from "@/app/components/GameSharePanel";
+import { useT } from "@/app/components/LanguageProvider";
 
 type Game = { game_id: string; season: string | null; tipoff: string | null; venue: string | null; home_team_id: string; away_team_id: string; home_score: number | null; away_score: number | null; };
 type Team = { team_id: string; team_name: string; };
@@ -81,6 +82,7 @@ function fmtPlusMinus(val: number | null): string {
 
 export default function GamePage() {
   const params = useParams<{ game_id?: string | string[] }>();
+  const { t } = useT();
   const gameId = useMemo(() => {
     const raw = params?.game_id;
     if (Array.isArray(raw)) return raw[0] ?? "";
@@ -245,8 +247,8 @@ export default function GamePage() {
     };
   }, [stats, teams, game]);
 
-  if (loading) return <main className="p-8 text-center font-black uppercase italic text-gray-500">Loading Game...</main>;
-  if (error || !game) return <main className="p-8 text-center text-red-500 font-bold uppercase">Game not found</main>;
+  if (loading) return <main className="p-8 text-center font-black uppercase italic text-gray-500">{t("game_loading")}</main>;
+  if (error || !game) return <main className="p-8 text-center text-red-500 font-bold uppercase">{t("game_not_found")}</main>;
 
   const homeTeam = teams[game.home_team_id];
   const awayTeam = teams[game.away_team_id];
@@ -257,7 +259,7 @@ export default function GamePage() {
     ? new Date(game.tipoff).toLocaleDateString([], {
         weekday: "short", day: "numeric", month: "short", year: "numeric",
       })
-    : "Date TBD";
+    : t("game_date_tbd");
 
   const hasFinalScore = game.home_score !== null && game.away_score !== null;
   const homeWins = hasFinalScore && game.home_score! > game.away_score!;
@@ -290,7 +292,7 @@ export default function GamePage() {
           <thead>
             <tr className="bg-black text-white">
               <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-orange-500 w-12">#</th>
-              <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-orange-500">Player</th>
+                <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-orange-500">{t("game_col_player")}</th>
               <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-orange-500 text-right">PTS</th>
             </tr>
           </thead>
@@ -313,7 +315,7 @@ export default function GamePage() {
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={3} className="p-10 text-xs text-center font-black uppercase italic tracking-widest" style={{ color: "#111" }}>No Stats Recorded</td></tr>
+              <tr><td colSpan={3} className="p-10 text-xs text-center font-black uppercase italic tracking-widest" style={{ color: "#111" }}>{t("game_no_stats")}</td></tr>
             )}
           </tbody>
         </table>
@@ -369,7 +371,7 @@ export default function GamePage() {
             <thead>
               <tr className="bg-black text-white">
                 <th className={`${thLeftCls} w-8`}>#</th>
-                <th className={`${thLeftCls} min-w-[130px]`}>Player</th>
+                <th className={`${thLeftCls} min-w-[130px]`}>{t("game_col_player")}</th>
                 {hasMinutes && <th className={thCls}>MIN</th>}
                 {hasTwoPoint && <th className={thCls}>2FG</th>}
                 {hasThreePoint && <th className={thCls}>3FG</th>}
@@ -403,7 +405,7 @@ export default function GamePage() {
                         {p.first_name} {p.last_name}
                       </Link>
                       {p.is_starter && hasMinutes && (
-                        <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: "#4b5563", opacity: 1 }}>starter</span>
+                        <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: "#4b5563", opacity: 1 }}>{t("game_starter")}</span>
                       )}
                     </td>
                     {hasMinutes && <td className="py-2.5 px-2.5 text-right text-xs tabular-nums text-black">{p.minutes ?? "—"}</td>}
@@ -427,7 +429,7 @@ export default function GamePage() {
                 );
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={totalColumns} className="p-10 text-xs text-center text-black font-black uppercase italic tracking-widest">No Stats Recorded</td></tr>
+                <tr><td colSpan={totalColumns} className="p-10 text-xs text-center text-black font-black uppercase italic tracking-widest">{t("game_no_stats")}</td></tr>
               )}
             </tbody>
           </table>
@@ -460,7 +462,7 @@ export default function GamePage() {
                 <span style={{ color: "#FF8C00" }}>basket</span>
                 <span style={{ color: "rgba(255,255,255,0.85)" }}>.md</span>
               </div>
-              <div style={{ fontSize: "8px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "rgba(255,255,255,0.25)" }}>Basketball League</div>
+              <div style={{ fontSize: "8px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", color: "rgba(255,255,255,0.25)" }}>{t("game_basketball_league")}</div>
             </div>
           </div>
 
@@ -480,7 +482,7 @@ export default function GamePage() {
                   {homeTeam?.team_name ?? "Home Team"}
                 </Link>
                 <p className="text-[8px] font-bold uppercase tracking-[0.2em] mt-1" style={{ color: homeWins ? "rgba(255,140,0,0.6)" : "rgba(255,255,255,0.22)" }}>
-                  {homeWins ? "HOME · WINNER" : "HOME"}
+                  {homeWins ? t("game_home_winner") : t("game_home")}
                 </p>
               </div>
 
@@ -491,7 +493,7 @@ export default function GamePage() {
                   <span className="text-5xl font-black tabular-nums leading-none" style={{ fontFamily: "'Bebas Neue', Impact, serif", color: hasFinalScore ? (awayWins ? "#FF8C00" : "rgba(255,255,255,0.3)") : "white", textShadow: awayWins ? "0 0 40px rgba(255,130,0,0.35)" : "none" }}>{game.away_score ?? "-"}</span>
                 </div>
                 <div className="mt-3" style={{ background: hasFinalScore ? "rgba(255,140,0,0.12)" : "rgba(255,255,255,0.07)", border: hasFinalScore ? "1px solid rgba(255,140,0,0.3)" : "1px solid rgba(255,255,255,0.1)", borderRadius: "20px", padding: "4px 10px", fontSize: "8px", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: hasFinalScore ? "#FF8C00" : "rgba(255,255,255,0.4)" }}>
-                  {hasFinalScore ? "⚡ Final" : "Scheduled"}
+                  {hasFinalScore ? t("game_flash_final") : t("status_scheduled")}
                 </div>
               </div>
 
@@ -508,7 +510,7 @@ export default function GamePage() {
                   {awayTeam?.team_name ?? "Away Team"}
                 </Link>
                 <p className="text-[8px] font-bold uppercase tracking-[0.2em] mt-1" style={{ color: awayWins ? "rgba(255,140,0,0.6)" : "rgba(255,255,255,0.22)" }}>
-                  {awayWins ? "AWAY · WINNER" : "AWAY"}
+                  {awayWins ? t("game_away_winner") : t("game_away")}
                 </p>
               </div>
             </div>
@@ -531,7 +533,7 @@ export default function GamePage() {
                     {homeTeam?.team_name ?? "Home Team"}
                   </Link>
                   <p className="mt-2 text-[9px] font-bold uppercase tracking-[0.22em]" style={{ color: homeWins ? "rgba(255,140,0,0.6)" : "rgba(255,255,255,0.22)" }}>
-                    {homeWins ? "HOME · WINNER" : "HOME"}
+                    {homeWins ? t("game_home_winner") : t("game_home")}
                   </p>
                 </div>
               </div>
@@ -544,7 +546,7 @@ export default function GamePage() {
                 <span className="font-black tabular-nums leading-none text-7xl md:text-8xl" style={{ fontFamily: "'Bebas Neue', Impact, serif", color: hasFinalScore ? (awayWins ? "#FF8C00" : "rgba(255,255,255,0.3)") : "white", textShadow: awayWins ? "0 0 50px rgba(255,130,0,0.4)" : "none" }}>{game.away_score ?? "-"}</span>
               </div>
               <div className="mt-4" style={{ background: hasFinalScore ? "rgba(255,140,0,0.12)" : "rgba(255,255,255,0.07)", border: hasFinalScore ? "1px solid rgba(255,140,0,0.3)" : "1px solid rgba(255,255,255,0.1)", borderRadius: "20px", padding: "5px 14px", fontSize: "9px", fontWeight: 700, letterSpacing: "2.5px", textTransform: "uppercase", color: hasFinalScore ? "#FF8C00" : "rgba(255,255,255,0.4)" }}>
-                {hasFinalScore ? "⚡ Final Result" : "Scheduled"}
+                {hasFinalScore ? t("game_flash_final") : t("status_scheduled")}
               </div>
             </div>
 
@@ -563,7 +565,7 @@ export default function GamePage() {
                     {awayTeam?.team_name ?? "Away Team"}
                   </Link>
                   <p className="mt-2 text-[9px] font-bold uppercase tracking-[0.22em]" style={{ color: awayWins ? "rgba(255,140,0,0.6)" : "rgba(255,255,255,0.22)" }}>
-                    {awayWins ? "AWAY · WINNER" : "AWAY"}
+                    {awayWins ? t("game_away_winner") : t("game_away")}
                   </p>
                 </div>
               </div>

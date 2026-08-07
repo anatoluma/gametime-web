@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import TeamLogo from "@/app/components/TeamLogo";
+import { useT } from "@/app/components/LanguageProvider";
 
 type Team = { team_id: string; team_name: string; city: string | null; coach: string | null; };
 type Player = { player_id: string; first_name: string; last_name: string; jersey_number: number | null; };
@@ -14,6 +15,7 @@ type TeamMap = Record<string, string>;
 
 export default function TeamPage() {
   const params = useParams();
+  const { t } = useT();
 
   const teamId = useMemo(() => {
     const raw = (params as any)?.team_id;
@@ -74,8 +76,8 @@ export default function TeamPage() {
     return () => { cancelled = true; };
   }, [teamId]);
 
-  if (loading) return <div className="p-20 text-center font-black uppercase italic text-gray-500 animate-pulse">Loading Franchise Data...</div>;
-  if (!team) return <div className="p-20 text-center font-bold text-red-600 uppercase tracking-widest">Team not found ({teamId})</div>;
+  if (loading) return <div className="p-20 text-center font-black uppercase italic text-gray-500 animate-pulse">{t("team_loading")}</div>;
+  if (!team) return <div className="p-20 text-center font-bold text-red-600 uppercase tracking-widest">{t("team_not_found")} ({teamId})</div>;
 
   return (
     <main className="max-w-6xl mx-auto p-4 md:p-12 bg-[var(--surface)] min-h-screen text-[var(--foreground)]">
@@ -83,7 +85,7 @@ export default function TeamPage() {
       <header className="mb-12 border-b border-[var(--border)] pb-8">
         <div className="flex flex-col gap-5">
           <div className="flex items-center gap-4">
-             <span className="bg-[var(--accent)] text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-[0.2em]">Active Franchise</span>
+             <span className="bg-[var(--accent)] text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-[0.2em]">{t("team_active")}</span>
           </div>
 
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
@@ -100,15 +102,15 @@ export default function TeamPage() {
                 </h1>
               </div>
               <p className="text-sm font-black text-[var(--text-muted)] uppercase tracking-[0.3em] mt-6">
-                {team.city ?? "Regional"} <span className="text-[var(--accent)] mx-2">•</span> Head Coach {team.coach ?? "TBD"}
+                {team.city ?? "Regional"} <span className="text-[var(--accent)] mx-2">•</span> {t("team_head_coach")} {team.coach ?? "TBD"}
               </p>
             </div>
 
             {summary && (
               <div className="border border-[var(--border)] bg-[var(--surface-muted)] px-5 py-4 rounded-xl min-w-[160px] shadow-sm">
-                <div className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest mb-2">Win/Loss</div>
+                <div className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest mb-2">{t("team_win_loss")}</div>
                 <div className="text-4xl font-black tracking-tight tabular-nums leading-none">{summary.wins}-{summary.losses}</div>
-                <div className="text-[11px] font-medium text-[var(--text-muted)] mt-2">{summary.gamesPlayed} games played</div>
+                <div className="text-[11px] font-medium text-[var(--text-muted)] mt-2">{summary.gamesPlayed} {t("team_games_played_suffix")}</div>
               </div>
             )}
           </div>
@@ -120,10 +122,10 @@ export default function TeamPage() {
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
           {[
-            { label: "Games Played", val: summary.gamesPlayed },
-            { label: "Points For", val: summary.pf },
-            { label: "Points Against", val: summary.pa },
-            { label: "Point Diff", val: summary.diff, color: summary.diff >= 0 ? 'text-green-600' : 'text-red-600' },
+            { label: t("team_stat_gp"), val: summary.gamesPlayed },
+            { label: t("team_stat_pf"), val: summary.pf },
+            { label: t("team_stat_pa"), val: summary.pa },
+            { label: t("team_stat_diff"), val: summary.diff, color: summary.diff >= 0 ? 'text-green-600' : 'text-red-600' },
           ].map((stat, i) => (
             <div key={i} className="bg-[var(--surface-muted)] border-2 border-[var(--border)] p-5 rounded-2xl">
               <div className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest mb-2">{stat.label}</div>
@@ -137,7 +139,7 @@ export default function TeamPage() {
         {/* RECENT GAMES */}
         <section>
           <div className="flex items-center gap-4 mb-8">
-            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-[var(--foreground)] italic">Recent Schedule</h2>
+            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-[var(--foreground)] italic">{t("team_recent_schedule")}</h2>
             <div className="h-px flex-1 bg-[var(--border)]"></div>
           </div>
           <div className="space-y-4">
@@ -184,7 +186,7 @@ export default function TeamPage() {
         {/* ROSTER */}
         <section>
           <div className="flex items-center gap-4 mb-8">
-            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-[var(--foreground)] italic">Active Roster</h2>
+            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-[var(--foreground)] italic">{t("team_roster")}</h2>
             <div className="h-px flex-1 bg-[var(--border)]"></div>
           </div>
           <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-3xl overflow-hidden shadow-[12px_12px_0px_0px_rgba(0,0,0,0.05)]">
@@ -192,7 +194,7 @@ export default function TeamPage() {
               <thead>
                 <tr className="bg-black">
                   <th className="p-5 text-[10px] font-black uppercase text-orange-500 tracking-widest w-20">#</th>
-                  <th className="p-5 text-[10px] font-black uppercase text-orange-500 tracking-widest">Athlete</th>
+                  <th className="p-5 text-[10px] font-black uppercase text-orange-500 tracking-widest">{t("team_col_athlete")}</th>
                   <th className="p-5 text-[10px] font-black uppercase text-orange-500 tracking-widest text-right">Link</th>
                 </tr>
               </thead>
@@ -208,7 +210,7 @@ export default function TeamPage() {
                     <td className="p-5 text-right">
                       {/* Fixed "Profile" Button Visibility: Switched to bg-gray-200 for high contrast */}
                       <Link href={`/players/${p.player_id}`} className="inline-block text-[10px] font-black bg-[var(--surface-muted)] text-[var(--foreground)] group-hover:bg-[var(--foreground)] group-hover:text-[var(--background)] px-3 py-1.5 rounded-full uppercase transition-all shadow-sm">
-                        Profile
+                        {t("team_profile")}
                       </Link>
                     </td>
                   </tr>

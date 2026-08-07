@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import TeamLogo from "@/app/components/TeamLogo";
+import { getServerT } from "@/lib/i18n/server";
 
 type TeamRow = {
   team_id: string;
@@ -15,6 +16,7 @@ type TeamRow = {
 };
 
 export default async function StandingsPage() {
+  const t = await getServerT();
   const { data: games, error: gamesError } = await supabase
     .from("games")
     .select("home_team_id, away_team_id, home_score, away_score")
@@ -88,14 +90,14 @@ export default async function StandingsPage() {
       {/* Header Section */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter text-gray-900 uppercase">Standings</h1>
+          <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter text-gray-900 uppercase">{t("standings_title")}</h1>
           <div className="h-1.5 w-24 bg-orange-600 mt-1"></div>
         </div>
         <Link
           href="/games"
           className="hidden sm:block bg-[var(--accent-strong)] !text-white px-6 py-3 rounded-full text-xs font-semibold uppercase tracking-[0.18em] hover:bg-[var(--accent)] transition-colors shadow-lg shadow-slate-900/20"
         >
-          Full Schedule
+          {t("standings_full_schedule")}
         </Link>
       </div>
 
@@ -107,7 +109,7 @@ export default async function StandingsPage() {
                 <th className="py-2 px-2 sticky left-0 bg-gray-900 z-20 !text-white text-[10px] font-black uppercase tracking-widest w-8 text-center">#</th>
                 
                 {/* Reduced min-width to allow wrapping */}
-                <th className="py-2 px-2 sticky left-8 bg-gray-900 z-20 min-w-[100px] md:min-w-[160px] !text-white text-[10px] font-black uppercase tracking-widest border-r border-gray-800 lg:border-r-0">Team</th>
+                <th className="py-2 px-2 sticky left-8 bg-gray-900 z-20 min-w-[100px] md:min-w-[160px] !text-white text-[10px] font-black uppercase tracking-widest border-r border-gray-800 lg:border-r-0">{t("standings_col_team")}</th>
                 
                 <th className="py-2 px-2 text-center !text-white text-[10px] font-black tracking-widest">GP</th>
                 <th className="py-2 px-2 text-center !text-white text-[10px] font-black tracking-widest">W</th>
@@ -158,14 +160,14 @@ export default async function StandingsPage() {
       <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 items-center justify-between opacity-80">
          <div className="flex gap-3">
            <span className="flex items-center gap-1.5 text-[9px] font-black uppercase">
-             <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div> W (2 pts)
+             <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div> {t("standings_legend_win")}
            </span>
            <span className="flex items-center gap-1.5 text-[9px] font-black uppercase">
-             <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div> L (1 pt)
+             <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div> {t("standings_legend_loss")}
            </span>
          </div>
          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest italic">
-           Tie-breakers: PTS &rarr; Diff &rarr; PF
+           {t("standings_tiebreakers")}
          </p>
       </div>
     </main>

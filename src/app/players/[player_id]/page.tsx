@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import PlayerAvatar from "@/app/components/PlayerAvatar";
+import { useT } from "@/app/components/LanguageProvider";
 
 type Player = {
   player_id: string;
@@ -35,6 +36,7 @@ type GameRow = {
 
 export default function PlayerPage() {
   const params = useParams();
+  const { t } = useT();
 
   const playerId = useMemo(() => {
     const raw = (params as any)?.player_id;
@@ -125,11 +127,11 @@ export default function PlayerPage() {
     return () => { cancelled = true; };
   }, [playerId]);
 
-  if (!playerId) return <main className="p-8"><h1 className="text-2xl font-bold">Bad route</h1></main>;
-  if (loading) return <main className="p-8 text-black"><h1 className="text-2xl font-black italic uppercase animate-pulse">Loading Stats...</h1></main>;
+  if (!playerId) return <main className="p-8"><h1 className="text-2xl font-bold">{t("player_bad_route")}</h1></main>;
+  if (loading) return <main className="p-8 text-black"><h1 className="text-2xl font-black italic uppercase animate-pulse">{t("player_loading")}</h1></main>;
   if (error || !player) return (
     <main className="p-8 text-black">
-      <h1 className="text-2xl font-bold">Error</h1>
+      <h1 className="text-2xl font-bold">{t("player_error")}</h1>
       <pre className="mt-4 text-sm bg-red-50 p-4 rounded text-red-600 border border-red-100">{JSON.stringify(error, null, 2)}</pre>
     </main>
   );
@@ -173,21 +175,21 @@ export default function PlayerPage() {
         {/* Quick Stats Cards - Fixed Visibility */}
         <div className="flex gap-4">
           <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border-2 border-black text-center min-w-[85px] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-            <div className="text-[10px] uppercase text-gray-400 font-black mb-1">GP</div>
+            <div className="text-[10px] uppercase text-gray-400 font-black mb-1">{t("player_stat_gp")}</div>
             <div className="text-2xl font-black text-black">{gamesPlayed}</div>
           </div>
           <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border-2 border-black text-center min-w-[85px] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-            <div className="text-[10px] uppercase text-gray-400 font-black mb-1">Total PTS</div>
+            <div className="text-[10px] uppercase text-gray-400 font-black mb-1">{t("player_stat_total_pts")}</div>
             <div className="text-2xl font-black text-black">{totalPoints}</div>
           </div>
           <div className="flex-1 md:flex-none bg-orange-600 p-4 rounded-xl border-2 border-black text-center min-w-[85px] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-            <div className="text-[10px] uppercase text-orange-200 font-black mb-1">PPG</div>
+            <div className="text-[10px] uppercase text-orange-200 font-black mb-1">{t("player_stat_ppg")}</div>
             <div className="text-2xl font-black text-white italic">{ppg}</div>
           </div>
         </div>
       </div>
 
-      <h2 className="text-xs font-black text-gray-400 uppercase tracking-[0.4em] mb-4 px-1 italic">Season Game Log</h2>
+      <h2 className="text-xs font-black text-gray-400 uppercase tracking-[0.4em] mb-4 px-1 italic">{t("player_game_log")}</h2>
 
       {/* GAME LOG LIST */}
       <div className="space-y-3">
@@ -245,7 +247,7 @@ export default function PlayerPage() {
 
         {rows.length === 0 && (
           <div className="text-center py-10 bg-white rounded-xl border-2 border-dashed border-gray-200 text-gray-400 text-xs font-black uppercase italic tracking-widest">
-            No game data available
+            {t("player_no_data")}
           </div>
         )}
       </div>

@@ -2,19 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useGlobalSearch } from "../../hooks/use-global-search";
+import { useT } from "./LanguageProvider";
+import { LOCALES, type Locale } from "@/lib/i18n";
 
 interface TeamResult { team_id: string; team_name: string; }
 interface PlayerResult { player_id: string; first_name: string; last_name: string; team_id: string; }
 
 export default function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const { results, isSearching } = useGlobalSearch(query);
+  const { t, locale, setLocale } = useT();
 
   const shouldShowDropdown = isFocused && query.trim().length >= 2;
   const hasResults = results.teams.length > 0 || results.players.length > 0;
@@ -39,11 +43,16 @@ export default function Nav() {
   }, []);
 
   const navLinks = [
-    { href: "/teams", label: "Teams" },
-    { href: "/games", label: "Games" },
-    { href: "/leaders", label: "Leaders" },
-    { href: "/standings", label: "Standings" },
+    { href: "/teams", label: t("nav_teams") },
+    { href: "/games", label: t("nav_games") },
+    { href: "/leaders", label: t("nav_leaders") },
+    { href: "/standings", label: t("nav_standings") },
   ];
+
+  const handleLocaleChange = (next: Locale) => {
+    setLocale(next);
+    router.refresh();
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-black text-white border-b-2 border-orange-600 shadow-lg">
@@ -60,7 +69,7 @@ export default function Nav() {
 
           <div ref={containerRef} className="relative w-[180px] sm:w-[240px] md:w-[300px] shrink-0">
             <label htmlFor="site-search" className="sr-only">
-              Search teams and players
+              {t("nav_search_placeholder")}
             </label>
             <div className="relative">
               <input
@@ -76,9 +85,9 @@ export default function Nav() {
                     inputRef.current?.blur();
                   }
                 }}
-                placeholder="Search team or player"
+                placeholder={t("nav_search_placeholder")}
                 className="w-full h-9 rounded-md bg-zinc-900 border border-zinc-700 px-9 pr-3 text-xs sm:text-sm text-white placeholder:text-zinc-400 focus:outline-none focus:border-orange-500"
-                aria-label="Search team or player"
+                aria-label={t("nav_search_placeholder")}
                 aria-expanded={shouldShowDropdown}
                 aria-controls="site-search-results"
               />
@@ -106,11 +115,11 @@ export default function Nav() {
                 className="absolute top-full mt-2 w-full rounded-md border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden"
               >
                 {isSearching && (
-                  <p className="px-3 py-2 text-xs text-zinc-400">Searching...</p>
+                  <p className="px-3 py-2 text-xs text-zinc-400">{t("nav_searching")}</p>
                 )}
 
                 {!isSearching && !hasResults && (
-                  <p className="px-3 py-2 text-xs text-zinc-400">No teams or players found.</p>
+                  <p className="px-3 py-2 text-xs text-zinc-400">{t("nav_no_results")}</p>
                 )}
 
                 {!isSearching && hasResults && (
@@ -118,7 +127,7 @@ export default function Nav() {
                     {results.teams.length > 0 && (
                       <div className="border-b border-zinc-800">
                         <p className="px-3 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                          Teams
+                          {t("nav_results_teams")}
                         </p>
                         {results.teams.map((t: TeamResult) => (
                           <Link
@@ -139,7 +148,7 @@ export default function Nav() {
                     {results.players.length > 0 && (
                       <div>
                         <p className="px-3 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                          Players
+                          {t("nav_results_players")}
                         </p>
                         {results.players.map((p: PlayerResult) => (
                           <Link
@@ -168,18 +177,35 @@ export default function Nav() {
           </div>
         </div>
 
-        <div className="mt-1 flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-colors whitespace-nowrap ${
-                pathname === link.href ? "text-orange-500" : "text-gray-400 hover:text-white"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
+        <div className="mt-1 flex items-center justify-between gap-1 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex items-center gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-colors whitespace-nowrap ${
+                  pathname === link.href ? "text-orange-500" : "text-gray-400 hover:text-white"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+          <div className="flex items-center gap-0.5 shrink-0 ml-2">
+            {LOCALES.map((l) => (
+              <button
+                key={l}
+                onClick={() => handleLocaleChange(l)}
+                className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded transition-colors ${
+                  locale === l
+                    ? "bg-orange-600 text-white"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
       </nav>
     </header>
