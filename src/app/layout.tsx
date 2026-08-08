@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import type { ReactNode } from "react";
 import AuthHashHandler from "./components/AuthHashHandler";
+import GoogleAnalytics from "./components/GoogleAnalytics";
 import Nav from "./components/Nav";
 import { LanguageProvider } from "./components/LanguageProvider";
 import FooterCta from "./components/FooterCta";
@@ -74,6 +75,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       </head>
       <body className="min-h-screen bg-[var(--background)] antialiased">
         <LanguageProvider>
+          <GoogleAnalytics />
           <AuthHashHandler />
           <Nav />
 
