@@ -1,4 +1,26 @@
+import { supabase } from "@/lib/supabase/client";
+
 export const EXCLUDED_TEAM_NAMES = ["Veterans"] as const;
+
+export type Season = {
+  season: string;
+  is_current: boolean;
+};
+
+/** Returns all seasons ordered newest-first. */
+export async function getAvailableSeasons(): Promise<Season[]> {
+  const { data } = await supabase
+    .from("seasons")
+    .select("season, is_current")
+    .order("season", { ascending: false });
+  return (data ?? []) as Season[];
+}
+
+/** Returns the season currently flagged is_current, or the newest season as fallback. */
+export async function getCurrentSeason(): Promise<string> {
+  const seasons = await getAvailableSeasons();
+  return seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season ?? "2025/26";
+}
 
 export function isExcludedTeamName(teamName?: string | null) {
   if (!teamName) return false;

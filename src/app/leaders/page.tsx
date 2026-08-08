@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import PlayerAvatar from "@/app/components/PlayerAvatar";
+import SeasonSelector from "@/app/components/SeasonSelector";
 import { useT } from "@/app/components/LanguageProvider";
+import type { Season } from "@/lib/league";
 
 type StatRow = {
   player_id: string;
@@ -31,9 +34,38 @@ export default function LeadersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
   const [sortMode, setSortMode] = useState<"PTS" | "PPG">("PTS");
+  const [seasons, setSeasons] = useState<Season[]>([]);
   const { t } = useT();
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Derive selected season from URL; fall back to is_current once seasons load
+  const seasonParam = searchParams.get("season");
+  const currentSeason = seasonParam ?? seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season ?? "";
+
+  // Load available seasons once
   useEffect(() => {
+    supabase
+      .from("seasons")
+      .select("season, is_current")
+      .order("season", { ascending: false })
+      .then(({ data }) => setSeasons((data ?? []) as Season[]));
+  }, []);
+
+  // When seasons load and there's no URL param, set the default in the URL
+  useEffect(() => {
+    if (seasonParam || seasons.length === 0) return;
+    const defaultSeason = seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season;
+    if (!defaultSeason) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("season", defaultSeason);
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [seasons, seasonParam, pathname, router, searchParams]);
+
+  useEffect(() => {
+    if (!currentSeason) return;
     let cancelled = false;
     async function load() {
       setLoading(true);
@@ -43,13 +75,15 @@ export default function LeadersPage() {
         .select(`
           player_id,
           points,
+          games!inner(season),
           players (
             first_name,
             last_name,
             team_id,
             teams ( team_name )
           )
-        `);
+        `)
+        .eq("games.season", currentSeason);
 
       if (cancelled) return;
       if (error) {
@@ -93,7 +127,7 @@ export default function LeadersPage() {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [currentSeason]);
 
   const sorted = useMemo(() => {
     const arr = [...rows];
@@ -113,10 +147,15 @@ export default function LeadersPage() {
     <main className="py-4 text-black px-2 max-w-4xl mx-auto min-h-screen bg-white">
       <div className="flex items-baseline justify-between gap-2 flex-wrap mb-6 border-b-4 border-black pb-4">
         <h1 className="text-3xl font-black italic uppercase tracking-tighter text-black">{t("leaders_title")}</h1>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">{t("leaders_sort_by")}</span>
-          <button onClick={() => setSortMode("PTS")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PTS" ? "bg-black !text-white" : "bg-gray-100 !text-gray-500 hover:bg-gray-200"}`}>PTS</button>
-          <button onClick={() => setSortMode("PPG")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PPG" ? "bg-black !text-white" : "bg-gray-100 !text-gray-500 hover:bg-gray-200"}`}>PPG</button>
+        <div className="flex items-center gap-3">
+          {seasons.length > 0 && currentSeason && (
+            <SeasonSelector seasons={seasons} currentSeason={currentSeason} />
+          )}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">{t("leaders_sort_by")}</span>
+            <button onClick={() => setSortMode("PTS")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PTS" ? "bg-black !text-white" : "bg-gray-100 !text-gray-500 hover:bg-gray-200"}`}>PTS</button>
+            <button onClick={() => setSortMode("PPG")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PPG" ? "bg-black !text-white" : "bg-gray-100 !text-gray-500 hover:bg-gray-200"}`}>PPG</button>
+          </div>
         </div>
       </div>
 

@@ -54,6 +54,13 @@ export default function AdminPage() {
         >
           Box score jobs
         </Link>
+
+        <Link
+          href="/admin/players"
+          className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-4 text-lg font-medium hover:bg-[var(--surface-muted)]"
+        >
+          Season rosters
+        </Link>
       </div>
     </main>
   );

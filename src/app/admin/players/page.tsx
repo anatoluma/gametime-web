@@ -1,0 +1,191 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type Season = { season: string; is_current: boolean };
+
+type PlayerSeasonRow = {
+  player_id: string;
+  season: string;
+  team_id: string;
+  jersey_number: number | null;
+  is_active: boolean;
+  players: { first_name: string | null; last_name: string | null } | null;
+  teams: { team_name: string | null } | null;
+};
+
+export default function AdminPlayersPage() {
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [selectedSeason, setSelectedSeason] = useState("");
+  const [rows, setRows] = useState<PlayerSeasonRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  // Load seasons on mount
+  useEffect(() => {
+    fetch("/api/admin/seasons")
+      .then((r) => r.json())
+      .then(({ seasons: s }: { seasons: Season[] }) => {
+        setSeasons(s ?? []);
+        const current = s?.find((x: Season) => x.is_current)?.season ?? s?.[0]?.season ?? "";
+        setSelectedSeason(current);
+      });
+  }, []);
+
+  // Load roster when season changes
+  useEffect(() => {
+    if (!selectedSeason) return;
+    setLoading(true);
+    setRows([]);
+    fetch(`/api/admin/players/seasons?season=${encodeURIComponent(selectedSeason)}`)
+      .then((r) => r.json())
+      .then(({ player_seasons }) => {
+        setRows(player_seasons ?? []);
+        setLoading(false);
+      });
+  }, [selectedSeason]);
+
+  const handleSetCurrent = async (season: string) => {
+    const res = await fetch(`/api/admin/seasons/${encodeURIComponent(season)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_current: true }),
+    });
+    if (res.ok) {
+      setSeasons((prev) => prev.map((s) => ({ ...s, is_current: s.season === season })));
+      setMessage(`✓ ${season} is now the current season`);
+    } else {
+      const { error } = await res.json();
+      setMessage(`Error: ${error}`);
+    }
+  };
+
+  const handleCopySeason = async () => {
+    const seasonList = seasons.map((s) => s.season).sort();
+    const currentIdx = seasonList.indexOf(selectedSeason);
+    const target = seasonList[currentIdx + 1] ?? "";
+    if (!target) {
+      setMessage("No next season found. Create one first via the API.");
+      return;
+    }
+    if (!confirm(`Copy all ${rows.length} players from ${selectedSeason} → ${target}?`)) return;
+    const res = await fetch("/api/admin/players/seasons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "copy_season", source_season: selectedSeason, target_season: target }),
+    });
+    const json = await res.json();
+    if (res.ok) {
+      setMessage(`✓ Copied ${json.copied} players to ${target}`);
+    } else {
+      setMessage(`Error: ${json.error}`);
+    }
+  };
+
+  const handleToggleActive = async (row: PlayerSeasonRow) => {
+    const res = await fetch("/api/admin/players/seasons", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ player_id: row.player_id, season: row.season, is_active: !row.is_active }),
+    });
+    if (res.ok) {
+      setRows((prev) =>
+        prev.map((r) =>
+          r.player_id === row.player_id ? { ...r, is_active: !r.is_active } : r
+        )
+      );
+    }
+  };
+
+  const grouped = rows.reduce<Record<string, PlayerSeasonRow[]>>((acc, r) => {
+    const key = r.teams?.team_name ?? r.team_id;
+    (acc[key] ??= []).push(r);
+    return acc;
+  }, {});
+
+  return (
+    <main className="mx-auto max-w-4xl px-4 py-12 text-[var(--foreground)] bg-[var(--surface)] min-h-screen">
+      <h1 className="text-3xl font-semibold tracking-tight mb-6">Season Rosters</h1>
+
+      {/* Season controls */}
+      <div className="flex flex-wrap items-center gap-3 mb-8">
+        <select
+          value={selectedSeason}
+          onChange={(e) => setSelectedSeason(e.target.value)}
+          className="border border-[var(--border)] rounded px-3 py-2 text-sm bg-[var(--surface)]"
+        >
+          {seasons.map((s) => (
+            <option key={s.season} value={s.season}>
+              {s.season}{s.is_current ? " (current)" : ""}
+            </option>
+          ))}
+        </select>
+
+        {selectedSeason && !seasons.find((s) => s.season === selectedSeason)?.is_current && (
+          <button
+            onClick={() => handleSetCurrent(selectedSeason)}
+            className="text-sm px-4 py-2 rounded border border-orange-500 text-orange-600 hover:bg-orange-50"
+          >
+            Set as current season
+          </button>
+        )}
+
+        <button
+          onClick={handleCopySeason}
+          disabled={!selectedSeason || rows.length === 0}
+          className="text-sm px-4 py-2 rounded border border-[var(--border)] hover:bg-[var(--surface-muted)] disabled:opacity-40"
+        >
+          Copy roster to next season →
+        </button>
+      </div>
+
+      {message && (
+        <p className="mb-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+          {message}
+        </p>
+      )}
+
+      {loading && <p className="text-sm text-gray-400 animate-pulse">Loading roster...</p>}
+
+      {!loading && rows.length === 0 && selectedSeason && (
+        <p className="text-sm text-gray-400">No players registered for {selectedSeason}.</p>
+      )}
+
+      {/* Roster grouped by team */}
+      {Object.entries(grouped).map(([teamName, players]) => (
+        <div key={teamName} className="mb-8">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-2 border-b border-[var(--border)] pb-1">
+            {teamName}
+          </h2>
+          <div className="divide-y divide-[var(--border)]">
+            {players.map((p) => (
+              <div
+                key={p.player_id}
+                className={`flex items-center justify-between py-2.5 px-1 gap-2 ${!p.is_active ? "opacity-40" : ""}`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-xs text-gray-400 w-6 text-right shrink-0">
+                    #{p.jersey_number ?? "—"}
+                  </span>
+                  <span className="text-sm font-medium truncate">
+                    {p.players?.first_name} {p.players?.last_name}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleToggleActive(p)}
+                  className={`text-xs px-2.5 py-1 rounded border ${
+                    p.is_active
+                      ? "border-gray-300 text-gray-500 hover:border-red-300 hover:text-red-500"
+                      : "border-green-300 text-green-600 hover:bg-green-50"
+                  }`}
+                >
+                  {p.is_active ? "Deactivate" : "Activate"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </main>
+  );
+}

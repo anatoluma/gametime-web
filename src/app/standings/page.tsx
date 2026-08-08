@@ -1,7 +1,10 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import TeamLogo from "@/app/components/TeamLogo";
+import SeasonSelector from "@/app/components/SeasonSelector";
 import { getServerT } from "@/lib/i18n/server";
+import { getAvailableSeasons } from "@/lib/league";
 
 type TeamRow = {
   team_id: string;
@@ -15,11 +18,22 @@ type TeamRow = {
   diff: number;
 };
 
-export default async function StandingsPage() {
+export default async function StandingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ season?: string }>;
+}) {
   const t = await getServerT();
+  const { season: seasonParam } = await searchParams;
+
+  const [seasons] = await Promise.all([getAvailableSeasons()]);
+  const defaultSeason = seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season ?? "2025/26";
+  const selectedSeason = seasonParam ?? defaultSeason;
+
   const { data: games, error: gamesError } = await supabase
     .from("games")
     .select("home_team_id, away_team_id, home_score, away_score")
+    .eq("season", selectedSeason)
     .not("home_score", "is", null)
     .not("away_score", "is", null);
 
@@ -93,12 +107,17 @@ export default async function StandingsPage() {
           <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter text-gray-900 uppercase">{t("standings_title")}</h1>
           <div className="h-1.5 w-24 bg-orange-600 mt-1"></div>
         </div>
-        <Link
-          href="/games"
-          className="hidden sm:block bg-[var(--accent-strong)] !text-white px-6 py-3 rounded-full text-xs font-semibold uppercase tracking-[0.18em] hover:bg-[var(--accent)] transition-colors shadow-lg shadow-slate-900/20"
-        >
-          {t("standings_full_schedule")}
-        </Link>
+        <div className="flex items-center gap-3">
+          <Suspense fallback={null}>
+            <SeasonSelector seasons={seasons} currentSeason={selectedSeason} />
+          </Suspense>
+          <Link
+            href="/games"
+            className="hidden sm:block bg-[var(--accent-strong)] !text-white px-6 py-3 rounded-full text-xs font-semibold uppercase tracking-[0.18em] hover:bg-[var(--accent)] transition-colors shadow-lg shadow-slate-900/20"
+          >
+            {t("standings_full_schedule")}
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white border-2 border-gray-900 rounded-xl shadow-2xl overflow-hidden">
