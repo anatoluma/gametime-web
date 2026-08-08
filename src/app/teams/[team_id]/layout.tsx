@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/server'
 
@@ -30,6 +31,41 @@ export async function generateMetadata({ params }: TeamLayoutProps): Promise<Met
   }
 }
 
-export default function TeamLayout({ children }: TeamLayoutProps) {
-  return children
+export default async function TeamLayout({ children, params }: TeamLayoutProps) {
+  const { team_id: teamId } = await params
+  const supabase = await createClient()
+  const { data: team } = await supabase
+    .from('teams')
+    .select('team_id, team_name, city, coach')
+    .eq('team_id', teamId)
+    .maybeSingle()
+
+  if (!team) return children
+
+  const teamUrl = `https://ligabasket.md/teams/${encodeURIComponent(team.team_id)}`
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsTeam',
+    '@id': `${teamUrl}#team`,
+    name: team.team_name,
+    url: teamUrl,
+    sport: 'Basketball',
+    ...(team.city ? { location: { '@type': 'City', name: team.city } } : {}),
+    ...(team.coach ? { coach: { '@type': 'Person', name: team.coach } } : {}),
+    memberOf: { '@id': 'https://ligabasket.md/#organization' },
+  }
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      <noscript>
+        <article>
+          <h1>{team.team_name}</h1>
+          <p>Basketball team in the Liga Basket Moldova statistics database.{team.city ? ` Based in ${team.city}.` : ''}{team.coach ? ` Head coach: ${team.coach}.` : ''}</p>
+          <p><Link href="/games">View fixtures and results</Link></p>
+        </article>
+      </noscript>
+      {children}
+    </>
+  )
 }
