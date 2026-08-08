@@ -9,10 +9,43 @@ import { cookies } from "next/headers";
 import type { Locale } from "@/lib/i18n";
 import { LOCALE_COOKIE } from "@/lib/i18n";
 
-export const metadata = {
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'SportsOrganization',
+      '@id': 'https://ligabasket.md/#organization',
+      name: 'Liga Basket Moldova',
+      url: 'https://ligabasket.md',
+      description: 'The official stats database for the Moldovan Basketball League.',
+      sport: 'Basketball',
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://ligabasket.md/#website',
+      name: 'Liga Basket Moldova',
+      url: 'https://ligabasket.md',
+      publisher: { '@id': 'https://ligabasket.md/#organization' },
+      inLanguage: ['en', 'ro', 'ru'],
+    },
+  ],
+}
+
+export const metadata: Metadata = {
   title: 'Liga Basket Moldova | Stats & Scores',
   description: 'The official stats database for the Moldovan Basketball League.',
-  metadataBase: new URL('https://ligabasket.md'), // Add this!
+  metadataBase: new URL('https://ligabasket.md'),
+  openGraph: {
+    type: 'website',
+    siteName: 'Liga Basket Moldova',
+    title: 'Liga Basket Moldova | Stats & Scores',
+    description: 'The official stats database for the Moldovan Basketball League.',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Liga Basket Moldova | Stats & Scores',
+    description: 'The official stats database for the Moldovan Basketball League.',
+  },
 }
 
 export const viewport = {
@@ -28,6 +61,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang={locale}>
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
