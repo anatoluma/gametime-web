@@ -32,7 +32,7 @@ type LeaderRow = {
 export default function LeadersPage() {
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<"PTS" | "PPG">("PTS");
   const [seasons, setSeasons] = useState<Season[]>([]);
   const { t } = useT();
@@ -43,7 +43,7 @@ export default function LeadersPage() {
 
   // Derive selected season from URL; fall back to is_current once seasons load
   const seasonParam = searchParams.get("season");
-  const currentSeason = seasonParam ?? seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season ?? "";
+  const currentSeason = seasonParam ?? seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season ?? "2025/26";
 
   // Load available seasons once
   useEffect(() => {
@@ -87,7 +87,7 @@ export default function LeadersPage() {
 
       if (cancelled) return;
       if (error) {
-        setError(error);
+        setError(error.message);
         setLoading(false);
         return;
       }
@@ -142,6 +142,8 @@ export default function LeadersPage() {
   const top = useMemo(() => sorted.slice(0, 50), [sorted]);
 
   if (loading) return <main className="py-6 text-black px-2 max-w-4xl mx-auto"><h1 className="text-3xl font-black italic uppercase">{t("leaders_title")}</h1><p className="mt-4 animate-pulse font-bold text-gray-400">{t("leaders_loading")}</p></main>;
+
+  if (error) return <main className="py-6 text-black px-2 max-w-4xl mx-auto"><h1 className="text-3xl font-black italic uppercase">{t("leaders_title")}</h1><p className="mt-4 font-bold text-red-600">{error}</p></main>;
 
   return (
     <main className="py-4 text-black px-2 max-w-4xl mx-auto min-h-screen bg-white">
