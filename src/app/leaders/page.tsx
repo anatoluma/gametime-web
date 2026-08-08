@@ -70,12 +70,31 @@ export default function LeadersPage() {
     async function load() {
       setLoading(true);
       setError(null);
+
+      const { data: games, error: gamesError } = await supabase
+        .from("games")
+        .select("game_id")
+        .eq("season", currentSeason);
+
+      if (cancelled) return;
+      if (gamesError) {
+        setError(gamesError.message);
+        setLoading(false);
+        return;
+      }
+
+      const gameIds = (games ?? []).map((game) => game.game_id);
+      if (gameIds.length === 0) {
+        setRows([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("player_game_stats")
         .select(`
           player_id,
           points,
-          games!inner(season),
           players (
             first_name,
             last_name,
@@ -83,7 +102,7 @@ export default function LeadersPage() {
             teams ( team_name )
           )
         `)
-        .eq("games.season", currentSeason);
+        .in("game_id", gameIds);
 
       if (cancelled) return;
       if (error) {
