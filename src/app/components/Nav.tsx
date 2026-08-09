@@ -22,7 +22,6 @@ export default function Nav() {
   const [query, setQuery] = useState("");
   const [isDesktopFocused, setIsDesktopFocused] = useState(false);
   const [isMobileFocused, setIsMobileFocused] = useState(false);
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const { results, isSearching } = useGlobalSearch(query);
   const { t, locale, setLocale } = useT();
@@ -35,7 +34,6 @@ export default function Nav() {
     setQuery("");
     setIsDesktopFocused(false);
     setIsMobileFocused(false);
-    setIsMobileSearchOpen(false);
     setIsLanguageOpen(false);
   }, [pathname]);
 
@@ -64,21 +62,6 @@ export default function Nav() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isMobileSearchOpen) {
-      setIsMobileFocused(false);
-      return;
-    }
-
-    const id = window.setTimeout(() => {
-      mobileInputRef.current?.focus();
-    }, 0);
-
-    return () => {
-      window.clearTimeout(id);
-    };
-  }, [isMobileSearchOpen]);
-
   const navLinks = [
     { href: "/teams", label: t("nav_teams") },
     { href: "/games", label: t("nav_games") },
@@ -101,10 +84,10 @@ export default function Nav() {
 
   return (
     <header className="sticky top-0 z-50 bg-black text-white border-b-2 border-orange-600 shadow-lg">
-      <nav className="max-w-5xl mx-auto px-3 sm:px-6 py-1">
-        <div className="flex items-center justify-between gap-1.5 min-h-[38px]">
+      <nav className="max-w-5xl mx-auto px-3 sm:px-6 py-2">
+        <div className="flex items-center gap-2 min-h-[52px]">
           <Link href="/" className="flex items-center gap-1 shrink-0">
-            <div className="bg-orange-600 text-black font-black italic px-1.5 py-0.5 rounded text-[11px] leading-none">
+            <div className="bg-orange-600 text-black font-black italic px-1.5 py-0.5 rounded text-[11px] leading-none sm:text-sm">
               LBM
             </div>
             <span className="font-black uppercase italic tracking-tighter text-base hidden xs:block">
@@ -112,31 +95,117 @@ export default function Nav() {
             </span>
           </Link>
 
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsMobileSearchOpen((prev) => !prev)}
-              className="sm:hidden h-[38px] w-[38px] inline-flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-white"
-              aria-label={t("nav_search_placeholder")}
-              aria-expanded={isMobileSearchOpen}
-              aria-controls="mobile-site-search"
-            >
+          <div ref={mobileSearchRef} className="relative min-w-0 flex-1 sm:hidden">
+            <label htmlFor="mobile-search" className="sr-only">
+              {t("nav_search_placeholder")}
+            </label>
+            <div className="relative">
+              <input
+                id="mobile-search"
+                ref={mobileInputRef}
+                type="text"
+                value={query}
+                onFocus={() => {
+                  setIsMobileFocused(true);
+                  setIsDesktopFocused(false);
+                }}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setIsMobileFocused(false);
+                    mobileInputRef.current?.blur();
+                  }
+                }}
+                placeholder="Search..."
+                className="w-full h-10 rounded-md bg-zinc-900 border border-zinc-700 pl-8 pr-2 text-[11px] text-white placeholder:text-zinc-400 focus:outline-none focus:border-orange-500"
+                aria-label={t("nav_search_placeholder")}
+                aria-expanded={shouldShowMobileDropdown}
+                aria-controls="mobile-site-search-results"
+              />
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
+                width="14"
+                height="14"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
                 aria-hidden="true"
               >
                 <circle cx="11" cy="11" r="8" />
                 <path d="m21 21-4.3-4.3" />
               </svg>
-            </button>
+            </div>
+
+            {shouldShowMobileDropdown && (
+              <div
+                id="mobile-site-search-results"
+                className="absolute top-full mt-2 w-full rounded-md border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden"
+              >
+                {isSearching && (
+                  <p className="px-3 py-2 text-xs text-zinc-400">{t("nav_searching")}</p>
+                )}
+
+                {!isSearching && !hasResults && (
+                  <p className="px-3 py-2 text-xs text-zinc-400">{t("nav_no_results")}</p>
+                )}
+
+                {!isSearching && hasResults && (
+                  <>
+                    {results.teams.length > 0 && (
+                      <div className="border-b border-zinc-800">
+                        <p className="px-3 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                          {t("nav_results_teams")}
+                        </p>
+                        {results.teams.map((t: TeamResult) => (
+                          <Link
+                            key={t.team_id}
+                            href={`/teams/${t.team_id}`}
+                            onClick={() => {
+                              setQuery("");
+                              setIsMobileFocused(false);
+                            }}
+                            className="block px-3 py-2 text-sm font-semibold hover:bg-zinc-900 hover:text-orange-500 transition-colors"
+                          >
+                            {t.team_name}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+
+                    {results.players.length > 0 && (
+                      <div>
+                        <p className="px-3 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                          {t("nav_results_players")}
+                        </p>
+                        {results.players.map((p: PlayerResult) => (
+                          <Link
+                            key={p.player_id}
+                            href={`/players/${p.player_id}`}
+                            onClick={() => {
+                              setQuery("");
+                              setIsMobileFocused(false);
+                            }}
+                            className="flex items-center justify-between px-3 py-2 text-sm hover:bg-zinc-900 transition-colors"
+                          >
+                            <span className="font-semibold hover:text-orange-500 transition-colors">
+                              {p.first_name} {p.last_name}
+                            </span>
+                            <span className="text-[10px] font-bold text-zinc-500">
+                              {p.team_id}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
             <div ref={desktopSearchRef} className="relative hidden sm:block w-[240px] md:w-[300px] shrink-0">
               <label htmlFor="site-search" className="sr-only">
@@ -311,129 +380,12 @@ export default function Nav() {
           </div>
         </div>
 
-        {isMobileSearchOpen && (
-          <div ref={mobileSearchRef} id="mobile-site-search" className="mt-2 sm:hidden relative">
-            <label htmlFor="mobile-search" className="sr-only">
-              {t("nav_search_placeholder")}
-            </label>
-            <div className="relative">
-              <input
-                id="mobile-search"
-                ref={mobileInputRef}
-                type="text"
-                value={query}
-                onFocus={() => {
-                  setIsMobileFocused(true);
-                  setIsDesktopFocused(false);
-                }}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setIsMobileFocused(false);
-                    setIsMobileSearchOpen(false);
-                    mobileInputRef.current?.blur();
-                  }
-                }}
-                placeholder={t("nav_search_placeholder")}
-                className="w-full h-9 rounded-md bg-zinc-900 border border-zinc-700 px-9 pr-3 text-xs sm:text-sm text-white placeholder:text-zinc-400 focus:outline-none focus:border-orange-500"
-                aria-label={t("nav_search_placeholder")}
-                aria-expanded={shouldShowMobileDropdown}
-                aria-controls="mobile-site-search-results"
-              />
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
-                aria-hidden="true"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
-            </div>
-
-            {shouldShowMobileDropdown && (
-              <div
-                id="mobile-site-search-results"
-                className="absolute top-full mt-2 w-full rounded-md border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden"
-              >
-                {isSearching && (
-                  <p className="px-3 py-2 text-xs text-zinc-400">{t("nav_searching")}</p>
-                )}
-
-                {!isSearching && !hasResults && (
-                  <p className="px-3 py-2 text-xs text-zinc-400">{t("nav_no_results")}</p>
-                )}
-
-                {!isSearching && hasResults && (
-                  <>
-                    {results.teams.length > 0 && (
-                      <div className="border-b border-zinc-800">
-                        <p className="px-3 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                          {t("nav_results_teams")}
-                        </p>
-                        {results.teams.map((t: TeamResult) => (
-                          <Link
-                            key={t.team_id}
-                            href={`/teams/${t.team_id}`}
-                            onClick={() => {
-                              setQuery("");
-                              setIsMobileFocused(false);
-                              setIsMobileSearchOpen(false);
-                            }}
-                            className="block px-3 py-2 text-sm font-semibold hover:bg-zinc-900 hover:text-orange-500 transition-colors"
-                          >
-                            {t.team_name}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-
-                    {results.players.length > 0 && (
-                      <div>
-                        <p className="px-3 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                          {t("nav_results_players")}
-                        </p>
-                        {results.players.map((p: PlayerResult) => (
-                          <Link
-                            key={p.player_id}
-                            href={`/players/${p.player_id}`}
-                            onClick={() => {
-                              setQuery("");
-                              setIsMobileFocused(false);
-                              setIsMobileSearchOpen(false);
-                            }}
-                            className="flex items-center justify-between px-3 py-2 text-sm hover:bg-zinc-900 transition-colors"
-                          >
-                            <span className="font-semibold hover:text-orange-500 transition-colors">
-                              {p.first_name} {p.last_name}
-                            </span>
-                            <span className="text-[10px] font-bold text-zinc-500">
-                              {p.team_id}
-                            </span>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="mt-0.5 grid grid-cols-4 items-center gap-0">
+        <div className="mt-2 grid grid-cols-4 items-center gap-0">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`min-w-0 px-0.5 py-1 text-center text-[10px] sm:text-xs font-black uppercase tracking-[0.08em] transition-colors whitespace-nowrap leading-none ${
+              className={`min-w-0 px-0.5 py-2 text-center text-[10px] sm:text-xs font-black uppercase tracking-[0.05em] transition-colors whitespace-nowrap leading-none ${
                 pathname === link.href ? "text-orange-500" : "text-gray-400 hover:text-white"
               }`}
             >
