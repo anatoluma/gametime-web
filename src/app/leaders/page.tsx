@@ -71,47 +71,37 @@ export default function LeadersPage() {
       setLoading(true);
       setError(null);
 
-      const { data: games, error: gamesError } = await supabase
-        .from("games")
-        .select("game_id")
-        .eq("season", currentSeason);
+      const stats: StatRow[] = [];
+      const statsPageSize = 1000;
+      for (let start = 0; ; start += statsPageSize) {
+        const { data, error } = await supabase
+          .from("player_game_stats")
+          .select(`
+            player_id,
+            points,
+            players (
+              first_name,
+              last_name,
+              team_id,
+              teams ( team_name )
+            )
+          `)
+          .order("game_id")
+          .order("player_id")
+          .range(start, start + statsPageSize - 1);
 
-      if (cancelled) return;
-      if (gamesError) {
-        setError(gamesError.message);
-        setLoading(false);
-        return;
+        if (cancelled) return;
+        if (error) {
+          setError(error.message);
+          setLoading(false);
+          return;
+        }
+
+        const page = (data ?? []) as unknown as StatRow[];
+        stats.push(...page);
+        if (page.length < statsPageSize) break;
       }
 
-      const gameIds = (games ?? []).map((game) => game.game_id);
-      if (gameIds.length === 0) {
-        setRows([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("player_game_stats")
-        .select(`
-          player_id,
-          points,
-          players (
-            first_name,
-            last_name,
-            team_id,
-            teams ( team_name )
-          )
-        `)
-        .in("game_id", gameIds);
-
-      if (cancelled) return;
-      if (error) {
-        setError(error.message);
-        setLoading(false);
-        return;
-      }
-
-      const stats = (data ?? []) as unknown as StatRow[];
       const map = new Map<string, { gp: number; pts: number; name: string; teamName: string }>();
 
       for (const r of stats) {

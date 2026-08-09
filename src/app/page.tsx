@@ -2,28 +2,31 @@ import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import TeamLogo from "@/app/components/TeamLogo";
 import { getServerT } from "@/lib/i18n/server";
-import { getCurrentSeason } from "@/lib/league";
 
 export const revalidate = 0;
 
 export default async function Home() {
   const t = await getServerT();
-  const currentSeason = await getCurrentSeason();
   const [teamsRes, gamesRes] = await Promise.all([
     supabase.from("teams").select("team_id, team_name").eq("is_active", true),
-    supabase.from("games").select("*").eq("season", currentSeason).order("tipoff", { ascending: false }),
+    supabase.from("games").select("*").order("tipoff", { ascending: false }),
   ]);
+
+  const statsData: any[] = [];
+  const statsPageSize = 1000;
+  for (let start = 0; ; start += statsPageSize) {
+    const { data } = await supabase
+      .from("player_game_stats")
+      .select("player_id, points, players(first_name, last_name, team_id)")
+      .order("game_id")
+      .order("player_id")
+      .range(start, start + statsPageSize - 1);
+    statsData.push(...(data ?? []));
+    if (!data || data.length < statsPageSize) break;
+  }
 
   const teams = teamsRes.data ?? [];
   const allGames = gamesRes.data ?? [];
-  const gameIds = allGames.map((game) => game.game_id);
-  const statsData = gameIds.length > 0
-    ? await supabase
-      .from("player_game_stats")
-      .select("player_id, points, players(first_name, last_name, team_id)")
-      .in("game_id", gameIds)
-    : [];
-  const seasonStats = Array.isArray(statsData) ? statsData : [];
   const recentGames = allGames.slice(0, 4);
   const teamMap = new Map(teams.map(t => [t.team_id, t.team_name ?? t.team_id]));
 
@@ -55,9 +58,9 @@ export default async function Home() {
   const gamesPlayed = allGames.filter(g => g.home_score !== null).length;
 
   // --- LEADERS LOGIC ---
-  const totalPlayers = new Set(seasonStats.map((s: any) => s.player_id)).size;
+  const totalPlayers = new Set(statsData.map((s: any) => s.player_id)).size;
   const ptsByPlayer: Record<string, { name: string; teamId: string; gp: number; pts: number }> = {};
-  seasonStats.forEach((s: any) => {
+  statsData.forEach((s: any) => {
     if (!s.player_id || !s.players) return;
     const fullName = [s.players.first_name, s.players.last_name].filter(Boolean).join(' ') || s.player_id;
     if (!ptsByPlayer[s.player_id]) {

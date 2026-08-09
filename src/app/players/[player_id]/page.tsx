@@ -6,7 +6,6 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import PlayerAvatar from "@/app/components/PlayerAvatar";
 import { useT } from "@/app/components/LanguageProvider";
-import { getCurrentSeason } from "@/lib/league";
 
 type Player = {
   player_id: string;
@@ -28,7 +27,6 @@ type StatRow = {
 
 type GameRow = {
   game_id: string;
-  season: string | null;
   tipoff: string | null;
   home_team_id: string;
   away_team_id: string;
@@ -106,12 +104,10 @@ export default function PlayerPage() {
         return;
       }
 
-      const currentSeason = await getCurrentSeason();
       const { data: gamesData, error: gamesError } = await supabase
         .from("games")
-        .select("game_id, season, tipoff, home_team_id, away_team_id, home_score, away_score")
-        .in("game_id", gameIds)
-        .eq("season", currentSeason);
+        .select("game_id, tipoff, home_team_id, away_team_id, home_score, away_score")
+        .in("game_id", gameIds);
 
       if (cancelled) return;
       if (gamesError) {
@@ -123,7 +119,6 @@ export default function PlayerPage() {
       const map: Record<string, GameRow> = {};
       (gamesData ?? []).forEach((g: any) => (map[g.game_id] = g));
       setGamesById(map);
-      setStats(statRows.filter((stat) => map[stat.game_id]));
 
       setLoading(false);
     }
