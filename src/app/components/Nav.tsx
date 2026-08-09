@@ -378,7 +378,6 @@ export default function Nav() {
               )}
             </div>
           </div>
-        </div>
 
         <div className="mt-2 grid grid-cols-4 items-center gap-0">
           {navLinks.map((link) => (
