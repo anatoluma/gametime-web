@@ -1,0 +1,68 @@
+"use client";
+
+import Image from "next/image";
+import { useMemo, useState } from "react";
+
+type CrestProps = {
+  teamId?: string | null;
+  teamName?: string | null;
+  size?: number;
+  className?: string;
+};
+
+function getInitials(name?: string | null, fallback?: string | null): string {
+  const source = (name && name.trim()) || (fallback && fallback.trim()) || "TM";
+  const words = source.split(/\s+/).filter(Boolean);
+
+  if (words.length >= 2) {
+    return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
+  }
+
+  return source.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "TM";
+}
+
+function getTeamLogoSrc(teamId?: string | null): string {
+  const normalizedId = (teamId ?? "").trim().toLowerCase();
+  if (normalizedId === "bld") {
+    return "/images/teams/bld_new.webp";
+  }
+  if (!normalizedId) {
+    return "/images/teams/default.svg";
+  }
+  return `/images/teams/${normalizedId}.webp`;
+}
+
+export default function Crest({ teamId, teamName, size = 26, className = "" }: CrestProps) {
+  const [hasError, setHasError] = useState(false);
+  const src = useMemo(() => getTeamLogoSrc(teamId), [teamId]);
+  const initials = useMemo(() => getInitials(teamName, teamId), [teamName, teamId]);
+
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center justify-center rounded-full border ${className}`}
+      style={{
+        width: size,
+        height: size,
+        borderColor: "var(--line)",
+        background: "var(--navy-700)",
+      }}
+      aria-hidden="true"
+    >
+      {hasError ? (
+        <span className="text-[10px] font-bold tracking-wide" style={{ color: "var(--text)" }}>
+          {initials}
+        </span>
+      ) : (
+        <Image
+          src={src}
+          alt={teamName ? `${teamName} logo` : `${teamId ?? "team"} logo`}
+          width={size}
+          height={size}
+          className="h-[70%] w-[70%] object-contain"
+          onError={() => setHasError(true)}
+          unoptimized
+        />
+      )}
+    </span>
+  );
+}

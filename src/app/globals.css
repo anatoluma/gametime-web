@@ -18,6 +18,21 @@
   --text-muted: #6b7280;
   --accent: #1d4ed8;
   --accent-strong: #1e3a8a;
+
+  --navy-950: #0a1220;
+  --navy-900: #0e1930;
+  --navy-800: #142140;
+  --navy-700: #1b2b4d;
+  --line: #26365c;
+  --orange: #ff7a1a;
+  --win: #4ade80;
+  --lose: #8a97b8;
+  --text: #eef1f8;
+  --muted: #8a97b8;
+  --gold: #e6b93d;
+  --silver: #c3cbdb;
+  --bronze: #c4813f;
+  --radius: 14px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -66,6 +81,31 @@ textarea::placeholder {
 
 button {
   color: inherit;
+}
+
+.lbm-hero-bg {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(255, 122, 26, 0.15) 0%, rgba(255, 122, 26, 0) 42%),
+    repeating-linear-gradient(-35deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 12px),
+    linear-gradient(180deg, var(--navy-900) 0%, var(--navy-950) 100%);
+}
+
+.lbm-section-heading {
+  position: relative;
+  padding-left: 12px;
+  font-family: var(--font-display, "Segoe UI");
+}
+
+.lbm-section-heading::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 4px;
+  height: 16px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: var(--orange);
 }
 
 /* REFINED TABLE LOGIC 

@@ -1,9 +1,59 @@
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
-import TeamLogo from "@/app/components/TeamLogo";
+import { Inter, Oswald } from "next/font/google";
 import { getServerT } from "@/lib/i18n/server";
+import Crest from "@/app/components/home/Crest";
+import RankBadge from "@/app/components/home/RankBadge";
+import SectionHeading from "@/app/components/home/SectionHeading";
+import StatTile from "@/app/components/home/StatTile";
+import Eyebrow from "@/app/components/home/Eyebrow";
+import { getWinner } from "@/lib/get-winner";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-body", weight: ["400", "500", "600", "700"] });
+const oswald = Oswald({ subsets: ["latin"], variable: "--font-display", weight: ["500", "600", "700"] });
 
 export const revalidate = 0;
+
+function StatIcon({ type }: { type: "teams" | "games" | "players" | "playoffs" }) {
+  if (type === "teams") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="8.5" cy="7" r="3" />
+        <path d="M20 8v6" />
+        <path d="M23 11h-6" />
+      </svg>
+    );
+  }
+
+  if (type === "games") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <path d="M8 2v4" />
+        <path d="M16 2v4" />
+        <path d="M3 10h18" />
+      </svg>
+    );
+  }
+
+  if (type === "players") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 4a8 8 0 0 0 0 16" />
+        <path d="M12 4a8 8 0 0 1 0 16" />
+        <path d="M4 12h16" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M12 3l2.2 4.5L19 8.2l-3.5 3.4.8 4.8L12 14l-4.3 2.4.8-4.8L5 8.2l4.8-.7L12 3z" />
+    </svg>
+  );
+}
 
 export default async function Home() {
   const t = await getServerT();
@@ -75,180 +125,262 @@ export default async function Home() {
     .slice(0, 5);
 
   return (
-    <main className="min-h-screen bg-white text-black">
-      {/* SEASON COMPLETE BANNER */}
-      <section className="relative w-full bg-gray-900 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tight mb-4">
-              {t("home_title")}
-            </h1>
-            <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
-              {t("home_subtitle")}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link 
-                href="/games" 
-                className="inline-flex items-center justify-center px-8 py-3 bg-orange-500 text-white font-bold text-sm uppercase tracking-wider border-2 border-orange-500 hover:bg-orange-600 hover:border-orange-600 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none"
-              >
-                {t("home_cta_results")}
-              </Link>
-              <Link 
-                href="/leaders" 
-                className="inline-flex items-center justify-center px-8 py-3 bg-gray-700 text-white font-bold text-sm uppercase tracking-wider border-2 border-gray-600 hover:bg-gray-600 hover:border-gray-500 transition-all"
-              >
-                {t("home_cta_leaders")}
-              </Link>
-            </div>
-            
-            {/* Stat Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-              <div className="bg-gray-800 border-2 border-gray-700 p-4 rounded-lg">
-                <div className="text-3xl md:text-4xl font-black text-orange-500">{teams.length}</div>
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{t("home_stat_teams")}</div>
-              </div>
-              <div className="bg-gray-800 border-2 border-gray-700 p-4 rounded-lg">
-                <div className="text-3xl md:text-4xl font-black text-orange-500">{gamesPlayed}</div>
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{t("home_stat_games")}</div>
-              </div>
-              <div className="bg-gray-800 border-2 border-gray-700 p-4 rounded-lg">
-                <div className="text-3xl md:text-4xl font-black text-orange-500">{totalPlayers}</div>
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{t("home_stat_players")}</div>
-              </div>
-              <div className="bg-gray-800 border-2 border-gray-700 p-4 rounded-lg">
-                <div className="text-3xl md:text-4xl font-black text-orange-500">{t("home_stat_playoffs")}</div>
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{t("home_stat_playoffs_sub")}</div>
-              </div>
-            </div>
+    <main className={`${inter.variable} ${oswald.variable} min-h-screen`} style={{ background: "var(--navy-950)", color: "var(--text)", fontFamily: "var(--font-body)" }}>
+      <section className="lbm-hero-bg border-b px-3 pb-6 pt-6 sm:px-6 sm:pt-7" style={{ borderColor: "var(--line)" }}>
+        <div className="mx-auto max-w-5xl">
+          <Eyebrow>{t("home_eyebrow")}</Eyebrow>
+
+          <h1 className="mt-3 text-4xl leading-none sm:text-5xl" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
+            {t("home_title")}
+          </h1>
+
+          <p className="mt-3 max-w-3xl text-sm sm:text-base" style={{ color: "var(--muted)" }}>
+            {t("home_subtitle")}
+          </p>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link
+              href="/games"
+              className="inline-flex items-center justify-center border px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.08em] transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--orange)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--navy-900)]"
+              style={{
+                borderRadius: "var(--radius)",
+                borderColor: "#ff9d58",
+                background: "linear-gradient(135deg, #ff7a1a 0%, #ff9a4a 100%)",
+                color: "#1f1309",
+              }}
+            >
+              {t("home_cta_results")}
+            </Link>
+
+            <Link
+              href="/leaders"
+              className="inline-flex items-center justify-center border px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.08em] transition-colors hover:border-[var(--orange)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--orange)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--navy-900)]"
+              style={{
+                borderRadius: "var(--radius)",
+                border: "1.5px solid var(--line)",
+                background: "transparent",
+                color: "var(--muted)",
+              }}
+            >
+              {t("home_cta_leaders")}
+            </Link>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatTile icon={<StatIcon type="teams" />} value={teams.length} label={t("home_stat_teams")} href="/teams" />
+            <StatTile icon={<StatIcon type="games" />} value={gamesPlayed} label={t("home_stat_games")} href="/games" />
+            <StatTile icon={<StatIcon type="players" />} value={totalPlayers} label={t("home_stat_players")} href="/leaders" />
+            <StatTile icon={<StatIcon type="playoffs" />} value={t("home_stat_playoffs")} label={t("home_stat_playoffs_sub")} href="/games" />
           </div>
         </div>
       </section>
 
-      <section className="bg-gray-100 border-b-2 border-black py-4 px-3 sm:px-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {recentGames.map((game) => {
-            const dateObj = game.tipoff ? new Date(game.tipoff) : null;
-            const now = new Date();
-            const isFinished = game.home_score !== null && game.away_score !== null && dateObj && dateObj < now;
-            const timeText = dateObj ? dateObj.toLocaleTimeString('ro-RO', { timeZone: 'Europe/Chisinau', hour: '2-digit', minute: '2-digit' }) : "TBD";
-            
-            return (
-              <Link key={game.game_id} href={`/games/${game.game_id}`} className="bg-white border-2 border-black p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all">
-                {/* Date/Time header */}
-                <div className="flex items-center justify-between mb-2 text-[9px] font-medium text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <span>{dateObj ? dateObj.toLocaleDateString('ro-RO', { timeZone: 'Europe/Chisinau', month: 'short', day: 'numeric' }) : ""}</span>
-                    <span>•</span>
-                    <span className="text-gray-700">{timeText}</span>
-                  </div>
-                  <span className={isFinished ? "text-emerald-600" : "text-orange-500"}>
-                    {isFinished ? t("status_final") : t("status_scheduled")}
-                  </span>
-                </div>
-                
-                {/* Teams layout */}
-                <div className="space-y-1">
-                  {/* Home Team */}
-                  <div className="flex items-center justify-between gap-1">
-                    <div className="flex items-center gap-1 flex-1">
-                      <TeamLogo teamId={game.home_team_id} size={16} className="shrink-0" />
-                      <span className="text-[9px] font-black uppercase leading-tight">{teamMap.get(game.home_team_id) ?? game.home_team_id}</span>
+      <section className="border-b px-3 py-5 sm:px-6" style={{ borderColor: "var(--line)" }}>
+        <div className="mx-auto max-w-5xl">
+          <SectionHeading
+            title={t("games_recent")}
+            href="/games"
+            linkLabel={t("home_cta_results")}
+            headingClassName="text-lg"
+          />
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {recentGames.map((game) => {
+              const dateObj = game.tipoff ? new Date(game.tipoff) : null;
+              const now = new Date();
+              const isFinished = game.home_score !== null && game.away_score !== null && dateObj && dateObj < now;
+              const timeText = dateObj
+                ? dateObj.toLocaleTimeString("ro-RO", { timeZone: "Europe/Chisinau", hour: "2-digit", minute: "2-digit" })
+                : "TBD";
+
+              const winner = getWinner(game.home_score, game.away_score);
+              const homeName = teamMap.get(game.home_team_id) ?? game.home_team_id;
+              const awayName = teamMap.get(game.away_team_id) ?? game.away_team_id;
+
+              return (
+                <Link
+                  key={game.game_id}
+                  href={`/games/${game.game_id}`}
+                  className="block border px-3 py-3 transition-colors hover:border-[var(--orange)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--orange)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--navy-900)]"
+                  style={{
+                    borderColor: "var(--line)",
+                    borderRadius: "var(--radius)",
+                    background: "var(--navy-800)",
+                    borderLeft: "3px solid var(--orange)",
+                  }}
+                >
+                  {/* TODO: use team primary_color once available in teams data. */}
+                  <div className="mb-2 flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-1" style={{ color: "var(--muted)" }}>
+                      <span>{dateObj ? dateObj.toLocaleDateString("ro-RO", { timeZone: "Europe/Chisinau", month: "short", day: "numeric" }) : ""}</span>
+                      <span>•</span>
+                      <span>{timeText}</span>
                     </div>
-                    {isFinished ? (
-                      <span className="text-[10px] font-black shrink-0 ml-1">{game.home_score}</span>
-                    ) : null}
+                    <span style={{ color: isFinished ? "var(--win)" : "var(--orange)" }}>
+                      {isFinished ? t("status_final") : t("status_scheduled")}
+                    </span>
                   </div>
 
-                  {/* Away Team */}
-                  <div className="flex items-center justify-between gap-1">
-                    <div className="flex items-center gap-1 flex-1">
-                      <TeamLogo teamId={game.away_team_id} size={16} className="shrink-0" />
-                      <span className="text-[9px] font-black uppercase leading-tight">{teamMap.get(game.away_team_id) ?? game.away_team_id}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Crest teamId={game.home_team_id} teamName={homeName} size={26} />
+                        <span
+                          className={`truncate text-xs uppercase ${winner === "home" ? "font-bold" : "font-semibold"}`}
+                          style={{ color: winner === "home" ? "var(--text)" : "var(--lose)" }}
+                        >
+                          {homeName}
+                        </span>
+                      </div>
+                      {isFinished ? (
+                        <span
+                          className="text-right"
+                          style={{
+                            color: winner === "home" ? "var(--orange)" : "var(--lose)",
+                            fontFamily: "var(--font-display)",
+                            fontSize: "17px",
+                            fontWeight: winner === "home" ? 700 : 500,
+                          }}
+                        >
+                          {game.home_score}
+                        </span>
+                      ) : null}
                     </div>
-                    {isFinished ? (
-                      <span className="text-[10px] font-black shrink-0 ml-1">{game.away_score}</span>
-                    ) : null}
+
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Crest teamId={game.away_team_id} teamName={awayName} size={26} />
+                        <span
+                          className={`truncate text-xs uppercase ${winner === "away" ? "font-bold" : "font-semibold"}`}
+                          style={{ color: winner === "away" ? "var(--text)" : "var(--lose)" }}
+                        >
+                          {awayName}
+                        </span>
+                      </div>
+                      {isFinished ? (
+                        <span
+                          className="text-right"
+                          style={{
+                            color: winner === "away" ? "var(--orange)" : "var(--lose)",
+                            fontFamily: "var(--font-display)",
+                            fontSize: "17px",
+                            fontWeight: winner === "away" ? 700 : 500,
+                          }}
+                        >
+                          {game.away_score}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              </Link>
-            );
-          })}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* 3. MAIN TABLES GRID */}
-      <div className="px-3 sm:px-6 py-6 md:py-8 grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 items-start">
-        
-        {/* STANDINGS */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black uppercase italic">{t("home_section_standings")}</h2>
-            <Link href="/standings" className="text-xs font-bold border-b-2 border-black text-black">{t("home_standings_full")}</Link>
-          </div>
-          <div className="border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] min-h-[360px]">
-            <table className="w-full text-left bg-white">
-              <thead className="bg-gray-900 text-white text-[9px] uppercase tracking-widest">
-                <tr>
-                  <th className="p-3">{t("home_standings_team")}</th>
-                  <th className="p-3 text-center">W-L</th>
-                  <th className="p-3 text-center">PTS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {sortedStandings.map((team: any, i) => (
-                  <tr key={i} className="hover:bg-orange-50 transition-colors">
-                    <td className="p-3 font-black uppercase text-[11px]">
-                      <Link href={`/teams/${team.id}`} className="flex items-center gap-2 hover:text-orange-600 transition-colors">
-                        <span className="text-gray-300 shrink-0"># {i+1}</span>
-                        <TeamLogo teamId={team.id} size={20} className="shrink-0" />
-                        <span className="truncate max-w-[110px] md:max-w-none">{team.name}</span>
-                      </Link>
-                    </td>
-                    <td className="p-3 text-center text-xs font-bold">{team.w}-{team.l}</td>
-                    <td className="p-3 text-center font-black text-orange-600">{team.pts}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+      <div className="px-3 py-6 sm:px-6 md:py-8">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10">
+          <section>
+            <SectionHeading
+              title={t("home_section_standings")}
+              href="/standings"
+              linkLabel={t("home_standings_full")}
+            />
 
-        {/* LEADERS */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black uppercase italic">{t("home_section_leaders")}</h2>
-            <Link href="/leaders" className="text-xs font-bold border-b-2 border-black text-black">{t("home_leaders_full")}</Link>
-          </div>
-          <div className="border-2 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] min-h-[360px]">
-            <table className="w-full text-left bg-white">
-              <thead className="bg-gray-900 text-white text-[9px] uppercase tracking-widest">
-                <tr>
-                  <th className="p-3">{t("home_leaders_player")}</th>
-                  <th className="p-3 text-center">GP</th>
-                  <th className="p-3 text-center">PPG</th>
-                  <th className="p-3 text-center">PTS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {sortedLeaders.map((p: any, i) => (
-                  <tr key={i} className="hover:bg-orange-50 transition-colors">
-                    <td className="p-3 px-3 font-black uppercase text-[11px]">
-                      <Link href={`/players/${p.id}`} className="group flex items-center gap-2 hover:text-orange-600 transition-colors">
-                        <span className="text-gray-300 shrink-0"># {i + 1}</span>
-                        <TeamLogo teamId={p.teamId} size={20} className="shrink-0" />
-                        <span className="truncate max-w-[130px] md:max-w-none">{p.name}</span>
-                      </Link>
-                    </td>
-                    <td className="p-3 text-center text-xs font-bold text-gray-600">{p.gp}</td>
-                    <td className="p-3 text-center text-xs font-bold text-gray-600">{p.ppg.toFixed(1)}</td>
-                    <td className="p-3 text-center font-black text-orange-600">{p.pts}</td>
+            <div className="overflow-hidden border" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}>
+              <table className="w-full text-left">
+                <thead style={{ background: "var(--navy-700)" }}>
+                  <tr className="text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>
+                    <th className="px-3 py-3">{t("home_standings_team")}</th>
+                    <th className="px-3 py-3 text-center">W-L</th>
+                    <th className="px-3 py-3 text-right">PTS</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                </thead>
+                <tbody>
+                  {sortedStandings.map((team: any, i) => (
+                    <tr
+                      key={team.id}
+                      style={{
+                        borderTop: "1px solid var(--line)",
+                        background: i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                      }}
+                    >
+                      <td className="px-3 py-3">
+                        <Link
+                          href={`/teams/${team.id}`}
+                          className="flex items-center gap-2 text-xs font-semibold uppercase transition-colors hover:text-[var(--orange)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--orange)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--navy-900)]"
+                        >
+                          <RankBadge rank={i + 1} />
+                          <Crest teamId={team.id} teamName={team.name} size={26} />
+                          <span className="truncate">{team.name}</span>
+                        </Link>
+                      </td>
+                      <td className="px-3 py-3 text-center text-xs font-semibold" style={{ color: "var(--muted)" }}>
+                        {team.w}-{team.l}
+                      </td>
+                      <td className="px-3 py-3 text-right text-xl leading-none" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>
+                        {team.pts}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
 
+          <section>
+            <SectionHeading
+              title={t("home_section_leaders")}
+              href="/leaders"
+              linkLabel={t("home_leaders_full")}
+            />
+
+            <div className="overflow-hidden border" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}>
+              <table className="w-full text-left">
+                <thead style={{ background: "var(--navy-700)" }}>
+                  <tr className="text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>
+                    <th className="px-3 py-3">{t("home_leaders_player")}</th>
+                    <th className="px-3 py-3 text-right">GP</th>
+                    <th className="px-3 py-3 text-right">PPG</th>
+                    <th className="px-3 py-3 text-right">PTS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedLeaders.map((p: any, i) => (
+                    <tr
+                      key={p.id}
+                      style={{
+                        borderTop: "1px solid var(--line)",
+                        background: i % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent",
+                      }}
+                    >
+                      <td className="px-3 py-3">
+                        <Link
+                          href={`/players/${p.id}`}
+                          className="flex items-center gap-2 text-xs font-semibold uppercase transition-colors hover:text-[var(--orange)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--orange)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--navy-900)]"
+                        >
+                          <RankBadge rank={i + 1} />
+                          <Crest teamId={p.teamId} teamName={teamMap.get(p.teamId) ?? p.teamId} size={26} />
+                          <span className="truncate">{p.name}</span>
+                        </Link>
+                      </td>
+                      <td className="px-3 py-3 text-right text-xs font-semibold" style={{ color: "var(--muted)" }}>
+                        {p.gp}
+                      </td>
+                      <td className="px-3 py-3 text-right text-xs font-semibold" style={{ color: "var(--muted)" }}>
+                        {p.ppg.toFixed(1)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-xl leading-none" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>
+                        {p.pts}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       </div>
     </main>
   );

@@ -19,6 +19,7 @@ export const translations = {
     status_scheduled: 'Scheduled',
 
     // Home
+    home_eyebrow: 'Season Complete',
     home_title: '2025/26 Season Hub',
     home_subtitle: 'The season is complete. Explore final standings, playoff results, box scores and player stats.',
     home_cta_results: 'View Results',
@@ -125,6 +126,7 @@ export const translations = {
     status_scheduled: 'Programat',
 
     // Home
+    home_eyebrow: 'Sezon Încheiat',
     home_title: 'Sezonul 2025/26',
     home_subtitle: 'Sezonul s-a încheiat. Explorați clasamentul final, rezultatele playoff, scorurile și statisticile jucătorilor.',
     home_cta_results: 'Vezi Rezultate',
@@ -231,6 +233,7 @@ export const translations = {
     status_scheduled: 'Запланировано',
 
     // Home
+    home_eyebrow: 'Сезон завершен',
     home_title: 'Сезон 2025/26',
     home_subtitle: 'Сезон завершён. Изучите итоговую таблицу, результаты плей-офф, протоколы и статистику игроков.',
     home_cta_results: 'Смотреть результаты',
