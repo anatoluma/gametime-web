@@ -101,10 +101,10 @@ export default function Nav() {
 
   return (
     <header className="sticky top-0 z-50 bg-black text-white border-b-2 border-orange-600 shadow-lg">
-      <nav className="max-w-5xl mx-auto px-3 sm:px-6 py-1.5">
-        <div className="flex items-center justify-between gap-2 min-h-10">
-          <Link href="/" className="flex items-center gap-1.5 shrink-0">
-            <div className="bg-orange-600 text-black font-black italic px-1.5 py-0.5 rounded text-sm leading-none">
+      <nav className="max-w-5xl mx-auto px-3 sm:px-6 py-1">
+        <div className="flex items-center justify-between gap-1.5 min-h-[38px]">
+          <Link href="/" className="flex items-center gap-1 shrink-0">
+            <div className="bg-orange-600 text-black font-black italic px-1.5 py-0.5 rounded text-[11px] leading-none">
               LBM
             </div>
             <span className="font-black uppercase italic tracking-tighter text-base hidden xs:block">
@@ -112,11 +112,11 @@ export default function Nav() {
             </span>
           </Link>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={() => setIsMobileSearchOpen((prev) => !prev)}
-              className="sm:hidden h-9 w-9 inline-flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-white"
+              className="sm:hidden h-[38px] w-[38px] inline-flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-white"
               aria-label={t("nav_search_placeholder")}
               aria-expanded={isMobileSearchOpen}
               aria-controls="mobile-site-search"
@@ -264,7 +264,7 @@ export default function Nav() {
                     setIsLanguageOpen(true);
                   }
                 }}
-                className="h-9 px-2.5 rounded-md border border-zinc-700 bg-zinc-900 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white inline-flex items-center gap-1 leading-none"
+                className="h-[38px] px-2 rounded-md border border-zinc-700 bg-zinc-900 text-[9px] sm:text-xs font-black uppercase tracking-[0.08em] text-white inline-flex items-center gap-1 leading-none"
                 aria-label="Select language"
                 aria-haspopup="menu"
                 aria-expanded={isLanguageOpen}
@@ -428,12 +428,12 @@ export default function Nav() {
           </div>
         )}
 
-        <div className="mt-1 grid grid-cols-4 items-center gap-0">
+        <div className="mt-0.5 grid grid-cols-4 items-center gap-0">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`min-w-0 px-1 py-1.5 text-center text-[10px] sm:text-xs font-black uppercase tracking-widest transition-colors whitespace-nowrap leading-none ${
+              className={`min-w-0 px-0.5 py-1 text-center text-[10px] sm:text-xs font-black uppercase tracking-[0.08em] transition-colors whitespace-nowrap leading-none ${
                 pathname === link.href ? "text-orange-500" : "text-gray-400 hover:text-white"
               }`}
             >
