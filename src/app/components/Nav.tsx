@@ -86,8 +86,8 @@ export default function Nav() {
     <header className="sticky top-0 z-50 bg-black text-white border-b-2 border-orange-600 shadow-lg">
       <nav className="max-w-5xl mx-auto px-3 sm:px-6 py-2">
         <div className="flex items-center gap-2 min-h-[52px]">
-          <Link href="/" className="flex items-center gap-1 shrink-0">
-            <div className="bg-orange-600 text-black font-black italic px-1.5 py-0.5 rounded text-[11px] leading-none sm:text-sm">
+          <Link href="/" className="flex items-center gap-1.5 shrink-0">
+            <div className="bg-orange-600 text-black font-black italic h-10 px-3 rounded text-sm leading-none inline-flex items-center sm:h-auto sm:px-1.5 sm:py-0.5 sm:text-sm">
               LBM
             </div>
             <span className="font-black uppercase italic tracking-tighter text-base hidden xs:block">
