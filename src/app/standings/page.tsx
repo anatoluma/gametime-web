@@ -1,10 +1,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
-import TeamLogo from "@/app/components/TeamLogo";
 import SeasonSelector from "@/app/components/SeasonSelector";
 import { getServerT } from "@/lib/i18n/server";
 import { getAvailableSeasons } from "@/lib/league";
+import Crest from "@/app/components/home/Crest";
+import RankBadge from "@/app/components/home/RankBadge";
+import SectionHeading from "@/app/components/home/SectionHeading";
 
 type TeamRow = {
   team_id: string;
@@ -100,94 +102,75 @@ export default async function StandingsPage({
   /* ... existing imports and logic stay the same ... */
 
   return (
-    <main className="p-4 md:p-8 max-w-6xl mx-auto bg-gray-50 min-h-screen">
-      {/* Header Section */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl md:text-5xl font-black italic tracking-tighter text-gray-900 uppercase">{t("standings_title")}</h1>
-          <div className="h-1.5 w-24 bg-orange-600 mt-1"></div>
+    <main className="min-h-screen px-3 py-4 sm:px-6" style={{ background: "var(--navy-950)", color: "var(--text)" }}>
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-3xl uppercase leading-none md:text-5xl" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
+            {t("standings_title")}
+          </h1>
+          <div className="flex items-center gap-3">
+            <Suspense fallback={null}>
+              <SeasonSelector seasons={seasons} currentSeason={selectedSeason} />
+            </Suspense>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Suspense fallback={null}>
-            <SeasonSelector seasons={seasons} currentSeason={selectedSeason} />
-          </Suspense>
-          <Link
-            href="/games"
-            className="hidden sm:block bg-[var(--accent-strong)] !text-white px-6 py-3 rounded-full text-xs font-semibold uppercase tracking-[0.18em] hover:bg-[var(--accent)] transition-colors shadow-lg shadow-slate-900/20"
-          >
-            {t("standings_full_schedule")}
-          </Link>
-        </div>
-      </div>
 
-      <div className="bg-white border-2 border-gray-900 rounded-xl shadow-2xl overflow-hidden">
-        <div className="overflow-x-auto lg:overflow-x-visible">
-          <table className="w-full text-left border-collapse min-w-[450px] lg:min-w-full">
-            <thead>
-              <tr className="bg-gray-900 border-b-2 border-gray-900">
-                <th className="py-2 px-2 sticky left-0 bg-gray-900 z-20 !text-white text-[10px] font-black uppercase tracking-widest w-8 text-center">#</th>
-                
-                {/* Reduced min-width to allow wrapping */}
-                <th className="py-2 px-2 sticky left-8 bg-gray-900 z-20 min-w-[100px] md:min-w-[160px] !text-white text-[10px] font-black uppercase tracking-widest border-r border-gray-800 lg:border-r-0">{t("standings_col_team")}</th>
-                
-                <th className="py-2 px-2 text-center !text-white text-[10px] font-black tracking-widest">GP</th>
-                <th className="py-2 px-2 text-center !text-white text-[10px] font-black tracking-widest">W</th>
-                <th className="py-2 px-2 text-center !text-white text-[10px] font-black tracking-widest">L</th>
-                <th className="py-2 px-2 text-center !text-orange-400 text-[10px] font-black tracking-widest bg-gray-800">PTS</th>
-                <th className="py-2 px-2 text-center !text-white text-[10px] font-black tracking-widest">PF</th>
-                <th className="py-2 px-2 text-center !text-white text-[10px] font-black tracking-widest">PA</th>
-                <th className="py-2 px-2 text-center !text-white text-[10px] font-black tracking-widest pr-4">Diff</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {sorted.map((t, idx) => (
-                <tr key={t.team_id} className="hover:bg-orange-50/50 transition-colors group">
-                  <td className="py-2 px-2 text-[11px] font-black text-gray-400 sticky left-0 bg-white group-hover:bg-orange-50/50 z-10 text-center border-r border-gray-50 lg:border-r-0">
-                    {idx + 1}
-                  </td>
-                  
-                  {/* WRAPPING ENABLED: Removed whitespace-nowrap, added leading-tight */}
-                  <td className="py-2 px-2 font-black text-gray-900 sticky left-8 bg-white group-hover:bg-orange-50/50 z-10 border-r border-gray-50 lg:border-r-0">
-                    <Link 
-                      href={`/teams/${t.team_id}`} 
-                      className="flex items-center gap-2 hover:text-orange-600 transition-colors"
-                    >
-                      <TeamLogo teamId={t.team_id} size={22} className="shrink-0" />
-                      <span className="uppercase tracking-tighter text-[10px] md:text-sm leading-tight truncate max-w-[70px] md:max-w-none">
-                        {t.name}
-                      </span>
-                    </Link>
-                  </td>
-                  
-                  <td className="py-2 px-2 text-center text-[11px] font-bold text-gray-600">{t.gp}</td>
-                  <td className="py-2 px-2 text-center text-[11px] font-bold text-green-600">{t.w}</td>
-                  <td className="py-2 px-2 text-center text-[11px] font-bold text-red-400">{t.l}</td>
-                  <td className="py-2 px-2 text-center text-[13px] font-black text-gray-900 bg-gray-50/80 group-hover:bg-orange-100/50">{t.pts}</td>
-                  <td className="py-2 px-2 text-center text-[11px] text-gray-500">{t.pf}</td>
-                  <td className="py-2 px-2 text-center text-[11px] text-gray-500">{t.pa}</td>
-                  <td className={`py-2 px-2 text-center text-[11px] font-black pr-4 ${t.diff >= 0 ? 'text-blue-600' : 'text-orange-700'}`}>
-                    {t.diff > 0 ? `+${t.diff}` : t.diff}
-                  </td>
+        <SectionHeading title={t("standings_title")} href="/games" linkLabel={t("standings_full_schedule")} headingClassName="text-lg" />
+
+        <div className="overflow-hidden border" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left">
+              <thead style={{ background: "var(--navy-700)" }}>
+                <tr className="text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>
+                  <th className="px-3 py-3 text-center">#</th>
+                  <th className="px-3 py-3">{t("standings_col_team")}</th>
+                  <th className="px-3 py-3 text-center">GP</th>
+                  <th className="px-3 py-3 text-center">W</th>
+                  <th className="px-3 py-3 text-center">L</th>
+                  <th className="px-3 py-3 text-right">PTS</th>
+                  <th className="px-3 py-3 text-center">PF</th>
+                  <th className="px-3 py-3 text-center">PA</th>
+                  <th className="px-3 py-3 text-center">Diff</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sorted.map((team, idx) => (
+                  <tr key={team.team_id} style={{ borderTop: "1px solid var(--line)", background: idx % 2 === 1 ? "rgba(255,255,255,0.02)" : "transparent" }}>
+                    <td className="px-3 py-3 text-center">
+                      <RankBadge rank={idx + 1} />
+                    </td>
+                    <td className="px-3 py-3">
+                      <Link
+                        href={`/teams/${team.team_id}`}
+                        className="flex items-center gap-2 text-xs font-semibold uppercase hover:text-[var(--orange)]"
+                      >
+                        <Crest teamId={team.team_id} teamName={team.name} size={26} />
+                        <span className="truncate">{team.name}</span>
+                      </Link>
+                    </td>
+                    <td className="px-3 py-3 text-center text-xs font-semibold" style={{ color: "var(--muted)" }}>{team.gp}</td>
+                    <td className="px-3 py-3 text-center text-xs font-semibold" style={{ color: "var(--win)" }}>{team.w}</td>
+                    <td className="px-3 py-3 text-center text-xs font-semibold" style={{ color: "#fda4af" }}>{team.l}</td>
+                    <td className="px-3 py-3 text-right text-xl leading-none" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{team.pts}</td>
+                    <td className="px-3 py-3 text-center text-xs" style={{ color: "var(--muted)" }}>{team.pf}</td>
+                    <td className="px-3 py-3 text-center text-xs" style={{ color: "var(--muted)" }}>{team.pa}</td>
+                    <td className="px-3 py-3 text-center text-xs font-semibold" style={{ color: team.diff >= 0 ? "var(--win)" : "#fda4af" }}>{team.diff > 0 ? `+${team.diff}` : team.diff}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* Tighter footer info */}
-      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 items-center justify-between opacity-80">
-         <div className="flex gap-3">
-           <span className="flex items-center gap-1.5 text-[9px] font-black uppercase">
-             <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div> {t("standings_legend_win")}
-           </span>
-           <span className="flex items-center gap-1.5 text-[9px] font-black uppercase">
-             <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div> {t("standings_legend_loss")}
-           </span>
-         </div>
-         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest italic">
-           {t("standings_tiebreakers")}
-         </p>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex gap-3 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>
+            <span>{t("standings_legend_win")}</span>
+            <span>{t("standings_legend_loss")}</span>
+          </div>
+          <p className="text-[10px] uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>
+            {t("standings_tiebreakers")}
+          </p>
+        </div>
       </div>
     </main>
   );

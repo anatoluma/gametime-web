@@ -8,6 +8,8 @@ import PlayerAvatar from "@/app/components/PlayerAvatar";
 import SeasonSelector from "@/app/components/SeasonSelector";
 import { useT } from "@/app/components/LanguageProvider";
 import type { Season } from "@/lib/league";
+import RankBadge from "@/app/components/home/RankBadge";
+import SectionHeading from "@/app/components/home/SectionHeading";
 
 type StatRow = {
   player_id: string;
@@ -150,32 +152,40 @@ export default function LeadersPage() {
 
   const top = useMemo(() => sorted.slice(0, 50), [sorted]);
 
-  if (loading) return <main className="py-6 text-black px-2 max-w-4xl mx-auto"><h1 className="text-3xl font-black italic uppercase">{t("leaders_title")}</h1><p className="mt-4 animate-pulse font-bold text-gray-400">{t("leaders_loading")}</p></main>;
+  if (loading) return <main className="py-6 px-2 max-w-4xl mx-auto" style={{ color: "var(--text)" }}><h1 className="text-3xl uppercase" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>{t("leaders_title")}</h1><p className="mt-4 animate-pulse font-bold" style={{ color: "var(--muted)" }}>{t("leaders_loading")}</p></main>;
 
-  if (error) return <main className="py-6 text-black px-2 max-w-4xl mx-auto"><h1 className="text-3xl font-black italic uppercase">{t("leaders_title")}</h1><p className="mt-4 font-bold text-red-600">{error}</p></main>;
+  if (error) return <main className="py-6 px-2 max-w-4xl mx-auto" style={{ color: "var(--text)" }}><h1 className="text-3xl uppercase" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>{t("leaders_title")}</h1><p className="mt-4 font-bold text-red-400">{error}</p></main>;
 
   return (
-    <main className="py-4 text-black px-2 max-w-4xl mx-auto min-h-screen bg-white">
-      <div className="flex items-baseline justify-between gap-2 flex-wrap mb-6 border-b-4 border-black pb-4">
-        <h1 className="text-3xl font-black italic uppercase tracking-tighter text-black">{t("leaders_title")}</h1>
+    <main className="min-h-screen px-3 py-4 sm:px-6" style={{ background: "var(--navy-950)", color: "var(--text)" }}>
+      <div className="mx-auto max-w-5xl">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <h1 className="text-3xl uppercase leading-none" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>{t("leaders_title")}</h1>
         <div className="flex items-center gap-3">
           {seasons.length > 0 && currentSeason && (
             <SeasonSelector seasons={seasons} currentSeason={currentSeason} />
           )}
           <div className="flex items-center gap-1.5">
-            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">{t("leaders_sort_by")}</span>
-            <button onClick={() => setSortMode("PTS")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PTS" ? "bg-black !text-white" : "bg-gray-100 !text-gray-500 hover:bg-gray-200"}`}>PTS</button>
-            <button onClick={() => setSortMode("PPG")} className={`px-2.5 py-1 rounded-full text-[9px] font-black transition-all ${sortMode === "PPG" ? "bg-black !text-white" : "bg-gray-100 !text-gray-500 hover:bg-gray-200"}`}>PPG</button>
+            <span className="text-[9px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("leaders_sort_by")}</span>
+            <button onClick={() => setSortMode("PTS")} className="rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors" style={sortMode === "PTS" ? { background: "var(--orange)", color: "#1f1309", borderRadius: "var(--radius)" } : { background: "var(--navy-800)", color: "var(--muted)", borderRadius: "var(--radius)", border: "1px solid var(--line)" }}>PTS</button>
+            <button onClick={() => setSortMode("PPG")} className="rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors" style={sortMode === "PPG" ? { background: "var(--orange)", color: "#1f1309", borderRadius: "var(--radius)" } : { background: "var(--navy-800)", color: "var(--muted)", borderRadius: "var(--radius)", border: "1px solid var(--line)" }}>PPG</button>
           </div>
         </div>
       </div>
+
+      <SectionHeading title={t("home_section_leaders")} href="/leaders" linkLabel={t("home_leaders_full")} headingClassName="text-lg" />
 
       <div className="space-y-2">
         {top.map((p, idx) => (
           <Link
             key={p.player_id}
             href={`/players/${p.player_id}`}
-            className="group block border-2 border-black/10 rounded-xl p-3 hover:border-black hover:bg-orange-50 transition-all shadow-sm"
+            className="group block border p-3 transition-colors hover:border-[var(--orange)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--orange)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--navy-900)]"
+            style={{
+              borderColor: "var(--line)",
+              borderRadius: "var(--radius)",
+              background: "var(--navy-800)",
+            }}
           >
             {/* GRID LAYOUT: Left side expands, Right side (Stats) is fixed */}
             <div className="grid grid-cols-[1fr_auto] items-center gap-2">
@@ -190,29 +200,29 @@ export default function LeadersPage() {
                   className="w-11 h-14 rounded-lg border border-black/10 bg-white object-cover shrink-0"
                 />
                 <div className="min-w-0">
-                  <div className="text-[9px] font-black text-gray-300 italic mb-0.5 uppercase tracking-tighter">#{idx + 1}</div>
-                  <div className="text-base font-black uppercase italic tracking-tight leading-tight group-hover:text-orange-600 transition-colors text-black break-words">
+                  <div className="mb-0.5"><RankBadge rank={idx + 1} /></div>
+                  <div className="break-words text-base font-semibold uppercase leading-tight tracking-tight transition-colors group-hover:text-[var(--orange)]" style={{ color: "var(--text)" }}>
                     {p.name}
                   </div>
-                  <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-tight break-words">
+                  <div className="text-[9px] font-semibold uppercase tracking-widest leading-tight break-words" style={{ color: "var(--muted)" }}>
                     {p.teamName}
                   </div>
                 </div>
               </div>
 
               {/* RIGHT: ALIGNED STATS COLUMNS (Fixed Width) */}
-              <div className="flex items-center border-l-2 border-gray-50 pl-2 gap-3 sm:gap-6">
+              <div className="flex items-center gap-3 border-l pl-2 sm:gap-6" style={{ borderColor: "var(--line)" }}>
                 <div className="text-center w-[35px] sm:w-[50px]">
-                  <div className="text-[8px] font-black text-gray-400 uppercase">PTS</div>
-                  <div className="text-base sm:text-xl font-black italic text-black tabular-nums">{p.pts}</div>
+                  <div className="text-[8px] font-semibold uppercase" style={{ color: "var(--muted)" }}>PTS</div>
+                  <div className="tabular-nums text-base leading-none sm:text-xl" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{p.pts}</div>
                 </div>
                 <div className="text-center w-[25px] sm:w-[40px]">
-                  <div className="text-[8px] font-black text-gray-400 uppercase">GP</div>
-                  <div className="text-base sm:text-xl font-black italic text-black tabular-nums">{p.gp}</div>
+                  <div className="text-[8px] font-semibold uppercase" style={{ color: "var(--muted)" }}>GP</div>
+                  <div className="tabular-nums text-base leading-none sm:text-xl" style={{ color: "var(--text)", fontFamily: "var(--font-display)", fontWeight: 600 }}>{p.gp}</div>
                 </div>
                 <div className="text-center w-[35px] sm:w-[50px]">
-                  <div className="text-[8px] font-black text-orange-600 uppercase">PPG</div>
-                  <div className="text-base sm:text-xl font-black italic text-orange-600 tabular-nums">
+                  <div className="text-[8px] font-semibold uppercase" style={{ color: "var(--muted)" }}>PPG</div>
+                  <div className="tabular-nums text-base leading-none sm:text-xl" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>
                     {p.ppg.toFixed(1)}
                   </div>
                 </div>
@@ -222,7 +232,8 @@ export default function LeadersPage() {
           </Link>
         ))}
 
-        {top.length === 0 && <div className="text-center py-20 font-black text-gray-200 uppercase italic text-2xl">{t("leaders_no_data")}</div>}
+        {top.length === 0 && <div className="py-20 text-center text-2xl font-semibold uppercase" style={{ color: "var(--muted)" }}>{t("leaders_no_data")}</div>}
+      </div>
       </div>
     </main>
   );

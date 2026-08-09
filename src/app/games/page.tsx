@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
-import TeamLogo from "@/app/components/TeamLogo";
 import { useT } from "@/app/components/LanguageProvider";
+import Crest from "@/app/components/home/Crest";
+import SectionHeading from "@/app/components/home/SectionHeading";
+import { getWinner } from "@/lib/get-winner";
 
 type GameRow = {
   game_id: string;
@@ -140,99 +142,117 @@ export default function GamesPage() {
     const timeText = dateObj ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "TBD";
     const dateText = dateObj ? dateObj.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : "";
 
+    const winner = getWinner(g.home_score, g.away_score);
+    const homeName = teamsById[g.home_team_id] || g.home_team_id;
+    const awayName = teamsById[g.away_team_id] || g.away_team_id;
+
     return (
-      <Link href={`/games/${g.game_id}`} className="group block bg-[var(--surface)] border border-[var(--border)] rounded-xl hover:border-[var(--accent)] transition-all overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 bg-[var(--surface-muted)] border-b border-[var(--border)] text-[11px] font-medium tracking-wide text-[var(--text-muted)]">
+      <Link
+        href={`/games/${g.game_id}`}
+        className="group block border px-3 py-3 transition-colors hover:border-[var(--orange)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--orange)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--navy-900)]"
+        style={{
+          borderColor: "var(--line)",
+          borderRadius: "var(--radius)",
+          background: "var(--navy-800)",
+          borderLeft: "3px solid var(--orange)",
+        }}
+      >
+        <div className="mb-2 flex items-center justify-between text-[11px]" style={{ color: "var(--muted)" }}>
           <div className="flex items-center gap-1.5">
             <span>{dateText}</span>
             <span>•</span>
-            <span className="text-[var(--foreground)]">{timeText}</span>
+            <span>{timeText}</span>
           </div>
-          <span className={isFinished ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--accent)]"}>
-            {isFinished ? `● ${t("status_final")}` : `○ ${t("status_scheduled")}`}
+          <span style={{ color: isFinished ? "var(--win)" : "var(--orange)" }}>
+            {isFinished ? t("status_final") : t("status_scheduled")}
           </span>
         </div>
-        
-        <div className="p-3 flex items-center justify-between gap-2">
-          {/* Home Team */}
-          <div className="flex-1 flex flex-col items-center text-center">
-            <TeamLogo
-              teamId={g.home_team_id}
-              teamName={teamsById[g.home_team_id] || g.home_team_id}
-              size={40}
-              className="mb-1 shrink-0"
-            />
-            <span className="text-[11px] font-medium leading-tight h-8 flex items-center">{teamsById[g.home_team_id] || g.home_team_id}</span>
-          </div>
 
-          {/* Center Score/VS Area */}
-          <div className="flex flex-col items-center min-w-[60px]">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Crest teamId={g.home_team_id} teamName={homeName} size={26} />
+              <span
+                className={`truncate text-xs uppercase ${winner === "home" ? "font-bold" : "font-semibold"}`}
+                style={{ color: winner === "home" ? "var(--text)" : "var(--lose)" }}
+              >
+                {homeName}
+              </span>
+            </div>
             {isFinished ? (
-              <div className="text-xl font-semibold flex items-center gap-2">
-                <span>{g.home_score}</span>
-                <span className="text-[var(--text-muted)] text-xs">-</span>
-                <span>{g.away_score}</span>
-              </div>
-            ) : (
-              <div className="px-2 py-0.5 bg-[var(--surface-muted)] rounded text-[10px] font-medium text-[var(--text-muted)] tracking-wide">VS</div>
-            )}
-            <div className="text-[10px] text-[var(--text-muted)] font-medium mt-1 truncate max-w-[80px] text-center">{g.venue || "TBD"}</div>
+              <span
+                className="text-right"
+                style={{
+                  color: winner === "home" ? "var(--orange)" : "var(--lose)",
+                  fontFamily: "var(--font-display)",
+                  fontSize: "17px",
+                  fontWeight: winner === "home" ? 700 : 500,
+                }}
+              >
+                {g.home_score}
+              </span>
+            ) : null}
           </div>
 
-          {/* Away Team */}
-          <div className="flex-1 flex flex-col items-center text-center">
-            <TeamLogo
-              teamId={g.away_team_id}
-              teamName={teamsById[g.away_team_id] || g.away_team_id}
-              size={40}
-              className="mb-1 shrink-0"
-            />
-            <span className="text-[11px] font-medium leading-tight h-8 flex items-center">{teamsById[g.away_team_id] || g.away_team_id}</span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Crest teamId={g.away_team_id} teamName={awayName} size={26} />
+              <span
+                className={`truncate text-xs uppercase ${winner === "away" ? "font-bold" : "font-semibold"}`}
+                style={{ color: winner === "away" ? "var(--text)" : "var(--lose)" }}
+              >
+                {awayName}
+              </span>
+            </div>
+            {isFinished ? (
+              <span
+                className="text-right"
+                style={{
+                  color: winner === "away" ? "var(--orange)" : "var(--lose)",
+                  fontFamily: "var(--font-display)",
+                  fontSize: "17px",
+                  fontWeight: winner === "away" ? 700 : 500,
+                }}
+              >
+                {g.away_score}
+              </span>
+            ) : (
+              <span className="text-[10px] uppercase" style={{ color: "var(--muted)" }}>{g.venue || "TBD"}</span>
+            )}
           </div>
         </div>
       </Link>
     );
   };
 
-  if (loading) return <main className="p-8 max-w-2xl mx-auto font-semibold text-2xl">{t("games_loading")}</main>;
+  if (loading) return <main className="p-8 max-w-2xl mx-auto text-2xl font-semibold" style={{ color: "var(--text)" }}>{t("games_loading")}</main>;
 
   return (
-    <main className="p-4 max-w-2xl mx-auto bg-[var(--surface)] min-h-screen pb-20">
-      <div className="flex items-center justify-between mb-6 pt-4">
-        <h1 className="text-3xl font-semibold tracking-tight">{t("games_title")}</h1>
-        <div className="w-10 h-1 bg-[var(--accent)]"></div>
+    <main className="min-h-screen px-3 pb-20 pt-4 sm:px-6" style={{ background: "var(--navy-950)", color: "var(--text)" }}>
+      <div className="mx-auto max-w-5xl">
+        <h1 className="mb-5 text-3xl uppercase leading-none" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
+          {t("games_title")}
+        </h1>
+
+        <section className="mb-10">
+          <SectionHeading title={t("games_this_week")} href="/games" linkLabel={t("standings_full_schedule")} headingClassName="text-lg" />
+          <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--orange)" }}>{computed.thisWeekLabel}</p>
+          <div className="grid gap-3">
+            {computed.upcomingThisWeek.map(g => <GameCard key={g.game_id} g={g} />)}
+            {computed.upcomingThisWeek.length === 0 && (
+              <p className="rounded border border-dashed p-4 text-center text-sm" style={{ borderColor: "var(--line)", background: "var(--navy-800)", color: "var(--muted)", borderRadius: "var(--radius)" }}>{t("games_no_upcoming")}</p>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <SectionHeading title={t("games_recent")} href="/games" linkLabel={t("home_cta_results")} headingClassName="text-lg" />
+          <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("games_recent_sub")}</p>
+          <div className="grid gap-3">
+            {computed.recentResults.slice(0, 6).map(g => <GameCard key={g.game_id} g={g} />)}
+          </div>
+        </section>
       </div>
-
-      {/* Section: Upcoming */}
-      <section className="mb-10">
-        <div className="flex justify-between items-end mb-4 px-1">
-          <div>
-            <h2 className="text-base font-semibold tracking-tight">{t("games_this_week")}</h2>
-            <p className="text-[11px] font-medium text-[var(--accent)]">{computed.thisWeekLabel}</p>
-          </div>
-        </div>
-        <div className="grid gap-3">
-          {computed.upcomingThisWeek.map(g => <GameCard key={g.game_id} g={g} />)}
-          {computed.upcomingThisWeek.length === 0 && (
-            <p className="text-[var(--text-muted)] text-sm p-4 bg-[var(--surface-muted)] rounded-lg border border-dashed border-[var(--border)] text-center">{t("games_no_upcoming")}</p>
-          )}
-        </div>
-        {/* ... Keep your "All Scheduled" details tag here ... */}
-      </section>
-
-      {/* Section: Recent Results */}
-      <section>
-        <div className="flex justify-between items-end mb-4 px-1">
-          <div>
-            <h2 className="text-base font-semibold tracking-tight">{t("games_recent")}</h2>
-            <p className="text-[11px] font-medium text-[var(--text-muted)]">{t("games_recent_sub")}</p>
-          </div>
-        </div>
-        <div className="grid gap-3">
-          {computed.recentResults.slice(0, 6).map(g => <GameCard key={g.game_id} g={g} />)}
-        </div>
-        {/* ... Keep your "All Past Results" details tag here ... */}
-      </section>
     </main>
   );
 }

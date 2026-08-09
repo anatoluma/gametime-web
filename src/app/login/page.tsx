@@ -72,13 +72,14 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-4 py-12">
-      <h1 className="text-3xl font-bold mb-6 text-center">Admin Login</h1>
+    <main className="min-h-screen px-3 py-8 sm:px-6" style={{ background: 'var(--navy-950)', color: 'var(--text)' }}>
+      <div className="mx-auto max-w-md border p-6" style={{ borderColor: 'var(--line)', background: 'var(--navy-800)', borderRadius: 'var(--radius)' }}>
+      <h1 className="mb-6 text-center text-3xl uppercase" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>Admin Login</h1>
 
       {step === 'email' ? (
         <form onSubmit={handleEmailSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-2">
+            <label htmlFor="email" className="mb-2 block text-sm font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--muted)' }}>
               Admin Email
             </label>
             <input
@@ -87,7 +88,8 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--orange)]"
+              style={{ borderColor: 'var(--line)', background: 'var(--navy-900)', color: 'var(--text)', borderRadius: 'var(--radius)' }}
               placeholder="admin@example.com"
             />
           </div>
@@ -95,17 +97,19 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="w-full px-4 py-2 uppercase tracking-[0.08em] disabled:opacity-50"
+            style={{ borderRadius: 'var(--radius)', background: 'linear-gradient(135deg, #ff7a1a 0%, #ff9a4a 100%)', color: '#1f1309', fontWeight: 700 }}
           >
             {loading ? 'Sending...' : 'Send Login Link'}
           </button>
         </form>
       ) : (
         <div className="space-y-4 text-center">
-          <p className="text-green-600">Login link sent! Check your email and click the link to sign in.</p>
+          <p style={{ color: 'var(--win)' }}>Login link sent! Check your email and click the link to sign in.</p>
           <button
             onClick={() => setStep('email')}
-            className="w-full text-gray-600 py-2 px-4 rounded-md hover:bg-gray-100"
+            className="w-full border px-4 py-2 uppercase tracking-[0.08em]"
+            style={{ borderColor: 'var(--line)', color: 'var(--muted)', borderRadius: 'var(--radius)' }}
           >
             Send another link
           </button>
@@ -113,10 +117,11 @@ export default function LoginPage() {
       )}
 
       {message && (
-        <p className={`mt-4 text-center ${message.includes('successful') ? 'text-green-600' : 'text-red-600'}`}>
+        <p className={`mt-4 text-center ${message.includes('successful') ? 'text-green-400' : 'text-red-400'}`}>
           {message}
         </p>
       )}
+      </div>
     </main>
   )
 }

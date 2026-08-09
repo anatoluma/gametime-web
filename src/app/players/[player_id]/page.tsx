@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import PlayerAvatar from "@/app/components/PlayerAvatar";
 import { useT } from "@/app/components/LanguageProvider";
+import SectionHeading from "@/app/components/home/SectionHeading";
 
 type Player = {
   player_id: string;
@@ -127,11 +128,11 @@ export default function PlayerPage() {
     return () => { cancelled = true; };
   }, [playerId]);
 
-  if (!playerId) return <main className="p-8"><h1 className="text-2xl font-bold">{t("player_bad_route")}</h1></main>;
-  if (loading) return <main className="p-8 text-black"><h1 className="text-2xl font-black italic uppercase animate-pulse">{t("player_loading")}</h1></main>;
+  if (!playerId) return <main className="p-8"><h1 className="text-2xl font-semibold uppercase">{t("player_bad_route")}</h1></main>;
+  if (loading) return <main className="p-8"><h1 className="text-2xl font-semibold uppercase animate-pulse" style={{ color: "var(--muted)" }}>{t("player_loading")}</h1></main>;
   if (error || !player) return (
-    <main className="p-8 text-black">
-      <h1 className="text-2xl font-bold">{t("player_error")}</h1>
+    <main className="p-8" style={{ color: "var(--text)" }}>
+      <h1 className="text-2xl font-semibold uppercase">{t("player_error")}</h1>
       <pre className="mt-4 text-sm bg-red-50 p-4 rounded text-red-600 border border-red-100">{JSON.stringify(error, null, 2)}</pre>
     </main>
   );
@@ -147,25 +148,26 @@ export default function PlayerPage() {
   });
 
   return (
-    <main className="p-4 md:p-8 max-w-4xl mx-auto bg-gray-50 min-h-screen text-black">
+    <main className="min-h-screen px-3 py-4 sm:px-6" style={{ background: "var(--navy-950)", color: "var(--text)" }}>
+      <div className="mx-auto max-w-5xl">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between border-b-4 border-black pb-6 mb-8 gap-6">
+      <div className="mb-8 flex flex-col justify-between gap-6 border-b pb-6 md:flex-row md:items-end" style={{ borderColor: "var(--line)" }}>
         <div className="flex items-end gap-4">
           <PlayerAvatar
             playerId={player.player_id}
             playerName={`${player.first_name} ${player.last_name}`}
             width={96}
             height={120}
-            className="w-20 h-24 md:w-24 md:h-[120px] rounded-xl border-2 border-black bg-white object-cover shrink-0"
+            className="h-24 w-20 shrink-0 rounded-[var(--radius)] object-cover md:h-[120px] md:w-24"
           />
 
           <div>
-          <h1 className="text-4xl md:text-5xl font-black text-black uppercase italic tracking-tighter">
+          <h1 className="text-4xl uppercase tracking-tight md:text-5xl" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
             {player.first_name} {player.last_name}
           </h1>
           <div className="flex items-center gap-3 mt-4 text-lg">
-            <span className="bg-orange-600 text-white px-3 py-1 rounded-lg font-black italic">#{player.jersey_number ?? "?"}</span>
-            <Link href={`/teams/${player.team_id}`} className="text-black/60 hover:text-orange-600 font-black uppercase tracking-tight underline decoration-orange-600 decoration-2 underline-offset-4 transition-colors">
+            <span className="px-3 py-1 text-sm uppercase" style={{ background: "var(--orange)", color: "#1f1309", borderRadius: "var(--radius)", fontFamily: "var(--font-display)", fontWeight: 700 }}>#{player.jersey_number ?? "?"}</span>
+            <Link href={`/teams/${player.team_id}`} className="font-semibold uppercase tracking-tight underline decoration-[var(--orange)] decoration-2 underline-offset-4 transition-colors hover:text-[var(--orange)]" style={{ color: "var(--muted)" }}>
               {team?.team_name ?? player.team_id}
             </Link>
           </div>
@@ -173,23 +175,23 @@ export default function PlayerPage() {
         </div>
 
         {/* Quick Stats Cards - Fixed Visibility */}
-        <div className="flex gap-4">
-          <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border-2 border-black text-center min-w-[85px] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-            <div className="text-[10px] uppercase text-gray-400 font-black mb-1">{t("player_stat_gp")}</div>
-            <div className="text-2xl font-black text-black">{gamesPlayed}</div>
+        <div className="flex gap-3">
+          <div className="min-w-[85px] flex-1 border p-4 text-center md:flex-none" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}>
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("player_stat_gp")}</div>
+            <div className="text-2xl leading-none" style={{ color: "var(--text)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{gamesPlayed}</div>
           </div>
-          <div className="flex-1 md:flex-none bg-white p-4 rounded-xl border-2 border-black text-center min-w-[85px] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-            <div className="text-[10px] uppercase text-gray-400 font-black mb-1">{t("player_stat_total_pts")}</div>
-            <div className="text-2xl font-black text-black">{totalPoints}</div>
+          <div className="min-w-[85px] flex-1 border p-4 text-center md:flex-none" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}>
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("player_stat_total_pts")}</div>
+            <div className="text-2xl leading-none" style={{ color: "var(--text)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{totalPoints}</div>
           </div>
-          <div className="flex-1 md:flex-none bg-orange-600 p-4 rounded-xl border-2 border-black text-center min-w-[85px] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-            <div className="text-[10px] uppercase text-orange-200 font-black mb-1">{t("player_stat_ppg")}</div>
-            <div className="text-2xl font-black text-white italic">{ppg}</div>
+          <div className="min-w-[85px] flex-1 border p-4 text-center md:flex-none" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}>
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("player_stat_ppg")}</div>
+            <div className="text-2xl leading-none" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{ppg}</div>
           </div>
         </div>
       </div>
 
-      <h2 className="text-xs font-black text-gray-400 uppercase tracking-[0.4em] mb-4 px-1 italic">{t("player_game_log")}</h2>
+      <SectionHeading title={t("player_game_log")} href="/games" linkLabel={t("home_cta_results")} headingClassName="text-lg" />
 
       {/* GAME LOG LIST */}
       <div className="space-y-3">
@@ -218,38 +220,40 @@ export default function PlayerPage() {
             <Link 
               key={s.game_id} 
               href={`/games/${s.game_id}`} 
-              className="group bg-white border-2 border-black rounded-xl p-4 flex items-center justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] hover:bg-orange-50 hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all"
+              className="group flex items-center justify-between border p-4 transition-colors hover:border-[var(--orange)]"
+              style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}
             >
               <div className="flex items-center gap-4">
                 {/* Date & Result */}
                 <div className="text-center min-w-[45px]">
-                  <div className="text-[10px] font-black text-gray-300 uppercase leading-none mb-1">{formattedDate}</div>
+                  <div className="mb-1 text-[10px] font-semibold uppercase leading-none" style={{ color: "var(--muted)" }}>{formattedDate}</div>
                   <div className={`text-xl font-black ${resultColor} leading-none italic`}>{resultChar}</div>
                 </div>
                 
                 {/* Opponent & Match Score */}
-                <div className="border-l-2 border-gray-100 pl-4">
-                  <div className="text-[10px] font-black text-gray-400 uppercase tracking-tight mb-1">
-                    {isHome ? "vs" : "@"} <span className="text-black group-hover:text-orange-600 transition-colors">{opponent}</span>
+                <div className="border-l pl-4" style={{ borderColor: "var(--line)" }}>
+                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-tight" style={{ color: "var(--muted)" }}>
+                    {isHome ? "vs" : "@"} <span style={{ color: "var(--text)" }} className="transition-colors group-hover:text-[var(--orange)]">{opponent}</span>
                   </div>
-                  <div className="text-xs font-black text-gray-600 italic tabular-nums">{g.home_score} : {g.away_score}</div>
+                  <div className="text-xs tabular-nums" style={{ color: "var(--muted)", fontFamily: "var(--font-display)", fontWeight: 600 }}>{g.home_score} : {g.away_score}</div>
                 </div>
               </div>
 
               {/* Individual Player Points */}
               <div className="text-right">
-                <div className="text-[10px] font-black text-orange-400 uppercase leading-none mb-1">PTS</div>
-                <div className="text-2xl font-black text-black italic leading-none">{s.points ?? 0}</div>
+                <div className="mb-1 text-[10px] font-semibold uppercase leading-none" style={{ color: "var(--muted)" }}>PTS</div>
+                <div className="text-2xl leading-none" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{s.points ?? 0}</div>
               </div>
             </Link>
           );
         })}
 
         {rows.length === 0 && (
-          <div className="text-center py-10 bg-white rounded-xl border-2 border-dashed border-gray-200 text-gray-400 text-xs font-black uppercase italic tracking-widest">
+          <div className="py-10 text-center text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)", background: "var(--navy-800)", borderColor: "var(--line)", borderRadius: "var(--radius)", borderStyle: "dashed", borderWidth: "1px" }}>
             {t("player_no_data")}
           </div>
         )}
+      </div>
       </div>
     </main>
   );

@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import TeamLogo from "@/app/components/TeamLogo";
 import { useT } from "@/app/components/LanguageProvider";
+import Crest from "@/app/components/home/Crest";
+import SectionHeading from "@/app/components/home/SectionHeading";
 
 type Team = { team_id: string; team_name: string; city: string | null; coach: string | null; };
 type Player = { player_id: string; first_name: string; last_name: string; jersey_number: number | null; };
@@ -76,60 +77,56 @@ export default function TeamPage() {
     return () => { cancelled = true; };
   }, [teamId]);
 
-  if (loading) return <div className="p-20 text-center font-black uppercase italic text-gray-500 animate-pulse">{t("team_loading")}</div>;
-  if (!team) return <div className="p-20 text-center font-bold text-red-600 uppercase tracking-widest">{t("team_not_found")} ({teamId})</div>;
+  if (loading) return <div className="p-20 text-center font-semibold uppercase" style={{ color: "var(--muted)" }}>{t("team_loading")}</div>;
+  if (!team) return <div className="p-20 text-center font-semibold uppercase tracking-widest text-red-400">{t("team_not_found")} ({teamId})</div>;
 
   return (
-    <main className="max-w-6xl mx-auto p-4 md:p-12 bg-[var(--surface)] min-h-screen text-[var(--foreground)]">
+    <main className="min-h-screen px-3 py-4 sm:px-6" style={{ background: "var(--navy-950)", color: "var(--text)" }}>
+      <div className="mx-auto max-w-6xl">
       {/* HEADER SECTION */}
-      <header className="mb-12 border-b border-[var(--border)] pb-8">
+      <header className="mb-10 border-b pb-7" style={{ borderColor: "var(--line)" }}>
         <div className="flex flex-col gap-5">
           <div className="flex items-center gap-4">
-             <span className="bg-[var(--accent)] text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-[0.2em]">{t("team_active")}</span>
+             <span className="rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ borderColor: "var(--line)", color: "var(--muted)" }}>{t("team_active")}</span>
           </div>
 
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
             <div className="min-w-0">
               <div className="flex items-center gap-4 md:gap-5">
-                <TeamLogo
-                  teamId={team.team_id}
-                  teamName={team.team_name}
-                  size={80}
-                  className="w-14 h-14 md:w-20 md:h-20 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] object-cover shrink-0"
-                />
-                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight leading-[0.9] break-words">
+                <Crest teamId={team.team_id} teamName={team.team_name} size={44} className="sm:!h-14 sm:!w-14" />
+                <h1 className="text-3xl uppercase tracking-tight leading-[0.9] break-words sm:text-5xl lg:text-6xl" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
                   {team.team_name}
                 </h1>
               </div>
-              <p className="text-sm font-black text-[var(--text-muted)] uppercase tracking-[0.3em] mt-6">
-                {team.city ?? "Regional"} <span className="text-[var(--accent)] mx-2">•</span> {t("team_head_coach")} {team.coach ?? "TBD"}
+              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--muted)" }}>
+                {team.city ?? "Regional"} <span className="mx-2" style={{ color: "var(--orange)" }}>•</span> {t("team_head_coach")} {team.coach ?? "TBD"}
               </p>
             </div>
 
             {summary && (
-              <div className="border border-[var(--border)] bg-[var(--surface-muted)] px-5 py-4 rounded-xl min-w-[160px] shadow-sm">
-                <div className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest mb-2">{t("team_win_loss")}</div>
-                <div className="text-4xl font-black tracking-tight tabular-nums leading-none">{summary.wins}-{summary.losses}</div>
-                <div className="text-[11px] font-medium text-[var(--text-muted)] mt-2">{summary.gamesPlayed} {t("team_games_played_suffix")}</div>
+              <div className="min-w-[180px] border px-5 py-4" style={{ borderColor: "var(--line)", background: "var(--navy-800)", borderRadius: "var(--radius)" }}>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("team_win_loss")}</div>
+                <div className="text-4xl leading-none tabular-nums" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{summary.wins}-{summary.losses}</div>
+                <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{summary.gamesPlayed} {t("team_games_played_suffix")}</div>
               </div>
             )}
           </div>
-          <div className="h-1 bg-[var(--foreground)]"></div>
+          <div className="h-0.5" style={{ background: "var(--line)" }}></div>
         </div>
       </header>
 
       {/* STATS STRIP */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
+        <div className="mb-14 grid grid-cols-2 gap-3 md:grid-cols-4">
           {[
             { label: t("team_stat_gp"), val: summary.gamesPlayed },
             { label: t("team_stat_pf"), val: summary.pf },
             { label: t("team_stat_pa"), val: summary.pa },
-            { label: t("team_stat_diff"), val: summary.diff, color: summary.diff >= 0 ? 'text-green-600' : 'text-red-600' },
+            { label: t("team_stat_diff"), val: summary.diff, color: summary.diff >= 0 ? "var(--win)" : "#fda4af" },
           ].map((stat, i) => (
-            <div key={i} className="bg-[var(--surface-muted)] border-2 border-[var(--border)] p-5 rounded-2xl">
-              <div className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest mb-2">{stat.label}</div>
-              <div className={`text-3xl font-black italic tracking-tight ${stat.color ?? 'text-[var(--foreground)]'}`}>{stat.val}</div>
+            <div key={i} className="border p-4" style={{ borderColor: "var(--line)", background: "var(--navy-800)", borderRadius: "var(--radius)" }}>
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{stat.label}</div>
+              <div className="text-3xl leading-none" style={{ color: stat.color ?? "var(--text)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{stat.val}</div>
             </div>
           ))}
         </div>
@@ -138,26 +135,23 @@ export default function TeamPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
         {/* RECENT GAMES */}
         <section>
-          <div className="flex items-center gap-4 mb-8">
-            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-[var(--foreground)] italic">{t("team_recent_schedule")}</h2>
-            <div className="h-px flex-1 bg-[var(--border)]"></div>
-          </div>
+          <SectionHeading title={t("team_recent_schedule")} href="/games" linkLabel={t("home_cta_results")} headingClassName="text-lg" />
           <div className="space-y-4">
             {games.slice(0, 8).map((g) => {
               const isWin = (g.home_team_id === teamId ? g.home_score! > g.away_score! : g.away_score! > g.home_score!);
               const isPlayed = g.home_score !== null;
 
               return (
-                <Link key={g.game_id} href={`/games/${g.game_id}`} className="group flex items-center justify-between p-4 md:p-5 border-2 border-[var(--border)] rounded-2xl hover:border-[var(--foreground)] hover:bg-[var(--surface-muted)] transition-all">
+                <Link key={g.game_id} href={`/games/${g.game_id}`} className="group flex items-center justify-between border p-4 transition-all hover:border-[var(--orange)]" style={{ borderColor: "var(--line)", background: "var(--navy-800)", borderRadius: "var(--radius)" }}>
                   {/* Left Column: Team Names */}
                   <div className="flex flex-col flex-1">
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                    <span className="mb-1 text-[9px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>
                       {g.tipoff ? new Date(g.tipoff).toLocaleDateString() : "TBD"}
                     </span>
                     {/* Responsive Stack: Rows on Mobile, Line on Desktop */}
-                    <div className="flex flex-col md:flex-row md:items-center font-black uppercase text-[11px] md:text-sm tracking-tight text-[var(--foreground)] group-hover:text-orange-500">
+                    <div className="flex flex-col text-[11px] font-semibold uppercase tracking-tight md:flex-row md:items-center md:text-sm group-hover:text-[var(--orange)]">
                       <span>{teamsById[g.home_team_id] ?? g.home_team_id}</span>
-                      <span className="text-[var(--text-muted)] md:mx-2 text-[9px] md:text-xs">VS</span>
+                      <span className="text-[9px] md:mx-2 md:text-xs" style={{ color: "var(--muted)" }}>VS</span>
                       <span>{teamsById[g.away_team_id] ?? g.away_team_id}</span>
                     </div>
                   </div>
@@ -165,7 +159,7 @@ export default function TeamPage() {
                   {/* Middle Column: W/L Indicator */}
                   <div className="flex items-center justify-center w-12">
                     {isPlayed && (
-                      <span className={`text-[10px] font-black px-2 py-1 rounded-md min-w-[24px] text-center ${isWin ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                      <span className={`text-[10px] font-semibold px-2 py-1 rounded-md min-w-[24px] text-center ${isWin ? 'text-black' : 'text-white'}`} style={{ background: isWin ? "var(--win)" : "#f87171" }}>
                         {isWin ? 'W' : 'L'}
                       </span>
                     )}
@@ -173,7 +167,7 @@ export default function TeamPage() {
 
                   {/* Right Column: Score */}
                   <div className="text-right min-w-[70px]">
-                    <span className="text-lg md:text-xl font-black italic tabular-nums text-[var(--foreground)] whitespace-nowrap">
+                    <span className="whitespace-nowrap text-lg tabular-nums md:text-xl" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>
                       {g.home_score ?? '--'} : {g.away_score ?? '--'}
                     </span>
                   </div>
@@ -185,31 +179,27 @@ export default function TeamPage() {
 
         {/* ROSTER */}
         <section>
-          <div className="flex items-center gap-4 mb-8">
-            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-[var(--foreground)] italic">{t("team_roster")}</h2>
-            <div className="h-px flex-1 bg-[var(--border)]"></div>
-          </div>
-          <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-3xl overflow-hidden shadow-[12px_12px_0px_0px_rgba(0,0,0,0.05)]">
+          <SectionHeading title={t("team_roster")} href="/teams" linkLabel={t("teams_title")} headingClassName="text-lg" />
+          <div className="overflow-hidden border" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}>
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-black">
-                  <th className="p-5 text-[10px] font-black uppercase text-orange-500 tracking-widest w-20">#</th>
-                  <th className="p-5 text-[10px] font-black uppercase text-orange-500 tracking-widest">{t("team_col_athlete")}</th>
-                  <th className="p-5 text-[10px] font-black uppercase text-orange-500 tracking-widest text-right">Link</th>
+                <tr style={{ background: "var(--navy-700)" }}>
+                  <th className="p-4 text-[10px] font-semibold uppercase tracking-[0.08em] w-20" style={{ color: "var(--muted)" }}>#</th>
+                  <th className="p-4 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("team_col_athlete")}</th>
+                  <th className="p-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-right" style={{ color: "var(--muted)" }}>Link</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--border)]">
+              <tbody>
                 {roster.map((p) => (
-                  <tr key={p.player_id} className="group hover:bg-orange-50 transition-colors">
-                    <td className="p-5 text-sm font-black text-[var(--text-muted)] italic group-hover:text-orange-500">{p.jersey_number ?? "--"}</td>
-                    <td className="p-5">
-                      <Link href={`/players/${p.player_id}`} className="text-sm font-black uppercase tracking-tight text-[var(--foreground)] group-hover:text-orange-500">
+                  <tr key={p.player_id} className="group transition-colors hover:bg-white/5" style={{ borderTop: "1px solid var(--line)" }}>
+                    <td className="p-4 text-sm font-semibold" style={{ color: "var(--muted)" }}>{p.jersey_number ?? "--"}</td>
+                    <td className="p-4">
+                      <Link href={`/players/${p.player_id}`} className="text-sm font-semibold uppercase tracking-tight hover:text-[var(--orange)]">
                         {p.first_name} {p.last_name}
                       </Link>
                     </td>
                     <td className="p-5 text-right">
-                      {/* Fixed "Profile" Button Visibility: Switched to bg-gray-200 for high contrast */}
-                      <Link href={`/players/${p.player_id}`} className="inline-block text-[10px] font-black bg-[var(--surface-muted)] text-[var(--foreground)] group-hover:bg-[var(--foreground)] group-hover:text-[var(--background)] px-3 py-1.5 rounded-full uppercase transition-all shadow-sm">
+                      <Link href={`/players/${p.player_id}`} className="inline-block border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-all hover:border-[var(--orange)] hover:text-[var(--orange)]" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", color: "var(--muted)" }}>
                         {t("team_profile")}
                       </Link>
                     </td>
@@ -219,6 +209,7 @@ export default function TeamPage() {
             </table>
           </div>
         </section>
+      </div>
       </div>
     </main>
   );
