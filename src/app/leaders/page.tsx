@@ -11,31 +11,155 @@ import type { Season } from "@/lib/league";
 import RankBadge from "@/app/components/home/RankBadge";
 import SectionHeading from "@/app/components/home/SectionHeading";
 
-type StatRow = {
+// One row per (player, season) from the player_season_stats DB view
+type SeasonStatRow = {
   player_id: string;
-  points: number | null;
-  players: {
-    first_name: string | null;
-    last_name: string | null;
-    team_id: string | null;
-    teams?: { team_name: string | null } | null;
-  } | null;
+  team_id: string | null;
+  gp: number;
+  pts: number | null;
+  ppg: number | null;
+  reb: number | null;
+  rpg: number | null;
+  ast: number | null;
+  apg: number | null;
+  stl: number | null;
+  spg: number | null;
+  blk: number | null;
+  bpg: number | null;
+  fg_made: number | null;
+  fg_att: number | null;
+  fg_pct: number | null;
+  three_made: number | null;
+  three_att: number | null;
+  three_pct: number | null;
 };
 
-type LeaderRow = {
-  player_id: string;
+type LeaderRow = SeasonStatRow & {
   name: string;
   teamName: string;
-  gp: number;
-  pts: number;
-  ppg: number;
 };
+
+type Category = "PTS" | "REB" | "AST" | "STL" | "BLK" | "FG_PCT" | "3PM" | "3P_PCT";
+
+const CATEGORIES: { key: Category; label: string }[] = [
+  { key: "PTS", label: "PTS" },
+  { key: "REB", label: "REB" },
+  { key: "AST", label: "AST" },
+  { key: "STL", label: "STL" },
+  { key: "BLK", label: "BLK" },
+  { key: "FG_PCT", label: "FG%" },
+  { key: "3PM", label: "3PM" },
+  { key: "3P_PCT", label: "3P%" },
+];
+
+function sortRows(rows: LeaderRow[], category: Category, ptsSortMode: "PTS" | "PPG") {
+  const arr = [...rows];
+  switch (category) {
+    case "PTS":
+      if (ptsSortMode === "PPG") {
+        arr.sort((a, b) => (b.ppg ?? 0) - (a.ppg ?? 0) || b.gp - a.gp || (b.pts ?? 0) - (a.pts ?? 0));
+      } else {
+        arr.sort((a, b) => (b.pts ?? 0) - (a.pts ?? 0) || b.gp - a.gp || (b.ppg ?? 0) - (a.ppg ?? 0));
+      }
+      return arr;
+    case "REB":
+      return arr.sort((a, b) => (b.rpg ?? 0) - (a.rpg ?? 0) || (b.reb ?? 0) - (a.reb ?? 0));
+    case "AST":
+      return arr.sort((a, b) => (b.apg ?? 0) - (a.apg ?? 0) || (b.ast ?? 0) - (a.ast ?? 0));
+    case "STL":
+      return arr.sort((a, b) => (b.spg ?? 0) - (a.spg ?? 0) || (b.stl ?? 0) - (a.stl ?? 0));
+    case "BLK":
+      return arr.sort((a, b) => (b.bpg ?? 0) - (a.bpg ?? 0) || (b.blk ?? 0) - (a.blk ?? 0));
+    case "FG_PCT":
+      // Only players with attempts can qualify for a shooting percentage leaderboard
+      return arr
+        .filter((r) => (r.fg_att ?? 0) > 0)
+        .sort((a, b) => (b.fg_pct ?? 0) - (a.fg_pct ?? 0) || (b.fg_made ?? 0) - (a.fg_made ?? 0));
+    case "3PM":
+      return arr.sort((a, b) => (b.three_made ?? 0) - (a.three_made ?? 0));
+    case "3P_PCT":
+      return arr
+        .filter((r) => (r.three_att ?? 0) > 0)
+        .sort((a, b) => (b.three_pct ?? 0) - (a.three_pct ?? 0) || (b.three_made ?? 0) - (a.three_made ?? 0));
+  }
+}
+
+function StatFooter({ row, category }: { row: LeaderRow; category: Category }) {
+  const cellStyle = { color: "var(--muted)" } as const;
+  const bigOrange = { color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 } as const;
+  const bigText = { color: "var(--text)", fontFamily: "var(--font-display)", fontWeight: 600 } as const;
+
+  const cols: { label: string; value: string; big?: boolean }[] = (() => {
+    switch (category) {
+      case "PTS":
+        return [
+          { label: "PTS", value: String(row.pts ?? 0), big: true },
+          { label: "GP", value: String(row.gp) },
+          { label: "PPG", value: (row.ppg ?? 0).toFixed(1) },
+        ];
+      case "REB":
+        return [
+          { label: "RPG", value: (row.rpg ?? 0).toFixed(1), big: true },
+          { label: "GP", value: String(row.gp) },
+          { label: "REB", value: String(row.reb ?? 0) },
+        ];
+      case "AST":
+        return [
+          { label: "APG", value: (row.apg ?? 0).toFixed(1), big: true },
+          { label: "GP", value: String(row.gp) },
+          { label: "AST", value: String(row.ast ?? 0) },
+        ];
+      case "STL":
+        return [
+          { label: "SPG", value: (row.spg ?? 0).toFixed(1), big: true },
+          { label: "GP", value: String(row.gp) },
+          { label: "STL", value: String(row.stl ?? 0) },
+        ];
+      case "BLK":
+        return [
+          { label: "BPG", value: (row.bpg ?? 0).toFixed(1), big: true },
+          { label: "GP", value: String(row.gp) },
+          { label: "BLK", value: String(row.blk ?? 0) },
+        ];
+      case "FG_PCT":
+        return [
+          { label: "FG%", value: (row.fg_pct ?? 0).toFixed(1), big: true },
+          { label: "GP", value: String(row.gp) },
+          { label: "FGM-FGA", value: `${row.fg_made ?? 0}-${row.fg_att ?? 0}` },
+        ];
+      case "3PM":
+        return [
+          { label: "3PM", value: String(row.three_made ?? 0), big: true },
+          { label: "GP", value: String(row.gp) },
+          { label: "3P%", value: (row.three_pct ?? 0).toFixed(1) },
+        ];
+      case "3P_PCT":
+        return [
+          { label: "3P%", value: (row.three_pct ?? 0).toFixed(1), big: true },
+          { label: "GP", value: String(row.gp) },
+          { label: "3PM-3PA", value: `${row.three_made ?? 0}-${row.three_att ?? 0}` },
+        ];
+    }
+  })();
+
+  return (
+    <div className="flex items-center gap-3 border-l pl-2 sm:gap-6" style={{ borderColor: "var(--line)" }}>
+      {cols.map((c) => (
+        <div key={c.label} className="text-center w-[35px] sm:w-[55px]">
+          <div className="text-[8px] font-semibold uppercase" style={cellStyle}>{c.label}</div>
+          <div className="tabular-nums text-base leading-none sm:text-xl" style={c.big ? bigOrange : bigText}>{c.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function LeadersPage() {
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortMode, setSortMode] = useState<"PTS" | "PPG">("PTS");
+  const [category, setCategory] = useState<Category>("PTS");
+  const [ptsSortMode, setPtsSortMode] = useState<"PTS" | "PPG">("PTS");
   const [seasons, setSeasons] = useState<Season[]>([]);
   const { t } = useT();
 
@@ -69,87 +193,62 @@ export default function LeadersPage() {
   useEffect(() => {
     if (!currentSeason) return;
     let cancelled = false;
+
     async function load() {
       setLoading(true);
       setError(null);
 
-      const stats: StatRow[] = [];
-      const statsPageSize = 1000;
-      for (let start = 0; ; start += statsPageSize) {
-        const { data, error } = await supabase
-          .from("player_game_stats")
-          .select(`
-            player_id,
-            points,
-            players (
-              first_name,
-              last_name,
-              team_id,
-              teams ( team_name )
-            )
-          `)
-          .order("game_id")
-          .order("player_id")
-          .range(start, start + statsPageSize - 1);
+      const { data: statRows, error: statsError } = await supabase
+        .from("player_season_stats")
+        .select("*")
+        .eq("season", currentSeason);
 
-        if (cancelled) return;
-        if (error) {
-          setError(error.message);
-          setLoading(false);
-          return;
-        }
-
-        const page = (data ?? []) as unknown as StatRow[];
-        stats.push(...page);
-        if (page.length < statsPageSize) break;
+      if (cancelled) return;
+      if (statsError) {
+        setError(statsError.message);
+        setLoading(false);
+        return;
       }
 
-      const map = new Map<string, { gp: number; pts: number; name: string; teamName: string }>();
+      const seasonStats = (statRows ?? []) as SeasonStatRow[];
+      const playerIds = Array.from(new Set(seasonStats.map((s) => s.player_id)));
 
-      for (const r of stats) {
-        const pid = r.player_id;
-        const pts = r.points ?? 0;
-        const first = r.players?.first_name ?? "";
-        const last = r.players?.last_name ?? "";
-        const name = `${first} ${last}`.trim() || pid;
-        const teamName = (r.players?.teams?.team_name ?? "").trim() || (r.players?.team_id ?? "").trim() || "—";
-
-        const cur = map.get(pid);
-        if (!cur) {
-          map.set(pid, { gp: 1, pts, name, teamName });
-        } else {
-          cur.gp += 1;
-          cur.pts += pts;
-        }
+      if (playerIds.length === 0) {
+        setRows([]);
+        setLoading(false);
+        return;
       }
 
-      const leaders: LeaderRow[] = Array.from(map.entries())
-        .map(([player_id, v]) => ({
-          player_id,
-          name: v.name,
-          teamName: v.teamName,
-          gp: v.gp,
-          pts: v.pts,
-          ppg: v.gp > 0 ? v.pts / v.gp : 0,
-        }))
-        .filter((x) => x.gp > 0);
+      const [{ data: playersData }, { data: teamsData }] = await Promise.all([
+        supabase.from("players").select("player_id, first_name, last_name, team_id").in("player_id", playerIds),
+        supabase.from("teams").select("team_id, team_name"),
+      ]);
+
+      if (cancelled) return;
+
+      type PlayerRow = { player_id: string; first_name: string | null; last_name: string | null; team_id: string | null };
+      type TeamRow = { team_id: string; team_name: string | null };
+
+      const playerById = new Map((playersData ?? []).map((p: PlayerRow) => [p.player_id, p]));
+      const teamNameById = new Map((teamsData ?? []).map((tm: TeamRow) => [tm.team_id, tm.team_name]));
+
+      const leaders: LeaderRow[] = seasonStats.map((s) => {
+        const p = playerById.get(s.player_id);
+        const name = p ? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || s.player_id : s.player_id;
+        const teamId = p?.team_id ?? s.team_id ?? "";
+        const teamName = teamNameById.get(teamId) ?? teamId ?? "—";
+        return { ...s, name, teamName };
+      });
+
       setRows(leaders);
       setLoading(false);
     }
+
     load();
     return () => { cancelled = true; };
   }, [currentSeason]);
 
-  const sorted = useMemo(() => {
-    const arr = [...rows];
-    if (sortMode === "PPG") {
-      arr.sort((a, b) => b.ppg - a.ppg || b.gp - a.gp || b.pts - a.pts);
-    } else {
-      arr.sort((a, b) => b.pts - a.pts || b.gp - a.gp || b.ppg - a.ppg);
-    }
-    return arr;
-  }, [rows, sortMode]);
-
+  const sorted = useMemo(() => sortRows(rows, category, ptsSortMode), [rows, category, ptsSortMode]);
   const top = useMemo(() => sorted.slice(0, 50), [sorted]);
 
   if (loading) return <main className="py-6 px-2 max-w-4xl mx-auto" style={{ color: "var(--text)" }}><h1 className="text-3xl uppercase" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>{t("leaders_title")}</h1><p className="mt-4 animate-pulse font-bold" style={{ color: "var(--muted)" }}>{t("leaders_loading")}</p></main>;
@@ -161,17 +260,34 @@ export default function LeadersPage() {
       <div className="mx-auto max-w-5xl">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-3xl uppercase leading-none" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>{t("leaders_title")}</h1>
-        <div className="flex items-center gap-3">
-          {seasons.length > 0 && currentSeason && (
-            <SeasonSelector seasons={seasons} currentSeason={currentSeason} />
-          )}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("leaders_sort_by")}</span>
-            <button onClick={() => setSortMode("PTS")} className="rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors" style={sortMode === "PTS" ? { background: "var(--orange)", color: "#1f1309", borderRadius: "var(--radius)" } : { background: "var(--navy-800)", color: "var(--muted)", borderRadius: "var(--radius)", border: "1px solid var(--line)" }}>PTS</button>
-            <button onClick={() => setSortMode("PPG")} className="rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors" style={sortMode === "PPG" ? { background: "var(--orange)", color: "#1f1309", borderRadius: "var(--radius)" } : { background: "var(--navy-800)", color: "var(--muted)", borderRadius: "var(--radius)", border: "1px solid var(--line)" }}>PPG</button>
-          </div>
-        </div>
+        {seasons.length > 0 && currentSeason && (
+          <SeasonSelector seasons={seasons} currentSeason={currentSeason} />
+        )}
       </div>
+
+      {/* CATEGORY TABS */}
+      <div className="mb-3 flex items-center gap-1.5 overflow-x-auto pb-1">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.key}
+            onClick={() => setCategory(c.key)}
+            className="shrink-0 rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors"
+            style={category === c.key
+              ? { background: "var(--orange)", color: "#1f1309", borderRadius: "var(--radius)" }
+              : { background: "var(--navy-800)", color: "var(--muted)", borderRadius: "var(--radius)", border: "1px solid var(--line)" }}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {category === "PTS" && (
+        <div className="mb-4 flex items-center gap-1.5">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("leaders_sort_by")}</span>
+          <button onClick={() => setPtsSortMode("PTS")} className="rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors" style={ptsSortMode === "PTS" ? { background: "var(--orange)", color: "#1f1309", borderRadius: "var(--radius)" } : { background: "var(--navy-800)", color: "var(--muted)", borderRadius: "var(--radius)", border: "1px solid var(--line)" }}>PTS</button>
+          <button onClick={() => setPtsSortMode("PPG")} className="rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors" style={ptsSortMode === "PPG" ? { background: "var(--orange)", color: "#1f1309", borderRadius: "var(--radius)" } : { background: "var(--navy-800)", color: "var(--muted)", borderRadius: "var(--radius)", border: "1px solid var(--line)" }}>PPG</button>
+        </div>
+      )}
 
       <SectionHeading title={t("home_section_leaders")} href="/leaders" linkLabel={t("home_leaders_full")} headingClassName="text-lg" />
 
@@ -211,22 +327,7 @@ export default function LeadersPage() {
               </div>
 
               {/* RIGHT: ALIGNED STATS COLUMNS (Fixed Width) */}
-              <div className="flex items-center gap-3 border-l pl-2 sm:gap-6" style={{ borderColor: "var(--line)" }}>
-                <div className="text-center w-[35px] sm:w-[50px]">
-                  <div className="text-[8px] font-semibold uppercase" style={{ color: "var(--muted)" }}>PTS</div>
-                  <div className="tabular-nums text-base leading-none sm:text-xl" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{p.pts}</div>
-                </div>
-                <div className="text-center w-[25px] sm:w-[40px]">
-                  <div className="text-[8px] font-semibold uppercase" style={{ color: "var(--muted)" }}>GP</div>
-                  <div className="tabular-nums text-base leading-none sm:text-xl" style={{ color: "var(--text)", fontFamily: "var(--font-display)", fontWeight: 600 }}>{p.gp}</div>
-                </div>
-                <div className="text-center w-[35px] sm:w-[50px]">
-                  <div className="text-[8px] font-semibold uppercase" style={{ color: "var(--muted)" }}>PPG</div>
-                  <div className="tabular-nums text-base leading-none sm:text-xl" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>
-                    {p.ppg.toFixed(1)}
-                  </div>
-                </div>
-              </div>
+              <StatFooter row={p} category={category} />
 
             </div>
           </Link>

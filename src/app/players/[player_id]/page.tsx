@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import PlayerAvatar from "@/app/components/PlayerAvatar";
+import SeasonSelector from "@/app/components/SeasonSelector";
 import { useT } from "@/app/components/LanguageProvider";
+import type { Season } from "@/lib/league";
 import SectionHeading from "@/app/components/home/SectionHeading";
 
 type Player = {
@@ -21,23 +23,69 @@ type Team = {
   team_name: string;
 };
 
-type StatRow = {
-  game_id: string;
-  points: number | null;
+// One row per (player, season) from the player_season_stats DB view
+type SeasonStatRow = {
+  season: string;
+  gp: number;
+  pts: number | null;
+  ppg: number | null;
+  reb: number | null;
+  rpg: number | null;
+  ast: number | null;
+  apg: number | null;
+  stl: number | null;
+  spg: number | null;
+  blk: number | null;
+  bpg: number | null;
+  fg_made: number | null;
+  fg_att: number | null;
+  fg_pct: number | null;
+  three_made: number | null;
+  three_att: number | null;
+  three_pct: number | null;
+  ft_made: number | null;
+  ft_att: number | null;
+  ft_pct: number | null;
 };
 
-type GameRow = {
-  game_id: string;
-  tipoff: string | null;
-  home_team_id: string;
-  away_team_id: string;
-  home_score: number | null;
-  away_score: number | null;
+// Career totals from the player_career_stats DB view (same shape, no season)
+type CareerStatRow = Omit<SeasonStatRow, "season">;
+
+const EMPTY_SEASON_STATS: SeasonStatRow = {
+  season: "", gp: 0, pts: 0, ppg: 0, reb: 0, rpg: 0, ast: 0, apg: 0, stl: 0, spg: 0,
+  blk: 0, bpg: 0, fg_made: 0, fg_att: 0, fg_pct: 0, three_made: 0, three_att: 0,
+  three_pct: 0, ft_made: 0, ft_att: 0, ft_pct: 0,
 };
+
+type GameLogRow = {
+  game_id: string;
+  points: number | null;
+  reb_tot: number | null;
+  assists: number | null;
+  games: {
+    tipoff: string | null;
+    home_team_id: string;
+    away_team_id: string;
+    home_score: number | null;
+    away_score: number | null;
+  } | null;
+};
+
+function pct(v: number | null) {
+  return (v ?? 0).toFixed(1);
+}
+
+function avg(v: number | null) {
+  return (v ?? 0).toFixed(1);
+}
 
 export default function PlayerPage() {
   const params = useParams();
   const { t } = useT();
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const playerId = useMemo(() => {
     const raw = (params as any)?.player_id;
@@ -47,10 +95,34 @@ export default function PlayerPage() {
 
   const [player, setPlayer] = useState<Player | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
-  const [gamesById, setGamesById] = useState<Record<string, GameRow>>({});
-  const [stats, setStats] = useState<StatRow[]>([]);
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [seasonStats, setSeasonStats] = useState<SeasonStatRow[]>([]);
+  const [careerStats, setCareerStats] = useState<CareerStatRow | null>(null);
+  const [gameLog, setGameLog] = useState<GameLogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
+
+  const seasonParam = searchParams.get("season");
+  const currentSeason = seasonParam ?? seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season ?? "2025/26";
+
+  // Load available seasons once
+  useEffect(() => {
+    supabase
+      .from("seasons")
+      .select("season, is_current")
+      .order("season", { ascending: false })
+      .then(({ data }) => setSeasons((data ?? []) as Season[]));
+  }, []);
+
+  // When seasons load and there's no URL param, set the default in the URL
+  useEffect(() => {
+    if (seasonParam || seasons.length === 0) return;
+    const defaultSeason = seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season;
+    if (!defaultSeason) return;
+    const params2 = new URLSearchParams(searchParams.toString());
+    params2.set("season", defaultSeason);
+    router.replace(`${pathname}?${params2.toString()}`);
+  }, [seasons, seasonParam, pathname, router, searchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,43 +155,20 @@ export default function PlayerPage() {
 
       if (!cancelled) setTeam((teamData as Team) ?? null);
 
-      const { data: statsData, error: statsError } = await supabase
-        .from("player_game_stats")
-        .select("game_id, points")
-        .eq("player_id", playerId);
+      const [seasonStatsRes, careerStatsRes] = await Promise.all([
+        supabase.from("player_season_stats").select("*").eq("player_id", playerId),
+        supabase.from("player_career_stats").select("*").eq("player_id", playerId).maybeSingle(),
+      ]);
 
       if (cancelled) return;
-      if (statsError) {
-        setError(statsError);
+      if (seasonStatsRes.error) {
+        setError(seasonStatsRes.error);
         setLoading(false);
         return;
       }
 
-      const statRows = (statsData ?? []) as StatRow[];
-      setStats(statRows);
-
-      const gameIds = Array.from(new Set(statRows.map((s) => s.game_id)));
-      if (gameIds.length === 0) {
-        setGamesById({});
-        setLoading(false);
-        return;
-      }
-
-      const { data: gamesData, error: gamesError } = await supabase
-        .from("games")
-        .select("game_id, tipoff, home_team_id, away_team_id, home_score, away_score")
-        .in("game_id", gameIds);
-
-      if (cancelled) return;
-      if (gamesError) {
-        setError(gamesError);
-        setLoading(false);
-        return;
-      }
-
-      const map: Record<string, GameRow> = {};
-      (gamesData ?? []).forEach((g: any) => (map[g.game_id] = g));
-      setGamesById(map);
+      setSeasonStats((seasonStatsRes.data ?? []) as SeasonStatRow[]);
+      setCareerStats((careerStatsRes.data as CareerStatRow) ?? null);
 
       setLoading(false);
     }
@@ -127,6 +176,30 @@ export default function PlayerPage() {
     load();
     return () => { cancelled = true; };
   }, [playerId]);
+
+  // Game log is filtered by the selected season separately, since it depends on currentSeason
+  useEffect(() => {
+    if (!playerId || !currentSeason) return;
+    let cancelled = false;
+
+    async function loadGameLog() {
+      const { data, error: gameLogError } = await supabase
+        .from("player_game_stats")
+        .select("game_id, points, reb_tot, assists, games!inner(tipoff, home_team_id, away_team_id, home_score, away_score, season)")
+        .eq("player_id", playerId)
+        .eq("games.season", currentSeason);
+
+      if (cancelled) return;
+      if (gameLogError) {
+        setError(gameLogError);
+        return;
+      }
+      setGameLog((data ?? []) as unknown as GameLogRow[]);
+    }
+
+    loadGameLog();
+    return () => { cancelled = true; };
+  }, [playerId, currentSeason]);
 
   if (!playerId) return <main className="p-8"><h1 className="text-2xl font-semibold uppercase">{t("player_bad_route")}</h1></main>;
   if (loading) return <main className="p-8"><h1 className="text-2xl font-semibold uppercase animate-pulse" style={{ color: "var(--muted)" }}>{t("player_loading")}</h1></main>;
@@ -137,13 +210,18 @@ export default function PlayerPage() {
     </main>
   );
 
-  const totalPoints = stats.reduce((sum, s) => sum + (s.points ?? 0), 0);
-  const gamesPlayed = stats.length;
-  const ppg = gamesPlayed > 0 ? (totalPoints / gamesPlayed).toFixed(1) : "0.0";
+  const headerStats = seasonStats.find((s) => s.season === currentSeason) ?? EMPTY_SEASON_STATS;
 
-  const rows = [...stats].sort((a, b) => {
-    const da = gamesById[a.game_id]?.tipoff ? new Date(gamesById[a.game_id].tipoff!).getTime() : -Infinity;
-    const db = gamesById[b.game_id]?.tipoff ? new Date(gamesById[b.game_id].tipoff!).getTime() : -Infinity;
+  const seasonRows = [...seasonStats].sort((a, b) => {
+    const ia = seasons.findIndex((s) => s.season === a.season);
+    const ib = seasons.findIndex((s) => s.season === b.season);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    return b.season.localeCompare(a.season);
+  });
+
+  const rows = [...gameLog].sort((a, b) => {
+    const da = a.games?.tipoff ? new Date(a.games.tipoff).getTime() : -Infinity;
+    const db = b.games?.tipoff ? new Date(b.games.tipoff).getTime() : -Infinity;
     return db - da;
   });
 
@@ -151,7 +229,7 @@ export default function PlayerPage() {
     <main className="min-h-screen px-3 py-4 sm:px-6" style={{ background: "var(--navy-950)", color: "var(--text)" }}>
       <div className="mx-auto max-w-5xl">
       {/* Header Section */}
-      <div className="mb-8 flex flex-col justify-between gap-6 border-b pb-6 md:flex-row md:items-end" style={{ borderColor: "var(--line)" }}>
+      <div className="mb-6 flex flex-col justify-between gap-6 border-b pb-6 md:flex-row md:items-end" style={{ borderColor: "var(--line)" }}>
         <div className="flex items-end gap-4">
           <PlayerAvatar
             playerId={player.player_id}
@@ -174,21 +252,86 @@ export default function PlayerPage() {
           </div>
         </div>
 
-        {/* Quick Stats Cards - Fixed Visibility */}
-        <div className="flex gap-3">
-          <div className="min-w-[85px] flex-1 border p-4 text-center md:flex-none" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}>
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("player_stat_gp")}</div>
-            <div className="text-2xl leading-none" style={{ color: "var(--text)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{gamesPlayed}</div>
+        {seasons.length > 0 && currentSeason && (
+          <SeasonSelector seasons={seasons} currentSeason={currentSeason} />
+        )}
+      </div>
+
+      {/* Quick Stats Cards for the selected season */}
+      <div className="mb-8 grid grid-cols-4 gap-2 sm:grid-cols-7">
+        {[
+          { label: t("player_stat_gp"), value: String(headerStats.gp), accent: false },
+          { label: t("player_stat_ppg"), value: avg(headerStats.ppg), accent: true },
+          { label: t("player_stat_rpg"), value: avg(headerStats.rpg), accent: true },
+          { label: t("player_stat_apg"), value: avg(headerStats.apg), accent: true },
+          { label: t("player_stat_spg"), value: avg(headerStats.spg), accent: false },
+          { label: t("player_stat_bpg"), value: avg(headerStats.bpg), accent: false },
+          { label: t("player_stat_fg_pct"), value: `${pct(headerStats.fg_pct)}%`, accent: false },
+        ].map((card) => (
+          <div key={card.label} className="border p-3 text-center" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}>
+            <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{card.label}</div>
+            <div className="text-xl leading-none sm:text-2xl" style={{ color: card.accent ? "var(--orange)" : "var(--text)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{card.value}</div>
           </div>
-          <div className="min-w-[85px] flex-1 border p-4 text-center md:flex-none" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}>
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("player_stat_total_pts")}</div>
-            <div className="text-2xl leading-none" style={{ color: "var(--text)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{totalPoints}</div>
-          </div>
-          <div className="min-w-[85px] flex-1 border p-4 text-center md:flex-none" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}>
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("player_stat_ppg")}</div>
-            <div className="text-2xl leading-none" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{ppg}</div>
-          </div>
-        </div>
+        ))}
+      </div>
+
+      {/* SEASON STATS TABLE */}
+      <SectionHeading title={t("player_season_stats_title")} href="/leaders" linkLabel={t("nav_leaders")} headingClassName="text-lg" />
+      <div className="mb-8 overflow-x-auto border" style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}>
+        <table className="w-full min-w-[720px] text-center text-sm">
+          <thead>
+            <tr className="text-[9px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>
+              <th className="px-3 py-2 text-left">Season</th>
+              <th className="px-3 py-2">{t("player_stat_gp")}</th>
+              <th className="px-3 py-2">PTS</th>
+              <th className="px-3 py-2">{t("player_stat_rpg")}</th>
+              <th className="px-3 py-2">{t("player_stat_apg")}</th>
+              <th className="px-3 py-2">{t("player_stat_spg")}</th>
+              <th className="px-3 py-2">{t("player_stat_bpg")}</th>
+              <th className="px-3 py-2">{t("player_stat_fg_pct")}</th>
+              <th className="px-3 py-2">{t("player_stat_3pm")}</th>
+              <th className="px-3 py-2">{t("player_stat_3p_pct")}</th>
+              <th className="px-3 py-2">{t("player_stat_ft_pct")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {seasonRows.map((s) => (
+              <tr key={s.season} className="border-t tabular-nums" style={{ borderColor: "var(--line)" }}>
+                <td className="px-3 py-2 text-left font-semibold" style={{ fontFamily: "var(--font-display)" }}>{s.season}</td>
+                <td className="px-3 py-2">{s.gp}</td>
+                <td className="px-3 py-2 font-semibold" style={{ color: "var(--orange)" }}>{avg(s.ppg)}</td>
+                <td className="px-3 py-2">{avg(s.rpg)}</td>
+                <td className="px-3 py-2">{avg(s.apg)}</td>
+                <td className="px-3 py-2">{avg(s.spg)}</td>
+                <td className="px-3 py-2">{avg(s.bpg)}</td>
+                <td className="px-3 py-2">{pct(s.fg_pct)}</td>
+                <td className="px-3 py-2">{s.three_made ?? 0}</td>
+                <td className="px-3 py-2">{pct(s.three_pct)}</td>
+                <td className="px-3 py-2">{pct(s.ft_pct)}</td>
+              </tr>
+            ))}
+            {careerStats && (
+              <tr className="border-t tabular-nums" style={{ borderColor: "var(--line)", background: "var(--navy-950)" }}>
+                <td className="px-3 py-2 text-left font-semibold uppercase" style={{ color: "var(--muted)" }}>{t("player_career_row_label")}</td>
+                <td className="px-3 py-2">{careerStats.gp}</td>
+                <td className="px-3 py-2 font-semibold" style={{ color: "var(--orange)" }}>{avg(careerStats.ppg)}</td>
+                <td className="px-3 py-2">{avg(careerStats.rpg)}</td>
+                <td className="px-3 py-2">{avg(careerStats.apg)}</td>
+                <td className="px-3 py-2">{avg(careerStats.spg)}</td>
+                <td className="px-3 py-2">{avg(careerStats.bpg)}</td>
+                <td className="px-3 py-2">{pct(careerStats.fg_pct)}</td>
+                <td className="px-3 py-2">{careerStats.three_made ?? 0}</td>
+                <td className="px-3 py-2">{pct(careerStats.three_pct)}</td>
+                <td className="px-3 py-2">{pct(careerStats.ft_pct)}</td>
+              </tr>
+            )}
+            {seasonRows.length === 0 && !careerStats && (
+              <tr>
+                <td colSpan={11} className="py-6 text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("player_no_data")}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       <SectionHeading title={t("player_game_log")} href="/games" linkLabel={t("home_cta_results")} headingClassName="text-lg" />
@@ -196,7 +339,7 @@ export default function PlayerPage() {
       {/* GAME LOG LIST */}
       <div className="space-y-3">
         {rows.map((s) => {
-          const g = gamesById[s.game_id];
+          const g = s.games;
           if (!g) return null;
 
           const isHome = g.home_team_id === player.team_id;
@@ -239,10 +382,20 @@ export default function PlayerPage() {
                 </div>
               </div>
 
-              {/* Individual Player Points */}
-              <div className="text-right">
-                <div className="mb-1 text-[10px] font-semibold uppercase leading-none" style={{ color: "var(--muted)" }}>PTS</div>
-                <div className="text-2xl leading-none" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{s.points ?? 0}</div>
+              {/* Individual Player PTS / REB / AST */}
+              <div className="flex items-center gap-3">
+                <div className="text-center w-[36px]">
+                  <div className="mb-1 text-[9px] font-semibold uppercase leading-none" style={{ color: "var(--muted)" }}>PTS</div>
+                  <div className="text-xl leading-none" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{s.points ?? 0}</div>
+                </div>
+                <div className="text-center w-[36px]">
+                  <div className="mb-1 text-[9px] font-semibold uppercase leading-none" style={{ color: "var(--muted)" }}>REB</div>
+                  <div className="text-xl leading-none" style={{ color: "var(--text)", fontFamily: "var(--font-display)", fontWeight: 600 }}>{s.reb_tot ?? 0}</div>
+                </div>
+                <div className="text-center w-[36px]">
+                  <div className="mb-1 text-[9px] font-semibold uppercase leading-none" style={{ color: "var(--muted)" }}>AST</div>
+                  <div className="text-xl leading-none" style={{ color: "var(--text)", fontFamily: "var(--font-display)", fontWeight: 600 }}>{s.assists ?? 0}</div>
+                </div>
               </div>
             </Link>
           );

@@ -165,14 +165,57 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: statsError2.message }, { status: 500 });
     }
   } else {
-    // For new games, only points are available (original behavior)
-    const allStats = [...homePlayers, ...awayPlayers]
-      .filter((p: any) => p.played)
-      .map((p: any) => ({
+    // For new games, save the full stat line entered in the form (not just points)
+    type PlayerStatInput = {
+      player_id: string;
+      team_id: string;
+      played: boolean;
+      points: number | null;
+      is_starter: boolean | null;
+      minutes: string | null;
+      two_made: number | null;
+      two_att: number | null;
+      three_made: number | null;
+      three_att: number | null;
+      ft_made: number | null;
+      ft_att: number | null;
+      reb_off: number | null;
+      reb_def: number | null;
+      reb_tot: number | null;
+      assists: number | null;
+      turnovers: number | null;
+      steals: number | null;
+      blocks: number | null;
+      fouls_personal: number | null;
+      plus_minus: number | null;
+      efficiency: number | null;
+    };
+
+    const allStats = ([...homePlayers, ...awayPlayers] as PlayerStatInput[])
+      .filter((p) => p.played)
+      .map((p) => ({
         game_id: gameId,
         player_id: p.player_id,
         points: p.points,
         team_id: p.team_id,
+        is_starter: p.is_starter ?? null,
+        minutes: p.minutes ?? null,
+        two_made: p.two_made ?? null,
+        two_att: p.two_att ?? null,
+        three_made: p.three_made ?? null,
+        three_att: p.three_att ?? null,
+        ft_made: p.ft_made ?? null,
+        ft_att: p.ft_att ?? null,
+        reb_off: p.reb_off ?? null,
+        reb_def: p.reb_def ?? null,
+        reb_tot: p.reb_tot ?? null,
+        assists: p.assists ?? null,
+        turnovers: p.turnovers ?? null,
+        steals: p.steals ?? null,
+        blocks: p.blocks ?? null,
+        fouls_personal: p.fouls_personal ?? null,
+        plus_minus: p.plus_minus ?? null,
+        efficiency: p.efficiency ?? null,
       }));
 
     const { error: statsError2 } = await supabaseAdmin
