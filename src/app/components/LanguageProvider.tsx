@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { getT, DEFAULT_LOCALE, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/i18n";
 
@@ -43,16 +43,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   // The html[lang] set by the server layout ensures server/client locale stay in sync.
   const [locale, setLocaleState] = useState<Locale>(getInitialLocale);
 
-  useEffect(() => {
-    document.cookie = `${LOCALE_COOKIE}=${locale};path=/;max-age=31536000;SameSite=Lax`;
+  const setLocale = (next: Locale) => {
+    // Write the cookie synchronously so any immediate router.refresh() call
+    // (e.g. from the language switcher) picks up the new locale, not the stale one.
+    document.cookie = `${LOCALE_COOKIE}=${next};path=/;max-age=31536000;SameSite=Lax`;
     try {
-      window.localStorage.setItem(LOCALE_COOKIE, locale);
+      window.localStorage.setItem(LOCALE_COOKIE, next);
     } catch {
       // Ignore localStorage access issues.
     }
-  }, [locale]);
-
-  const setLocale = (next: Locale) => {
     setLocaleState(next);
   };
 
