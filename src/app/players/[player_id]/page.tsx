@@ -57,18 +57,21 @@ const EMPTY_SEASON_STATS: SeasonStatRow = {
   three_pct: 0, ft_made: 0, ft_att: 0, ft_pct: 0,
 };
 
-type GameLogRow = {
+type GameStatRow = {
   game_id: string;
   points: number | null;
   reb_tot: number | null;
   assists: number | null;
-  games: {
-    tipoff: string | null;
-    home_team_id: string;
-    away_team_id: string;
-    home_score: number | null;
-    away_score: number | null;
-  } | null;
+};
+
+type GameRow = {
+  game_id: string;
+  season: string | null;
+  tipoff: string | null;
+  home_team_id: string;
+  away_team_id: string;
+  home_score: number | null;
+  away_score: number | null;
 };
 
 function pct(v: number | null) {
@@ -98,7 +101,8 @@ export default function PlayerPage() {
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [seasonStats, setSeasonStats] = useState<SeasonStatRow[]>([]);
   const [careerStats, setCareerStats] = useState<CareerStatRow | null>(null);
-  const [gameLog, setGameLog] = useState<GameLogRow[]>([]);
+  const [gameStats, setGameStats] = useState<GameStatRow[]>([]);
+  const [gamesById, setGamesById] = useState<Record<string, GameRow>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
 
@@ -170,36 +174,48 @@ export default function PlayerPage() {
       setSeasonStats((seasonStatsRes.data ?? []) as SeasonStatRow[]);
       setCareerStats((careerStatsRes.data as CareerStatRow) ?? null);
 
+      // player_game_stats has no FK relationship to games in the schema cache,
+      // so fetch each table separately and join them client-side.
+      const { data: statsData, error: statsError } = await supabase
+        .from("player_game_stats")
+        .select("game_id, points, reb_tot, assists")
+        .eq("player_id", playerId);
+
+      if (cancelled) return;
+      if (statsError) {
+        setError(statsError);
+        setLoading(false);
+        return;
+      }
+
+      const statRows = (statsData ?? []) as GameStatRow[];
+      setGameStats(statRows);
+
+      const gameIds = Array.from(new Set(statRows.map((r) => r.game_id)));
+      if (gameIds.length > 0) {
+        const { data: gamesData, error: gamesError } = await supabase
+          .from("games")
+          .select("game_id, season, tipoff, home_team_id, away_team_id, home_score, away_score")
+          .in("game_id", gameIds);
+
+        if (cancelled) return;
+        if (gamesError) {
+          setError(gamesError);
+          setLoading(false);
+          return;
+        }
+
+        const map: Record<string, GameRow> = {};
+        (gamesData ?? []).forEach((g: GameRow) => (map[g.game_id] = g));
+        setGamesById(map);
+      }
+
       setLoading(false);
     }
 
     load();
     return () => { cancelled = true; };
   }, [playerId]);
-
-  // Game log is filtered by the selected season separately, since it depends on currentSeason
-  useEffect(() => {
-    if (!playerId || !currentSeason) return;
-    let cancelled = false;
-
-    async function loadGameLog() {
-      const { data, error: gameLogError } = await supabase
-        .from("player_game_stats")
-        .select("game_id, points, reb_tot, assists, games!inner(tipoff, home_team_id, away_team_id, home_score, away_score, season)")
-        .eq("player_id", playerId)
-        .eq("games.season", currentSeason);
-
-      if (cancelled) return;
-      if (gameLogError) {
-        setError(gameLogError);
-        return;
-      }
-      setGameLog((data ?? []) as unknown as GameLogRow[]);
-    }
-
-    loadGameLog();
-    return () => { cancelled = true; };
-  }, [playerId, currentSeason]);
 
   if (!playerId) return <main className="p-8"><h1 className="text-2xl font-semibold uppercase">{t("player_bad_route")}</h1></main>;
   if (loading) return <main className="p-8"><h1 className="text-2xl font-semibold uppercase animate-pulse" style={{ color: "var(--muted)" }}>{t("player_loading")}</h1></main>;
@@ -219,11 +235,13 @@ export default function PlayerPage() {
     return b.season.localeCompare(a.season);
   });
 
-  const rows = [...gameLog].sort((a, b) => {
-    const da = a.games?.tipoff ? new Date(a.games.tipoff).getTime() : -Infinity;
-    const db = b.games?.tipoff ? new Date(b.games.tipoff).getTime() : -Infinity;
-    return db - da;
-  });
+  const rows = gameStats
+    .filter((s) => gamesById[s.game_id]?.season === currentSeason)
+    .sort((a, b) => {
+      const da = gamesById[a.game_id]?.tipoff ? new Date(gamesById[a.game_id].tipoff!).getTime() : -Infinity;
+      const db = gamesById[b.game_id]?.tipoff ? new Date(gamesById[b.game_id].tipoff!).getTime() : -Infinity;
+      return db - da;
+    });
 
   return (
     <main className="min-h-screen px-3 py-4 sm:px-6" style={{ background: "var(--navy-950)", color: "var(--text)" }}>
@@ -339,7 +357,7 @@ export default function PlayerPage() {
       {/* GAME LOG LIST */}
       <div className="space-y-3">
         {rows.map((s) => {
-          const g = s.games;
+          const g = gamesById[s.game_id];
           if (!g) return null;
 
           const isHome = g.home_team_id === player.team_id;

@@ -7,6 +7,18 @@ export type Season = {
   is_current: boolean;
 };
 
+/** Normalizes free-typed season labels (e.g. "2025-2026", " 2025-2026 ") to the canonical "YYYY/YY" form used everywhere else. */
+export function normalizeSeasonLabel(input: string): string {
+  const trimmed = input.trim();
+  const match = trimmed.match(/^(\d{4})\s*[/-]\s*(\d{2,4})$/);
+  if (!match) return trimmed;
+
+  const startYear = match[1];
+  const endPart = match[2];
+  const endYearShort = endPart.length === 4 ? endPart.slice(-2) : endPart.padStart(2, "0");
+  return `${startYear}/${endYearShort}`;
+}
+
 /** Returns all seasons ordered newest-first. */
 export async function getAvailableSeasons(): Promise<Season[]> {
   const { data } = await supabase

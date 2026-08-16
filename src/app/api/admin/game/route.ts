@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { normalizeSeasonLabel } from "@/lib/league";
 
 // Server-only admin client with service role key
 const supabaseAdmin = createClient(
@@ -85,9 +86,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "game_id is required" }, { status: 400 });
   }
 
+  const normalizedGamePayload = {
+    ...gamePayload,
+    ...(typeof gamePayload.season === "string" ? { season: normalizeSeasonLabel(gamePayload.season) } : {}),
+  };
+
   const { data: game, error: gameError } = await supabaseAdmin
     .from("games")
-    .upsert({ ...gamePayload, game_id: gameId }, { onConflict: "game_id" })
+    .upsert({ ...normalizedGamePayload, game_id: gameId }, { onConflict: "game_id" })
     .select()
     .maybeSingle();
 

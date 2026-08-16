@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { normalizeSeasonLabel } from "@/lib/league";
 
 type NewPlayerInput = {
   first_name: string;
@@ -257,7 +258,7 @@ export default function AdminGameEntry({
     const homeScore = homePlayers.filter(p => p.played).reduce((sum, p) => sum + (p.points || 0), 0);
     const awayScore = awayPlayers.filter(p => p.played).reduce((sum, p) => sum + (p.points || 0), 0);
 
-    const season = gameData.season || computeSeasonFromTipoff(gameData.tipoff) || "2025/26";
+    const season = normalizeSeasonLabel(gameData.season || computeSeasonFromTipoff(gameData.tipoff) || "2025/26");
 
     // 2. Prepare the game record data
     const gamePayload = {
@@ -483,6 +484,7 @@ export default function AdminGameEntry({
                     className="w-full rounded-lg border border-[var(--border)] p-3 text-base font-medium bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                     value={gameData.season}
                     onChange={(e) => setGameData({...gameData, season: e.target.value})}
+                    onBlur={(e) => setGameData({...gameData, season: normalizeSeasonLabel(e.target.value)})}
                   />
                 </div>
                 <div>
