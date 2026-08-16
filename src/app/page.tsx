@@ -7,6 +7,7 @@ import RankBadge from "@/app/components/home/RankBadge";
 import SectionHeading from "@/app/components/home/SectionHeading";
 import StatTile from "@/app/components/home/StatTile";
 import Eyebrow from "@/app/components/home/Eyebrow";
+import SeasonCountdown from "@/app/components/home/SeasonCountdown";
 import { getWinner } from "@/lib/get-winner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body", weight: ["400", "500", "600", "700"] });
@@ -126,6 +127,12 @@ export default async function Home() {
 
   return (
     <main className={`${inter.variable} ${oswald.variable} min-h-screen`} style={{ background: "var(--navy-950)", color: "var(--text)", fontFamily: "var(--font-body)" }}>
+      <SeasonCountdown
+        label={t("home_countdown_label")}
+        daysLabel={t("home_countdown_days")}
+        dateLabel={t("home_countdown_date")}
+      />
+
       <section className="lbm-hero-bg border-b px-3 pb-6 pt-6 sm:px-6 sm:pt-7" style={{ borderColor: "var(--line)" }}>
         <div className="mx-auto max-w-5xl">
           <Eyebrow>{t("home_eyebrow")}</Eyebrow>
