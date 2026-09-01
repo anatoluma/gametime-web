@@ -43,11 +43,12 @@ export default function AdminPlayersPage() {
   useEffect(() => {
     fetch("/api/admin/teams")
       .then((r) => r.json())
-      .then(({ teams: t }) => {
-        const list = t ?? [];
+      .then(({ teams: t }: { teams?: Team[] }) => {
+        const list: Team[] = t ?? [];
         setTeams(list);
         if (!selectedTeamId && list.length > 0) {
-          setSelectedTeamId(list.find((team) => team.is_active)?.team_id ?? list[0].team_id);
+          const defaultTeam = list.find((team: Team) => team.is_active) ?? list[0];
+          setSelectedTeamId(defaultTeam.team_id);
         }
       });
   }, [selectedTeamId]);
