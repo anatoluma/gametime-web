@@ -148,7 +148,21 @@ export default function AdminPlayersPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-12 text-[var(--foreground)] bg-[var(--surface)] min-h-screen">
-      <h1 className="text-3xl font-semibold tracking-tight mb-6">Season Rosters</h1>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h1 className="text-3xl font-semibold tracking-tight">Season Rosters</h1>
+        <a
+          href="/admin/teams"
+          className="text-sm px-3 py-2 rounded border border-[var(--border)] hover:bg-[var(--surface-muted)]"
+        >
+          Manage teams
+        </a>
+      </div>
+
+      {!isCurrentSeason && (
+        <div className="mb-6 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          This season is read-only. Switch to the current season to edit roster membership.
+        </div>
+      )}
 
       {/* Season controls */}
       <div className="flex flex-wrap items-center gap-3 mb-8">
@@ -175,7 +189,7 @@ export default function AdminPlayersPage() {
 
         <button
           onClick={handleCopySeason}
-          disabled={!selectedSeason || rows.length === 0}
+          disabled={!selectedSeason || !isCurrentSeason || rows.length === 0}
           className="text-sm px-4 py-2 rounded border border-[var(--border)] hover:bg-[var(--surface-muted)] disabled:opacity-40"
         >
           Copy roster to next season →
