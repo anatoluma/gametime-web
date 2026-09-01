@@ -91,6 +91,11 @@ export default function AdminPlayersPage() {
     [rows, selectedTeamId]
   );
 
+  const previousSeason = useMemo(() => {
+    const sorted = [...seasons].sort((a, b) => b.season.localeCompare(a.season));
+    return sorted.find((season) => season.season !== selectedSeason && !season.is_current)?.season ?? "";
+  }, [seasons, selectedSeason]);
+
   const handleSetCurrent = async (season: string) => {
     const res = await fetch(`/api/admin/seasons/${encodeURIComponent(season)}`, {
       method: "PATCH",
@@ -105,6 +110,33 @@ export default function AdminPlayersPage() {
     } else {
       const { error } = await res.json();
       setMessage(`Error: ${error}`);
+    }
+  };
+
+  const handleMigrateRosterFromPreviousSeason = async () => {
+    if (!previousSeason) {
+      setMessage("No previous season found to migrate from.");
+      return;
+    }
+
+    if (!confirm(`Copy the roster from ${previousSeason} into ${selectedSeason}?`)) {
+      return;
+    }
+
+    const res = await fetch("/api/admin/players/seasons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "copy_season", source_season: previousSeason, target_season: selectedSeason }),
+    });
+
+    const json = await res.json();
+    if (res.ok) {
+      setMessage(`✓ Migrated ${json.copied} players from ${previousSeason} to ${selectedSeason}`);
+      const refreshed = await fetch(`/api/admin/players/seasons?season=${encodeURIComponent(selectedSeason)}`);
+      const refreshedJson = await refreshed.json();
+      setRows(refreshedJson.player_seasons ?? []);
+    } else {
+      setMessage(`Error: ${json.error}`);
     }
   };
 
@@ -261,6 +293,15 @@ export default function AdminPlayersPage() {
               className="text-sm px-4 py-2 rounded border border-orange-500 text-orange-600 hover:bg-orange-50"
             >
               Set as current season
+            </button>
+          )}
+
+          {isCurrentSeason && previousSeason && (
+            <button
+              onClick={handleMigrateRosterFromPreviousSeason}
+              className="text-sm px-4 py-2 rounded border border-[var(--border)] hover:bg-[var(--surface-muted)]"
+            >
+              Migrate roster from {previousSeason}
             </button>
           )}
         </div>
