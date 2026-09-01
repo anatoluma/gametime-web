@@ -48,6 +48,7 @@ export default function AdminTeamsPage() {
   }, []);
 
   const teamCount = useMemo(() => teams.filter((team) => team.is_active ?? false).length, [teams]);
+  const inactiveTeamCount = useMemo(() => teams.filter((team) => !(team.is_active ?? false)).length, [teams]);
 
   const handleCreateOrUpdate = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -106,8 +107,10 @@ export default function AdminTeamsPage() {
     <main className="mx-auto max-w-5xl px-4 py-12 text-[var(--foreground)] bg-[var(--surface)] min-h-screen">
       <div className="mb-6 flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Teams</h1>
-          <p className="text-sm text-[var(--text-muted)]">{teamCount} active teams</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Current Season Teams</h1>
+          <p className="text-sm text-[var(--text-muted)]">
+            {teamCount} active • {inactiveTeamCount} inactive
+          </p>
         </div>
         <a
           href="/admin"
@@ -124,7 +127,15 @@ export default function AdminTeamsPage() {
       )}
 
       <form onSubmit={handleCreateOrUpdate} className="mb-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
-        <h2 className="text-lg font-semibold">Add or update team</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Add or update team</h2>
+          <a
+            href="/admin/players"
+            className="text-xs px-2 py-1 rounded border border-[var(--border)] hover:bg-[var(--surface-muted)]"
+          >
+            Roster editor
+          </a>
+        </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="text-sm font-medium">
