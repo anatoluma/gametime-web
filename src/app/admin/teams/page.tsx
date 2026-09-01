@@ -15,9 +15,13 @@ type Season = { season: string; is_current: boolean };
 export default function AdminTeamsPage() {
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [selectedSeason, setSelectedSeason] = useState("");
+  const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [showAddTeam, setShowAddTeam] = useState(false);
+  const [addMode, setAddMode] = useState<"new" | "existing">("new");
+  const [selectedPreviousTeamId, setSelectedPreviousTeamId] = useState("");
   const [form, setForm] = useState({
     team_id: "",
     team_name: "",
@@ -50,7 +54,9 @@ export default function AdminTeamsPage() {
       if (!isMounted) return;
 
       if (res.ok) {
-        setTeams(json.teams ?? []);
+        const all = json.teams ?? [];
+        setAllTeams(all);
+        setTeams(currentSeasonOnly ? [] : all);
       } else {
         setMessage(`Error: ${json.error ?? "Failed to load teams"}`);
       }
@@ -75,6 +81,13 @@ export default function AdminTeamsPage() {
     const sorted = [...seasons].sort((a, b) => b.season.localeCompare(a.season));
     return sorted.find((season) => season.season !== selectedSeason && !season.is_current)?.season ?? "";
   }, [seasons, selectedSeason]);
+  const previousSeasonTeams = useMemo(
+    () =>
+      [...allTeams]
+        .filter((team) => team.is_active ?? false)
+        .sort((a, b) => (a.team_name ?? "").localeCompare(b.team_name ?? "")),
+    [allTeams]
+  );
 
   const handleSetCurrentSeason = async (season: string) => {
     const res = await fetch(`/api/admin/seasons/${encodeURIComponent(season)}`, {
@@ -93,31 +106,41 @@ export default function AdminTeamsPage() {
     }
   };
 
-  const handleMigrateTeamsFromPreviousSeason = async () => {
-    if (!previousSeason) {
-      setMessage("No previous season available to migrate from.");
+  const handleAddExistingTeam = async () => {
+    if (!currentSeasonOnly) {
+      setMessage("Only the current season can be edited.");
       return;
     }
 
-    if (!confirm(`Copy all active teams from ${previousSeason} into ${selectedSeason}?`)) {
+    const selectedTeam = allTeams.find((team) => team.team_id === selectedPreviousTeamId);
+    if (!selectedTeam) {
+      setMessage("Select a team from the previous season to add.");
       return;
     }
 
-    const res = await fetch("/api/admin/teams", {
+    const response = await fetch("/api/admin/teams", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "migrate_from_previous_season", source_season: previousSeason, target_season: selectedSeason }),
+      body: JSON.stringify({
+        team_id: selectedTeam.team_id,
+        team_name: selectedTeam.team_name,
+        city: selectedTeam.city,
+        coach: selectedTeam.coach,
+        is_active: true,
+      }),
     });
 
-    const json = await res.json();
-    if (res.ok) {
-      setMessage(`✓ Migrated ${json.migrated ?? 0} teams from ${previousSeason} into ${selectedSeason}`);
-      const refreshed = await fetch("/api/admin/teams");
-      const refreshedJson = await refreshed.json();
-      setTeams(refreshedJson.teams ?? []);
-    } else {
-      setMessage(`Error: ${json.error ?? "Unable to migrate teams"}`);
+    const json = await response.json();
+    if (!response.ok) {
+      setMessage(`Error: ${json.error ?? "Unable to add team"}`);
+      return;
     }
+
+    setTeams((prev) => [{ ...selectedTeam, is_active: true }, ...prev.filter((team) => team.team_id !== selectedTeam.team_id)]);
+    setSelectedPreviousTeamId("");
+    setAddMode("new");
+    setShowAddTeam(false);
+    setMessage(`✓ Added ${selectedTeam.team_name ?? selectedTeam.team_id} to ${selectedSeason}`);
   };
 
   const handleCreateOrUpdate = async (event: React.FormEvent) => {
@@ -222,13 +245,13 @@ export default function AdminTeamsPage() {
           </button>
         )}
 
-        {currentSeasonOnly && previousSeason && (
+        {currentSeasonOnly && (
           <button
             type="button"
-            onClick={handleMigrateTeamsFromPreviousSeason}
+            onClick={() => setShowAddTeam((prev) => !prev)}
             className="text-sm px-4 py-2 rounded border border-[var(--border)] hover:bg-[var(--surface-muted)]"
           >
-            Migrate teams from {previousSeason}
+            + Add team
           </button>
         )}
       </div>
@@ -245,75 +268,126 @@ export default function AdminTeamsPage() {
         </div>
       )}
 
-      <form onSubmit={handleCreateOrUpdate} className="mb-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Add or update team</h2>
-          <a
-            href="/admin/players"
-            className="text-xs px-2 py-1 rounded border border-[var(--border)] hover:bg-[var(--surface-muted)]"
-          >
-            Roster editor
-          </a>
+      {showAddTeam && currentSeasonOnly && (
+        <div className="mb-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Add team to {selectedSeason}</h2>
+            <button type="button" onClick={() => setShowAddTeam(false)} className="text-sm hover:text-[var(--text-muted)]">
+              Close
+            </button>
+          </div>
+
+          <div className="flex gap-4 text-sm">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="add-team-mode"
+                checked={addMode === "new"}
+                onChange={() => setAddMode("new")}
+              />
+              New team
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="add-team-mode"
+                checked={addMode === "existing"}
+                onChange={() => setAddMode("existing")}
+              />
+              Add from {previousSeason || "previous season"}
+            </label>
+          </div>
+
+          {addMode === "new" ? (
+            <form onSubmit={handleCreateOrUpdate} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label className="text-sm font-medium">
+                  Team code
+                  <input
+                    value={form.team_id}
+                    onChange={(e) => setForm({ ...form, team_id: e.target.value.toUpperCase() })}
+                    placeholder="EDI"
+                    className="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+                  />
+                </label>
+
+                <label className="text-sm font-medium">
+                  Team name
+                  <input
+                    value={form.team_name}
+                    onChange={(e) => setForm({ ...form, team_name: e.target.value })}
+                    placeholder="Editura Dacia"
+                    className="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+                  />
+                </label>
+
+                <label className="text-sm font-medium">
+                  City
+                  <input
+                    value={form.city}
+                    onChange={(e) => setForm({ ...form, city: e.target.value })}
+                    placeholder="Chisinau"
+                    className="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+                  />
+                </label>
+
+                <label className="text-sm font-medium">
+                  Coach
+                  <input
+                    value={form.coach}
+                    onChange={(e) => setForm({ ...form, coach: e.target.value })}
+                    placeholder="John Smith"
+                    className="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+                  />
+                </label>
+              </div>
+
+              <label className="flex items-center gap-3 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={form.is_active}
+                  onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                />
+                Active in current season
+              </label>
+
+              <button
+                type="submit"
+                className="rounded border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-medium hover:bg-[var(--surface)]"
+              >
+                Save team
+              </button>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <label className="block text-sm font-medium">
+                Choose from previous season
+                <select
+                  value={selectedPreviousTeamId}
+                  onChange={(e) => setSelectedPreviousTeamId(e.target.value)}
+                  className="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+                >
+                  <option value="">Select a team</option>
+                  {previousSeasonTeams.map((team) => (
+                    <option key={team.team_id} value={team.team_id}>
+                      {team.team_name ?? team.team_id}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                type="button"
+                onClick={handleAddExistingTeam}
+                disabled={!selectedPreviousTeamId}
+                className="rounded border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-medium hover:bg-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Add selected team
+              </button>
+            </div>
+          )}
         </div>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className="text-sm font-medium">
-            Team code
-            <input
-              value={form.team_id}
-              onChange={(e) => setForm({ ...form, team_id: e.target.value.toUpperCase() })}
-              placeholder="EDI"
-              className="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
-            />
-          </label>
-
-          <label className="text-sm font-medium">
-            Team name
-            <input
-              value={form.team_name}
-              onChange={(e) => setForm({ ...form, team_name: e.target.value })}
-              placeholder="Editura Dacia" 
-              className="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
-            />
-          </label>
-
-          <label className="text-sm font-medium">
-            City
-            <input
-              value={form.city}
-              onChange={(e) => setForm({ ...form, city: e.target.value })}
-              placeholder="Chisinau"
-              className="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
-            />
-          </label>
-
-          <label className="text-sm font-medium">
-            Coach
-            <input
-              value={form.coach}
-              onChange={(e) => setForm({ ...form, coach: e.target.value })}
-              placeholder="John Smith"
-              className="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
-            />
-          </label>
-        </div>
-
-        <label className="flex items-center gap-3 text-sm font-medium">
-          <input
-            type="checkbox"
-            checked={form.is_active}
-            onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-          />
-          Active in current season
-        </label>
-
-        <button
-          type="submit"
-          className="rounded border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-medium hover:bg-[var(--surface)]"
-        >
-          Save team
-        </button>
-      </form>
+      )}
 
       {loading ? (
         <p className="text-sm text-gray-400">Loading teams...</p>
@@ -348,7 +422,11 @@ export default function AdminTeamsPage() {
             </div>
           ))}
 
-          {teams.length === 0 && <p className="text-sm text-gray-400">No teams registered yet.</p>}
+          {teams.length === 0 && (
+            <p className="text-sm text-gray-400">
+              {currentSeasonOnly ? "This season is empty. Use + Add team to start your list." : "No teams registered yet."}
+            </p>
+          )}
         </div>
       )}
     </main>
