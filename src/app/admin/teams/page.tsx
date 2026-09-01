@@ -10,7 +10,11 @@ type Team = {
   is_active: boolean | null;
 };
 
+type Season = { season: string; is_current: boolean };
+
 export default function AdminTeamsPage() {
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [selectedSeason, setSelectedSeason] = useState("");
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -23,6 +27,19 @@ export default function AdminTeamsPage() {
   });
 
   useEffect(() => {
+    fetch("/api/admin/seasons")
+      .then((r) => r.json())
+      .then(({ seasons: seasonList }: { seasons: Season[] }) => {
+        const list = seasonList ?? [];
+        setSeasons(list);
+        const current = list.find((season) => season.is_current)?.season ?? list[0]?.season ?? "";
+        setSelectedSeason(current);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!selectedSeason) return;
+
     let isMounted = true;
 
     const fetchTeams = async () => {
@@ -45,13 +62,71 @@ export default function AdminTeamsPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [selectedSeason]);
+
+  const currentSeasonOnly = useMemo(
+    () => !!seasons.find((season) => season.season === selectedSeason)?.is_current,
+    [selectedSeason, seasons]
+  );
 
   const teamCount = useMemo(() => teams.filter((team) => team.is_active ?? false).length, [teams]);
   const inactiveTeamCount = useMemo(() => teams.filter((team) => !(team.is_active ?? false)).length, [teams]);
+  const previousSeason = useMemo(() => {
+    const sorted = [...seasons].sort((a, b) => b.season.localeCompare(a.season));
+    return sorted.find((season) => season.season !== selectedSeason && !season.is_current)?.season ?? "";
+  }, [seasons, selectedSeason]);
+
+  const handleSetCurrentSeason = async (season: string) => {
+    const res = await fetch(`/api/admin/seasons/${encodeURIComponent(season)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_current: true }),
+    });
+
+    if (res.ok) {
+      setSeasons((prev) => prev.map((item) => ({ ...item, is_current: item.season === season })));
+      setSelectedSeason(season);
+      setMessage(`✓ ${season} is now the current season`);
+    } else {
+      const json = await res.json();
+      setMessage(`Error: ${json.error ?? "Unable to change current season"}`);
+    }
+  };
+
+  const handleMigrateTeamsFromPreviousSeason = async () => {
+    if (!previousSeason) {
+      setMessage("No previous season available to migrate from.");
+      return;
+    }
+
+    if (!confirm(`Copy all active teams from ${previousSeason} into ${selectedSeason}?`)) {
+      return;
+    }
+
+    const res = await fetch("/api/admin/teams", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "migrate_from_previous_season", source_season: previousSeason, target_season: selectedSeason }),
+    });
+
+    const json = await res.json();
+    if (res.ok) {
+      setMessage(`✓ Migrated ${json.migrated ?? 0} teams from ${previousSeason} into ${selectedSeason}`);
+      const refreshed = await fetch("/api/admin/teams");
+      const refreshedJson = await refreshed.json();
+      setTeams(refreshedJson.teams ?? []);
+    } else {
+      setMessage(`Error: ${json.error ?? "Unable to migrate teams"}`);
+    }
+  };
 
   const handleCreateOrUpdate = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!currentSeasonOnly) {
+      setMessage("Only the current season can be edited.");
+      return;
+    }
+
     const payload = {
       team_id: form.team_id,
       team_name: form.team_name,
@@ -84,6 +159,10 @@ export default function AdminTeamsPage() {
   };
 
   const handleToggleActive = async (team: Team) => {
+    if (!currentSeasonOnly) {
+      setMessage("Only the current season can be edited.");
+      return;
+    }
     const res = await fetch("/api/admin/teams", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -120,10 +199,50 @@ export default function AdminTeamsPage() {
         </a>
       </div>
 
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+        <select
+          value={selectedSeason}
+          onChange={(e) => setSelectedSeason(e.target.value)}
+          className="border border-[var(--border)] rounded px-3 py-2 text-sm bg-[var(--surface)]"
+        >
+          {seasons.map((season) => (
+            <option key={season.season} value={season.season}>
+              {season.season}{season.is_current ? " (current)" : ""}
+            </option>
+          ))}
+        </select>
+
+        {selectedSeason && !currentSeasonOnly && (
+          <button
+            type="button"
+            onClick={() => handleSetCurrentSeason(selectedSeason)}
+            className="text-sm px-4 py-2 rounded border border-orange-500 text-orange-600 hover:bg-orange-50"
+          >
+            Set as current season
+          </button>
+        )}
+
+        {currentSeasonOnly && previousSeason && (
+          <button
+            type="button"
+            onClick={handleMigrateTeamsFromPreviousSeason}
+            className="text-sm px-4 py-2 rounded border border-[var(--border)] hover:bg-[var(--surface-muted)]"
+          >
+            Migrate teams from {previousSeason}
+          </button>
+        )}
+      </div>
+
       {message && (
         <p className="mb-4 rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
           {message}
         </p>
+      )}
+
+      {!currentSeasonOnly && (
+        <div className="mb-6 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          This season is read-only. Switch to the current season to manage the teams list.
+        </div>
       )}
 
       <form onSubmit={handleCreateOrUpdate} className="mb-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
