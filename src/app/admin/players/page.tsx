@@ -18,6 +18,7 @@ export default function AdminPlayersPage() {
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [selectedSeason, setSelectedSeason] = useState("");
   const [rows, setRows] = useState<PlayerSeasonRow[]>([]);
+  const [teams, setTeams] = useState<Array<{ team_id: string; team_name: string | null; is_active: boolean | null }>>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -30,6 +31,12 @@ export default function AdminPlayersPage() {
         const current = s?.find((x: Season) => x.is_current)?.season ?? s?.[0]?.season ?? "";
         setSelectedSeason(current);
       });
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/teams")
+      .then((r) => r.json())
+      .then(({ teams: t }) => setTeams(t ?? []));
   }, []);
 
   // Load roster when season changes
@@ -83,6 +90,12 @@ export default function AdminPlayersPage() {
   };
 
   const handleToggleActive = async (row: PlayerSeasonRow) => {
+    const isCurrentSeason = !!seasons.find((s) => s.season === selectedSeason)?.is_current;
+    if (!isCurrentSeason) {
+      setMessage("Only the current season can be edited.");
+      return;
+    }
+
     const res = await fetch("/api/admin/players/seasons", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -94,6 +107,34 @@ export default function AdminPlayersPage() {
           r.player_id === row.player_id ? { ...r, is_active: !r.is_active } : r
         )
       );
+      setMessage(`✓ Updated ${row.players?.first_name ?? "Player"} ${row.players?.last_name ?? ""}`);
+    } else {
+      const json = await res.json();
+      setMessage(`Error: ${json.error ?? "Unable to update player status"}`);
+    }
+  };
+
+  const handleMovePlayer = async (row: PlayerSeasonRow, nextTeamId: string) => {
+    const isCurrentSeason = !!seasons.find((s) => s.season === selectedSeason)?.is_current;
+    if (!isCurrentSeason) {
+      setMessage("Only the current season can be edited.");
+      return;
+    }
+
+    const res = await fetch("/api/admin/players/seasons", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ player_id: row.player_id, season: row.season, team_id: nextTeamId }),
+    });
+
+    if (res.ok) {
+      setRows((prev) =>
+        prev.map((r) => (r.player_id === row.player_id ? { ...r, team_id: nextTeamId, teams: { team_name: teams.find((t) => t.team_id === nextTeamId)?.team_name ?? nextTeamId } } : r))
+      );
+      setMessage(`✓ Moved ${row.players?.first_name ?? "Player"} ${row.players?.last_name ?? ""} to ${nextTeamId}`);
+    } else {
+      const json = await res.json();
+      setMessage(`Error: ${json.error ?? "Unable to move player"}`);
     }
   };
 
@@ -102,6 +143,8 @@ export default function AdminPlayersPage() {
     (acc[key] ??= []).push(r);
     return acc;
   }, {});
+
+  const isCurrentSeason = !!seasons.find((s) => s.season === selectedSeason)?.is_current;
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-12 text-[var(--foreground)] bg-[var(--surface)] min-h-screen">
@@ -171,16 +214,34 @@ export default function AdminPlayersPage() {
                     {p.players?.first_name} {p.players?.last_name}
                   </span>
                 </div>
-                <button
-                  onClick={() => handleToggleActive(p)}
-                  className={`text-xs px-2.5 py-1 rounded border ${
-                    p.is_active
-                      ? "border-gray-300 text-gray-500 hover:border-red-300 hover:text-red-500"
-                      : "border-green-300 text-green-600 hover:bg-green-50"
-                  }`}
-                >
-                  {p.is_active ? "Deactivate" : "Activate"}
-                </button>
+
+                <div className="flex items-center gap-2">
+                  {isCurrentSeason && (
+                    <select
+                      value={p.team_id}
+                      onChange={(e) => handleMovePlayer(p, e.target.value)}
+                      className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs"
+                    >
+                      {teams.map((team) => (
+                        <option key={team.team_id} value={team.team_id}>
+                          {team.team_name ?? team.team_id}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  <button
+                    onClick={() => handleToggleActive(p)}
+                    disabled={!isCurrentSeason}
+                    className={`text-xs px-2.5 py-1 rounded border ${
+                      p.is_active
+                        ? "border-gray-300 text-gray-500 hover:border-red-300 hover:text-red-500"
+                        : "border-green-300 text-green-600 hover:bg-green-50"
+                    } disabled:opacity-40 disabled:cursor-not-allowed`}
+                  >
+                    {p.is_active ? "Deactivate" : "Activate"}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

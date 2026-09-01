@@ -61,7 +61,15 @@ export default function AdminPage() {
         >
           Season rosters
         </Link>
+
+        <Link
+          href="/admin/teams"
+          className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-4 text-lg font-medium hover:bg-[var(--surface-muted)]"
+        >
+          Teams
+        </Link>
       </div>
     </main>
   );
 }
+
