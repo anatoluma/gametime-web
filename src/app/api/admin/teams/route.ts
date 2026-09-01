@@ -21,6 +21,43 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
+
+  if (body?.action === "migrate_from_previous_season") {
+    const { source_season, target_season } = body ?? {};
+
+    if (!source_season || !target_season) {
+      return NextResponse.json({ error: "source_season and target_season are required" }, { status: 400 });
+    }
+
+    const { data: priorTeams, error: fetchError } = await supabaseAdmin
+      .from("teams")
+      .select("team_id, team_name, city, coach, is_active")
+      .eq("is_active", true)
+      .order("team_name");
+
+    if (fetchError) {
+      return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    }
+
+    const rows = (priorTeams ?? []).map((team) => ({
+      team_id: team.team_id,
+      team_name: team.team_name,
+      city: team.city,
+      coach: team.coach,
+      is_active: true,
+    }));
+
+    const { error: upsertError } = await supabaseAdmin
+      .from("teams")
+      .upsert(rows, { onConflict: "team_id" });
+
+    if (upsertError) {
+      return NextResponse.json({ error: upsertError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ migrated: rows.length, target_season });
+  }
+
   const team_id = String(body?.team_id ?? "").trim().toUpperCase();
   const team_name = String(body?.team_name ?? "").trim();
   const city = body?.city == null || String(body.city).trim() === "" ? null : String(body.city).trim();
