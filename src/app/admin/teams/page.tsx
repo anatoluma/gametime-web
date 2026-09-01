@@ -54,7 +54,15 @@ export default function AdminTeamsPage() {
       if (!isMounted) return;
 
       if (res.ok) {
-        setTeams(json.teams ?? []);
+        const seasonTeams = json.teams ?? [];
+
+        if (seasonTeams.length === 0 && !seasons.find((season) => season.season === selectedSeason)?.is_current) {
+          const legacyRes = await fetch("/api/admin/teams");
+          const legacyJson = await legacyRes.json();
+          setTeams(legacyRes.ok ? (legacyJson.teams ?? []) : []);
+        } else {
+          setTeams(seasonTeams);
+        }
       } else {
         setMessage(`Error: ${json.error ?? "Failed to load teams"}`);
       }
