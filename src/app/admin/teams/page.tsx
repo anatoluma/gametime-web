@@ -15,8 +15,8 @@ type Season = { season: string; is_current: boolean };
 export default function AdminTeamsPage() {
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [selectedSeason, setSelectedSeason] = useState("");
-  const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [previousSeasonTeams, setPreviousSeasonTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [showAddTeam, setShowAddTeam] = useState(false);
@@ -48,15 +48,13 @@ export default function AdminTeamsPage() {
 
     const fetchTeams = async () => {
       setLoading(true);
-      const res = await fetch("/api/admin/teams");
+      const res = await fetch(`/api/admin/teams?season=${encodeURIComponent(selectedSeason)}`);
       const json = await res.json();
 
       if (!isMounted) return;
 
       if (res.ok) {
-        const all = json.teams ?? [];
-        setAllTeams(all);
-        setTeams(currentSeasonOnly ? [] : all);
+        setTeams(json.teams ?? []);
       } else {
         setMessage(`Error: ${json.error ?? "Failed to load teams"}`);
       }
@@ -70,6 +68,26 @@ export default function AdminTeamsPage() {
     };
   }, [selectedSeason]);
 
+  const previousSeason = useMemo(() => {
+    const sorted = [...seasons].sort((a, b) => b.season.localeCompare(a.season));
+    return sorted.find((season) => season.season !== selectedSeason && !season.is_current)?.season ?? "";
+  }, [seasons, selectedSeason]);
+
+  useEffect(() => {
+    if (!previousSeason) {
+      setPreviousSeasonTeams([]);
+      return;
+    }
+
+    const fetchPreviousSeasonTeams = async () => {
+      const res = await fetch(`/api/admin/teams?season=${encodeURIComponent(previousSeason)}`);
+      const json = await res.json();
+      setPreviousSeasonTeams(res.ok ? (json.teams ?? []) : []);
+    };
+
+    void fetchPreviousSeasonTeams();
+  }, [previousSeason]);
+
   const currentSeasonOnly = useMemo(
     () => !!seasons.find((season) => season.season === selectedSeason)?.is_current,
     [selectedSeason, seasons]
@@ -77,17 +95,6 @@ export default function AdminTeamsPage() {
 
   const teamCount = useMemo(() => teams.filter((team) => team.is_active ?? false).length, [teams]);
   const inactiveTeamCount = useMemo(() => teams.filter((team) => !(team.is_active ?? false)).length, [teams]);
-  const previousSeason = useMemo(() => {
-    const sorted = [...seasons].sort((a, b) => b.season.localeCompare(a.season));
-    return sorted.find((season) => season.season !== selectedSeason && !season.is_current)?.season ?? "";
-  }, [seasons, selectedSeason]);
-  const previousSeasonTeams = useMemo(
-    () =>
-      [...allTeams]
-        .filter((team) => team.is_active ?? false)
-        .sort((a, b) => (a.team_name ?? "").localeCompare(b.team_name ?? "")),
-    [allTeams]
-  );
 
   const handleSetCurrentSeason = async (season: string) => {
     const res = await fetch(`/api/admin/seasons/${encodeURIComponent(season)}`, {
@@ -112,7 +119,7 @@ export default function AdminTeamsPage() {
       return;
     }
 
-    const selectedTeam = allTeams.find((team) => team.team_id === selectedPreviousTeamId);
+    const selectedTeam = previousSeasonTeams.find((team) => team.team_id === selectedPreviousTeamId);
     if (!selectedTeam) {
       setMessage("Select a team from the previous season to add.");
       return;
@@ -122,6 +129,7 @@ export default function AdminTeamsPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        season: selectedSeason,
         team_id: selectedTeam.team_id,
         team_name: selectedTeam.team_name,
         city: selectedTeam.city,
@@ -161,7 +169,7 @@ export default function AdminTeamsPage() {
     const res = await fetch("/api/admin/teams", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, season: selectedSeason }),
     });
     const json = await res.json();
 
@@ -169,7 +177,7 @@ export default function AdminTeamsPage() {
       setMessage(`✓ Saved ${json.team?.team_name ?? form.team_name}`);
       setForm({ team_id: "", team_name: "", city: "", coach: "", is_active: true });
       const next = async () => {
-        const res2 = await fetch("/api/admin/teams");
+        const res2 = await fetch(`/api/admin/teams?season=${encodeURIComponent(selectedSeason)}`);
         const json2 = await res2.json();
         if (res2.ok) {
           setTeams(json2.teams ?? []);
@@ -189,7 +197,7 @@ export default function AdminTeamsPage() {
     const res = await fetch("/api/admin/teams", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ team_id: team.team_id, is_active: !(team.is_active ?? false) }),
+      body: JSON.stringify({ season: selectedSeason, team_id: team.team_id, is_active: !(team.is_active ?? false) }),
     });
     const json = await res.json();
 
