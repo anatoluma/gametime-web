@@ -12,6 +12,8 @@ type GameRow = {
   game_id: string;
   season: string | null;
   tipoff: string | null;
+  scheduled_date: string | null;
+  round_number: number | null;
   venue: string | null;
   home_team_id: string;
   away_team_id: string;
@@ -58,7 +60,9 @@ export default function GamesPage() {
   const [games, setGames] = useState<GameRow[]>([]);
   const [teamsById, setTeamsById] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [selectedSeason, setSelectedSeason] = useState("");
+  const [selectedRound, setSelectedRound] = useState("all");
   const { t } = useT();
 
   useEffect(() => {
@@ -80,6 +84,8 @@ export default function GamesPage() {
       if (gamesError) { setError(gamesError); setLoading(false); return; }
 
       setGames((gamesData ?? []) as GameRow[]);
+      const seasons = [...new Set((gamesData ?? []).map((game: GameRow) => game.season).filter(Boolean))] as string[];
+      setSelectedSeason(seasons.sort().at(-1) ?? "");
       setLoading(false);
     }
     load();
@@ -88,6 +94,7 @@ export default function GamesPage() {
 
   const computed = useMemo(() => {
     const now = new Date();
+    const seasonGames = selectedSeason ? games.filter((g) => g.season === selectedSeason) : games;
     
     // helper to get the Monday of a given week
     const getMonday = (d: Date) => {
@@ -105,23 +112,31 @@ export default function GamesPage() {
     lastMonday.setDate(thisMonday.getDate() - 7);
 
     const isFinished = (g: GameRow) => {
-      const gameDate = g.tipoff ? new Date(g.tipoff) : null;
+      const gameDate = g.tipoff
+        ? new Date(g.tipoff)
+        : g.scheduled_date
+          ? new Date(`${g.scheduled_date}T12:00:00`)
+          : null;
       const now = new Date();
       return g.home_score != null && g.away_score != null && gameDate && gameDate < now;
     };
     
     // 1. Current Week Games (Today + Future this week)
-    const upcomingThisWeek = games.filter(g => 
+    const upcomingThisWeek = seasonGames.filter(g =>
       inRange(g.tipoff, thisMonday, nextMonday) && !isFinished(g)
     ).sort((a, b) => (a.tipoff ? new Date(a.tipoff).getTime() : 0) - (b.tipoff ? new Date(b.tipoff).getTime() : 0));
 
     // 2. Today's Finished Games or Recent Results
-    const recentResults = games.filter(g => 
+    const recentResults = seasonGames.filter(g =>
       (inRange(g.tipoff, thisMonday, nextMonday) || inRange(g.tipoff, lastMonday, thisMonday)) && isFinished(g)
     ).sort((a, b) => (b.tipoff ? new Date(b.tipoff).getTime() : 0) - (a.tipoff ? new Date(a.tipoff).getTime() : 0));
 
-    const allUpcoming = games.filter(g => !isFinished(g));
-    const allFinished = games.filter(isFinished);
+    const allUpcoming = seasonGames.filter(g => !isFinished(g));
+    const allFinished = seasonGames.filter(isFinished);
+    const scheduleGames = seasonGames
+      .filter((g) => selectedRound === "all" || String(g.round_number) === selectedRound)
+      .sort((a, b) => (a.scheduled_date ?? a.tipoff ?? "").localeCompare(b.scheduled_date ?? b.tipoff ?? ""));
+    const rounds = [...new Set(seasonGames.map((g) => g.round_number).filter((round): round is number => round != null))].sort((a, b) => a - b);
 
     const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
@@ -130,16 +145,22 @@ export default function GamesPage() {
       recentResults,
       allUpcoming,
       allFinished,
+      scheduleGames,
+      rounds,
       thisWeekLabel: `${fmt(thisMonday)} — ${fmt(new Date(nextMonday.getTime() - 86400000))}`,
       lastWeekLabel: `${fmt(lastMonday)} — ${fmt(new Date(thisMonday.getTime() - 86400000))}`,
     };
-  }, [games]);
+  }, [games, selectedRound, selectedSeason]);
 
   const GameCard = ({ g }: { g: GameRow }) => {
-    const dateObj = g.tipoff ? new Date(g.tipoff) : null;
+    const dateObj = g.tipoff
+      ? new Date(g.tipoff)
+      : g.scheduled_date
+        ? new Date(`${g.scheduled_date}T12:00:00`)
+        : null;
     const now = new Date();
     const isFinished = g.home_score != null && g.away_score != null && dateObj && dateObj < now;
-    const timeText = dateObj ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "TBD";
+    const timeText = g.tipoff && dateObj ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Time TBD";
     const dateText = dateObj ? dateObj.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : "";
 
     const winner = getWinner(g.home_score, g.away_score);
@@ -234,6 +255,22 @@ export default function GamesPage() {
           {t("games_title")}
         </h1>
 
+        <div className="mb-8 flex flex-wrap gap-3">
+          <label className="flex items-center gap-2 text-xs font-semibold uppercase" style={{ color: "var(--muted)" }}>
+            Season
+            <select value={selectedSeason} onChange={(event) => { setSelectedSeason(event.target.value); setSelectedRound("all"); }} className="rounded border px-3 py-2 text-xs" style={{ borderColor: "var(--line)", background: "var(--navy-800)", color: "var(--text)" }}>
+              {[...new Set(games.map((game) => game.season).filter((season): season is string => Boolean(season)))].sort().reverse().map((season) => <option key={season} value={season}>{season}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs font-semibold uppercase" style={{ color: "var(--muted)" }}>
+            Round
+            <select value={selectedRound} onChange={(event) => setSelectedRound(event.target.value)} className="rounded border px-3 py-2 text-xs" style={{ borderColor: "var(--line)", background: "var(--navy-800)", color: "var(--text)" }}>
+              <option value="all">All rounds</option>
+              {computed.rounds.map((round) => <option key={round} value={round}>Round {round}</option>)}
+            </select>
+          </label>
+        </div>
+
         <section className="mb-10">
           <SectionHeading title={t("games_this_week")} href="/games" linkLabel={t("standings_full_schedule")} headingClassName="text-lg" />
           <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--orange)" }}>{computed.thisWeekLabel}</p>
@@ -250,6 +287,22 @@ export default function GamesPage() {
           <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("games_recent_sub")}</p>
           <div className="grid gap-3">
             {computed.recentResults.slice(0, 6).map(g => <GameCard key={g.game_id} g={g} />)}
+          </div>
+        </section>
+
+        <section className="mt-12">
+          <h2 className="lbm-section-heading text-lg font-semibold uppercase leading-none">Full schedule</h2>
+          <div className="mt-4 space-y-8">
+            {computed.rounds
+              .filter((round) => selectedRound === "all" || String(round) === selectedRound)
+              .map((round) => (
+                <div key={round}>
+                  <h2 className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--orange)" }}>Round {round}</h2>
+                  <div className="grid gap-3">
+                    {computed.scheduleGames.filter((game) => game.round_number === round).map((game) => <GameCard key={game.game_id} g={game} />)}
+                  </div>
+                </div>
+              ))}
           </div>
         </section>
       </div>
