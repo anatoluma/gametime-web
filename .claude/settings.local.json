@@ -3,7 +3,9 @@
     "allow": [
       "Bash(ls -la /c/Users/anato/gametime-web/.cursor*)",
       "Bash(npm run:*)",
-      "Bash(node ocr/test-extraction.mjs ocr/ADM-EDI.jpg)"
+      "Bash(node ocr/test-extraction.mjs ocr/ADM-EDI.jpg)",
+      "Bash(cat /tmp/dev.log | tail -30)",
+      "Read(//tmp/**)"
     ]
   }
 }
