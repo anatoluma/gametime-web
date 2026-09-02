@@ -20,7 +20,7 @@ const supabaseAdmin = createClient(
 
 const TEAM_ID_RE = /^[A-Z0-9]{2,4}$/;
 
-const SEASON_TEAM_SELECT = "team_id, is_active, teams!inner(team_id, team_name, city, coach, is_active)";
+const SEASON_TEAM_SELECT = "team_id, is_active, teams!inner(team_id, team_name, city, coach, logo_url, is_active)";
 
 type SeasonTeamJoin = {
   team_id: string;
@@ -30,6 +30,7 @@ type SeasonTeamJoin = {
     team_name: string | null;
     city: string | null;
     coach: string | null;
+    logo_url: string | null;
     is_active: boolean | null;
   };
 };
@@ -39,6 +40,7 @@ type SeasonTeamRow = {
   team_name: string | null;
   city: string | null;
   coach: string | null;
+  logo_url: string | null;
   /** Season-scoped: does this team play the selected season. */
   is_active: boolean;
   /** Global: does the franchise exist in the league. */
@@ -51,6 +53,7 @@ function toSeasonTeamRow(row: SeasonTeamJoin): SeasonTeamRow {
     team_name: row.teams?.team_name ?? null,
     city: row.teams?.city ?? null,
     coach: row.teams?.coach ?? null,
+    logo_url: row.teams?.logo_url ?? null,
     is_active: row.is_active ?? true,
     league_active: row.teams?.is_active ?? true,
   };
@@ -100,7 +103,7 @@ export async function GET(request: Request) {
   // No season: the canonical franchise list.
   const { data, error } = await supabaseAdmin
     .from("teams")
-    .select("team_id, team_name, city, coach, is_active")
+    .select("team_id, team_name, city, coach, logo_url, is_active")
     .order("team_name");
 
   if (error) {

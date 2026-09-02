@@ -8,7 +8,7 @@ import { useT } from "@/app/components/LanguageProvider";
 import Crest from "@/app/components/home/Crest";
 import SectionHeading from "@/app/components/home/SectionHeading";
 
-type Team = { team_id: string; team_name: string; city: string | null; coach: string | null; };
+type Team = { team_id: string; team_name: string; city: string | null; coach: string | null; logo_url: string | null; };
 type Player = { player_id: string; first_name: string; last_name: string; jersey_number: number | null; };
 type Game = { game_id: string; season: string | null; tipoff: string | null; home_team_id: string; away_team_id: string; home_score: number | null; away_score: number | null; };
 type Summary = { gamesPlayed: number; wins: number; losses: number; pf: number; pa: number; diff: number; };
@@ -93,7 +93,7 @@ export default function TeamPage() {
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
             <div className="min-w-0">
               <div className="flex items-center gap-4 md:gap-5">
-                <Crest teamId={team.team_id} teamName={team.team_name} size={44} className="sm:!h-14 sm:!w-14" />
+                <Crest teamId={team.team_id} teamName={team.team_name} logoUrl={team.logo_url} size={44} className="sm:!h-14 sm:!w-14" />
                 <h1 className="text-3xl uppercase tracking-tight leading-[0.9] break-words sm:text-5xl lg:text-6xl" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
                   {team.team_name}
                 </h1>
