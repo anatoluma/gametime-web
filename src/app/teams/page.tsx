@@ -47,6 +47,7 @@ export default async function TeamsPage() {
                 <Crest
                   teamId={team.team_id}
                   teamName={team.team_name}
+                  logoUrl={team.logo_url}
                   size={28}
                   className="h-7 w-7 sm:!h-8 sm:!w-8"
                   imageClassName="h-full w-full object-contain"

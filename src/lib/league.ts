@@ -15,6 +15,7 @@ export type SeasonTeam = {
   team_name: string | null;
   city: string | null;
   coach: string | null;
+  logo_url: string | null;
 };
 
 /** Normalizes free-typed season labels (e.g. "2025-2026", " 2025-2026 ") to the canonical "YYYY/YY" form used everywhere else. */
@@ -81,7 +82,7 @@ export async function getSeasonTeams(
 ): Promise<SeasonTeam[]> {
   let query = supabase
     .from("team_seasons")
-    .select("team_id, is_active, teams!inner(team_name, city, coach)")
+    .select("team_id, is_active, teams!inner(team_name, city, coach, logo_url)")
     .eq("season", season);
 
   if (!opts?.includeInactive) query = query.eq("is_active", true);
@@ -91,7 +92,7 @@ export async function getSeasonTeams(
 
   type Row = {
     team_id: string;
-    teams: { team_name: string | null; city: string | null; coach: string | null };
+    teams: { team_name: string | null; city: string | null; coach: string | null; logo_url: string | null };
   };
 
   return ((data ?? []) as unknown as Row[])
@@ -100,6 +101,7 @@ export async function getSeasonTeams(
       team_name: row.teams.team_name,
       city: row.teams.city,
       coach: row.teams.coach,
+      logo_url: row.teams.logo_url,
     }))
     .sort((a, b) => (a.team_name ?? a.team_id).localeCompare(b.team_name ?? b.team_id));
 }

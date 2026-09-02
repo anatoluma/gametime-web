@@ -11,6 +11,7 @@ import SectionHeading from "@/app/components/home/SectionHeading";
 type TeamRow = {
   team_id: string;
   name: string;
+  logo_url: string | null;
   gp: number;
   w: number;
   l: number;
@@ -56,6 +57,7 @@ export default async function StandingsPage({
     table[t.team_id] = {
       team_id: t.team_id,
       name: t.team_name ?? t.team_id,
+      logo_url: t.logo_url,
       gp: 0, w: 0, l: 0, pts: 0, pf: 0, pa: 0, diff: 0,
     };
   }
@@ -145,7 +147,7 @@ export default async function StandingsPage({
                         href={`/teams/${team.team_id}`}
                         className="flex items-center gap-2 text-xs font-semibold uppercase hover:text-[var(--orange)]"
                       >
-                        <Crest teamId={team.team_id} teamName={team.name} size={26} />
+                        <Crest teamId={team.team_id} teamName={team.name} logoUrl={team.logo_url} size={26} />
                         <span className="truncate">{team.name}</span>
                       </Link>
                     </td>

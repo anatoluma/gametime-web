@@ -9,7 +9,7 @@ import GameSharePanel from "@/app/components/GameSharePanel";
 import { useT } from "@/app/components/LanguageProvider";
 
 type Game = { game_id: string; season: string | null; tipoff: string | null; venue: string | null; home_team_id: string; away_team_id: string; home_score: number | null; away_score: number | null; };
-type Team = { team_id: string; team_name: string; };
+type Team = { team_id: string; team_name: string; logo_url: string | null; };
 type PlayerStat = {
   player_id: string;
   team_id: string;
@@ -118,7 +118,7 @@ export default function GamePage() {
       }
       setGame(gameData as Game);
 
-      const { data: teamsData } = await supabase.from("teams").select("team_id, team_name");
+      const { data: teamsData } = await supabase.from("teams").select("team_id, team_name, logo_url");
       const teamMap: Record<string, Team> = {};
       (teamsData ?? []).forEach((t: Team) => { teamMap[t.team_id] = t; });
       setTeams(teamMap);
@@ -472,7 +472,7 @@ export default function GamePage() {
               <div className="flex flex-col items-center text-center">
                 <div className="relative">
                   <div style={{ width: "64px", height: "64px", borderRadius: "50%", border: homeWins ? "2px solid rgba(255,140,0,0.45)" : "2px solid rgba(255,255,255,0.08)", background: homeWins ? "rgba(255,140,0,0.06)" : "rgba(255,255,255,0.04)", boxShadow: homeWins ? "0 0 20px rgba(255,130,0,0.15)" : "none", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <TeamLogo teamId={game.home_team_id} teamName={homeTeam?.team_name ?? "Home Team"} size={56} className="h-14 w-14 object-contain" />
+                    <TeamLogo teamId={game.home_team_id} teamName={homeTeam?.team_name ?? "Home Team"} logoUrl={homeTeam?.logo_url} size={56} className="h-14 w-14 object-contain" />
                   </div>
                   {homeWins && (
                     <div style={{ position: "absolute", top: "-3px", right: "-3px", width: "18px", height: "18px", borderRadius: "50%", background: "#FF8C00", border: "2px solid #0d0d14", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", fontWeight: 900, color: "#000" }}>✓</div>
@@ -500,7 +500,7 @@ export default function GamePage() {
               <div className="flex flex-col items-center text-center">
                 <div className="relative">
                   <div style={{ width: "64px", height: "64px", borderRadius: "50%", border: awayWins ? "2px solid rgba(255,140,0,0.45)" : "2px solid rgba(255,255,255,0.08)", background: awayWins ? "rgba(255,140,0,0.06)" : "rgba(255,255,255,0.04)", boxShadow: awayWins ? "0 0 20px rgba(255,130,0,0.15)" : "none", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <TeamLogo teamId={game.away_team_id} teamName={awayTeam?.team_name ?? "Away Team"} size={56} className="h-14 w-14 object-contain" />
+                    <TeamLogo teamId={game.away_team_id} teamName={awayTeam?.team_name ?? "Away Team"} logoUrl={awayTeam?.logo_url} size={56} className="h-14 w-14 object-contain" />
                   </div>
                   {awayWins && (
                     <div style={{ position: "absolute", top: "-3px", right: "-3px", width: "18px", height: "18px", borderRadius: "50%", background: "#FF8C00", border: "2px solid #0d0d14", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", fontWeight: 900, color: "#000" }}>✓</div>
@@ -522,7 +522,7 @@ export default function GamePage() {
               <div className="flex items-center gap-5">
                 <div className="relative flex-shrink-0">
                   <div style={{ width: "80px", height: "80px", borderRadius: "50%", border: homeWins ? "2px solid rgba(255,140,0,0.45)" : "2px solid rgba(255,255,255,0.08)", background: homeWins ? "rgba(255,140,0,0.06)" : "rgba(255,255,255,0.04)", boxShadow: homeWins ? "0 0 24px rgba(255,130,0,0.18)" : "none", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <TeamLogo teamId={game.home_team_id} teamName={homeTeam?.team_name ?? "Home Team"} size={72} className="h-[72px] w-[72px] object-contain" />
+                    <TeamLogo teamId={game.home_team_id} teamName={homeTeam?.team_name ?? "Home Team"} logoUrl={homeTeam?.logo_url} size={72} className="h-[72px] w-[72px] object-contain" />
                   </div>
                   {homeWins && (
                     <div style={{ position: "absolute", top: "-3px", right: "-3px", width: "20px", height: "20px", borderRadius: "50%", background: "#FF8C00", border: "2px solid #0d0d14", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: 900, color: "#000" }}>✓</div>
@@ -554,7 +554,7 @@ export default function GamePage() {
               <div className="flex items-center gap-5 flex-row-reverse">
                 <div className="relative flex-shrink-0">
                   <div style={{ width: "80px", height: "80px", borderRadius: "50%", border: awayWins ? "2px solid rgba(255,140,0,0.45)" : "2px solid rgba(255,255,255,0.08)", background: awayWins ? "rgba(255,140,0,0.06)" : "rgba(255,255,255,0.04)", boxShadow: awayWins ? "0 0 24px rgba(255,130,0,0.18)" : "none", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <TeamLogo teamId={game.away_team_id} teamName={awayTeam?.team_name ?? "Away Team"} size={72} className="h-[72px] w-[72px] object-contain" />
+                    <TeamLogo teamId={game.away_team_id} teamName={awayTeam?.team_name ?? "Away Team"} logoUrl={awayTeam?.logo_url} size={72} className="h-[72px] w-[72px] object-contain" />
                   </div>
                   {awayWins && (
                     <div style={{ position: "absolute", top: "-3px", right: "-3px", width: "20px", height: "20px", borderRadius: "50%", background: "#FF8C00", border: "2px solid #0d0d14", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: 900, color: "#000" }}>✓</div>
@@ -652,8 +652,8 @@ export default function GamePage() {
           <div className="absolute bottom-4 right-4 z-20 md:bottom-5 md:right-6">
             <GameSharePanel
               gameId={game.game_id}
-              homeTeam={{ name: homeTeam?.team_name ?? "Home Team", logoUrl: `/images/teams/${game.home_team_id.toLowerCase()}.webp` }}
-              awayTeam={{ name: awayTeam?.team_name ?? "Away Team", logoUrl: `/images/teams/${game.away_team_id.toLowerCase()}.webp` }}
+              homeTeam={{ name: homeTeam?.team_name ?? "Home Team", logoUrl: homeTeam?.logo_url ?? `/images/teams/${game.home_team_id.toLowerCase()}.webp` }}
+              awayTeam={{ name: awayTeam?.team_name ?? "Away Team", logoUrl: awayTeam?.logo_url ?? `/images/teams/${game.away_team_id.toLowerCase()}.webp` }}
               homeScore={game.home_score!}
               awayScore={game.away_score!}
               venue={game.venue ?? "Local Arena"}
