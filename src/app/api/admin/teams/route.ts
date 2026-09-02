@@ -32,20 +32,7 @@ export async function GET(request: Request) {
       is_active: row.is_active ?? true,
     }));
 
-    if (mapped.length > 0) {
-      return NextResponse.json({ teams: mapped });
-    }
-
-    const fallback = await supabaseAdmin
-      .from("teams")
-      .select("team_id, team_name, city, coach, is_active")
-      .order("team_name");
-
-    if (fallback.error) {
-      return NextResponse.json({ error: fallback.error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ teams: fallback.data ?? [] });
+    return NextResponse.json({ teams: mapped });
   }
 
   const { data, error } = await supabaseAdmin

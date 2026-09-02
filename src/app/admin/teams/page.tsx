@@ -54,15 +54,7 @@ export default function AdminTeamsPage() {
       if (!isMounted) return;
 
       if (res.ok) {
-        const seasonTeams = json.teams ?? [];
-
-        if (seasonTeams.length === 0 && !seasons.find((season) => season.season === selectedSeason)?.is_current) {
-          const legacyRes = await fetch("/api/admin/teams");
-          const legacyJson = await legacyRes.json();
-          setTeams(legacyRes.ok ? (legacyJson.teams ?? []) : []);
-        } else {
-          setTeams(seasonTeams);
-        }
+        setTeams(json.teams ?? []);
       } else {
         setMessage(`Error: ${json.error ?? "Failed to load teams"}`);
       }
@@ -103,6 +95,15 @@ export default function AdminTeamsPage() {
 
   const teamCount = useMemo(() => teams.filter((team) => team.is_active ?? false).length, [teams]);
   const inactiveTeamCount = useMemo(() => teams.filter((team) => !(team.is_active ?? false)).length, [teams]);
+  const orderedTeams = useMemo(
+    () =>
+      [...teams].sort((a, b) => {
+        const activeDiff = Number(Boolean(b.is_active)) - Number(Boolean(a.is_active));
+        if (activeDiff !== 0) return activeDiff;
+        return (a.team_name ?? a.team_id).localeCompare(b.team_name ?? b.team_id);
+      }),
+    [teams]
+  );
 
   const handleSetCurrentSeason = async (season: string) => {
     const res = await fetch(`/api/admin/seasons/${encodeURIComponent(season)}`, {
@@ -409,18 +410,21 @@ export default function AdminTeamsPage() {
         <p className="text-sm text-gray-400">Loading teams...</p>
       ) : (
         <div className="space-y-3">
-          {teams.map((team) => (
+          {orderedTeams.map((team, index) => (
             <div
               key={team.team_id}
               className={`flex items-center justify-between gap-4 rounded border px-4 py-3 ${team.is_active ? "border-green-300 bg-green-50/40" : "border-[var(--border)] bg-[var(--surface)]"}`}
             >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold uppercase tracking-wide">{team.team_id}</span>
-                  <span className="text-base font-medium">{team.team_name ?? "Unnamed team"}</span>
-                </div>
-                <div className="mt-1 text-xs text-[var(--text-muted)]">
-                  {team.city ?? "City not set"} {team.coach ? `• Coach: ${team.coach}` : ""}
+              <div className="flex items-center gap-4">
+                <span className="w-8 text-sm font-semibold text-[var(--text-muted)]">#{index + 1}</span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold uppercase tracking-wide">{team.team_id}</span>
+                    <span className="text-base font-medium">{team.team_name ?? "Unnamed team"}</span>
+                  </div>
+                  <div className="mt-1 text-xs text-[var(--text-muted)]">
+                    {team.city ?? "City not set"} {team.coach ? `• Coach: ${team.coach}` : ""}
+                  </div>
                 </div>
               </div>
 
