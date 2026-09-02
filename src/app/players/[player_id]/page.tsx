@@ -16,6 +16,7 @@ type Player = {
   first_name: string;
   last_name: string;
   jersey_number: number | null;
+  photo_url: string | null;
 };
 
 type Team = {
@@ -138,7 +139,7 @@ export default function PlayerPage() {
 
       const { data: playerData, error: playerError } = await supabase
         .from("players")
-        .select("player_id, team_id, first_name, last_name, jersey_number")
+        .select("player_id, team_id, first_name, last_name, jersey_number, photo_url")
         .eq("player_id", playerId)
         .maybeSingle();
 
@@ -252,6 +253,7 @@ export default function PlayerPage() {
           <PlayerAvatar
             playerId={player.player_id}
             playerName={`${player.first_name} ${player.last_name}`}
+            photoUrl={player.photo_url}
             width={96}
             height={120}
             className="h-24 w-20 shrink-0 rounded-[var(--radius)] object-cover md:h-[120px] md:w-24"
