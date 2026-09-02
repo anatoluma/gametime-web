@@ -9,11 +9,7 @@ const supabaseAdmin = createClient(
 
 const LOGOS_BUCKET = "team-logos";
 
-const ALLOWED_TYPES: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
+const ALLOWED_TYPES: Record<string, string> = { "image/webp": "webp" };
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 // POST /api/admin/teams/logo — multipart { team_id, file } — upload/replace a team's logo
@@ -60,7 +56,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
 
-  const storagePath = `${team_id}.${ext}`;
+  const storagePath = `${team_id.trim().toUpperCase()}.${ext}`;
   const fileBuffer = await file.arrayBuffer();
 
   const { error: storageError } = await supabaseAdmin.storage

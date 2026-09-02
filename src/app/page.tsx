@@ -65,7 +65,7 @@ export default async function Home() {
     supabase.from("games").select("*").eq("season", season).order("tipoff", { ascending: false }),
     // Every franchise ever, purely for labelling games — the standings set below
     // is season-scoped, but a game must never render without its team name.
-    supabase.from("teams").select("team_id, team_name"),
+    supabase.from("teams").select("team_id, team_name, logo_url"),
   ]);
 
   const statsData: any[] = [];
@@ -85,7 +85,7 @@ export default async function Home() {
   const allGames = gamesRes.data ?? [];
   const recentGames = allGames.slice(0, 4);
   const teamMap = new Map(
-    (allTeamsRes.data ?? []).map(t => [t.team_id, t.team_name ?? t.team_id])
+    (allTeamsRes.data ?? []).map(t => [t.team_id, { name: t.team_name ?? t.team_id, logoUrl: t.logo_url }])
   );
 
   // --- STANDINGS LOGIC ---
@@ -208,8 +208,10 @@ export default async function Home() {
                 : "TBD";
 
               const winner = getWinner(game.home_score, game.away_score);
-              const homeName = teamMap.get(game.home_team_id) ?? game.home_team_id;
-              const awayName = teamMap.get(game.away_team_id) ?? game.away_team_id;
+              const homeTeam = teamMap.get(game.home_team_id);
+              const awayTeam = teamMap.get(game.away_team_id);
+              const homeName = homeTeam?.name ?? game.home_team_id;
+              const awayName = awayTeam?.name ?? game.away_team_id;
 
               return (
                 <Link
@@ -238,7 +240,7 @@ export default async function Home() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
-                        <Crest teamId={game.home_team_id} teamName={homeName} size={26} />
+                        <Crest teamId={game.home_team_id} teamName={homeName} logoUrl={homeTeam?.logoUrl} size={26} />
                         <span
                           className={`truncate text-xs uppercase ${winner === "home" ? "font-bold" : "font-semibold"}`}
                           style={{ color: winner === "home" ? "var(--text)" : "var(--lose)" }}
@@ -263,7 +265,7 @@ export default async function Home() {
 
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
-                        <Crest teamId={game.away_team_id} teamName={awayName} size={26} />
+                        <Crest teamId={game.away_team_id} teamName={awayName} logoUrl={awayTeam?.logoUrl} size={26} />
                         <span
                           className={`truncate text-xs uppercase ${winner === "away" ? "font-bold" : "font-semibold"}`}
                           style={{ color: winner === "away" ? "var(--text)" : "var(--lose)" }}
@@ -326,7 +328,7 @@ export default async function Home() {
                           className="flex items-center gap-2 text-xs font-semibold uppercase transition-colors hover:text-[var(--orange)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--orange)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--navy-900)]"
                         >
                           <RankBadge rank={i + 1} />
-                          <Crest teamId={team.id} teamName={team.name} size={26} />
+                          <Crest teamId={team.id} teamName={team.name} logoUrl={teams.find((item) => item.team_id === team.id)?.logo_url} size={26} />
                           <span className="truncate">{team.name}</span>
                         </Link>
                       </td>
@@ -375,7 +377,7 @@ export default async function Home() {
                           className="flex items-center gap-2 text-xs font-semibold uppercase transition-colors hover:text-[var(--orange)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--orange)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--navy-900)]"
                         >
                           <RankBadge rank={i + 1} />
-                          <Crest teamId={p.teamId} teamName={teamMap.get(p.teamId) ?? p.teamId} size={26} />
+                          <Crest teamId={p.teamId} teamName={teamMap.get(p.teamId)?.name ?? p.teamId} logoUrl={teamMap.get(p.teamId)?.logoUrl} size={26} />
                           <span className="truncate">{p.name}</span>
                         </Link>
                       </td>

@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import TeamLogo from "@/app/components/TeamLogo";
 import GameSharePanel from "@/app/components/GameSharePanel";
 import { useT } from "@/app/components/LanguageProvider";
+import { getTeamLogoUrl } from "@/lib/team-logo";
 
 type Game = { game_id: string; season: string | null; tipoff: string | null; venue: string | null; home_team_id: string; away_team_id: string; home_score: number | null; away_score: number | null; };
 type Team = { team_id: string; team_name: string; logo_url: string | null; };
@@ -652,8 +653,8 @@ export default function GamePage() {
           <div className="absolute bottom-4 right-4 z-20 md:bottom-5 md:right-6">
             <GameSharePanel
               gameId={game.game_id}
-              homeTeam={{ name: homeTeam?.team_name ?? "Home Team", logoUrl: homeTeam?.logo_url ?? `/images/teams/${game.home_team_id.toLowerCase()}.webp` }}
-              awayTeam={{ name: awayTeam?.team_name ?? "Away Team", logoUrl: awayTeam?.logo_url ?? `/images/teams/${game.away_team_id.toLowerCase()}.webp` }}
+              homeTeam={{ name: homeTeam?.team_name ?? "Home Team", logoUrl: getTeamLogoUrl(game.home_team_id) ?? "/images/teams/default.svg" }}
+              awayTeam={{ name: awayTeam?.team_name ?? "Away Team", logoUrl: getTeamLogoUrl(game.away_team_id) ?? "/images/teams/default.svg" }}
               homeScore={game.home_score!}
               awayScore={game.away_score!}
               venue={game.venue ?? "Local Arena"}

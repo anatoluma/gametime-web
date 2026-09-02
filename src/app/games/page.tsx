@@ -24,6 +24,7 @@ type GameRow = {
 type TeamRow = {
   team_id: string;
   team_name: string;
+  logo_url: string | null;
 };
 
 function startOfDay(d: Date) {
@@ -71,7 +72,7 @@ function hasKnownTipoff(game: GameRow) {
 
 export default function GamesPage() {
   const [games, setGames] = useState<GameRow[]>([]);
-  const [teamsById, setTeamsById] = useState<Record<string, string>>({});
+  const [teamsById, setTeamsById] = useState<Record<string, TeamRow>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [selectedSeason, setSelectedSeason] = useState("");
@@ -82,10 +83,10 @@ export default function GamesPage() {
     let cancelled = false;
     async function load() {
       setLoading(true);
-      const { data: teams } = await supabase.from("teams").select("team_id, team_name");
+      const { data: teams } = await supabase.from("teams").select("team_id, team_name, logo_url");
       if (cancelled) return;
-      const map: Record<string, string> = {};
-      ((teams ?? []) as TeamRow[]).forEach((t) => (map[t.team_id] = t.team_name));
+      const map: Record<string, TeamRow> = {};
+      ((teams ?? []) as TeamRow[]).forEach((t) => (map[t.team_id] = t));
       setTeamsById(map);
 
       const { data: gamesData, error: gamesError } = await supabase
@@ -177,8 +178,10 @@ export default function GamesPage() {
     const dateText = dateObj ? dateObj.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : "";
 
     const winner = getWinner(g.home_score, g.away_score);
-    const homeName = teamsById[g.home_team_id] || g.home_team_id;
-    const awayName = teamsById[g.away_team_id] || g.away_team_id;
+    const homeTeam = teamsById[g.home_team_id];
+    const awayTeam = teamsById[g.away_team_id];
+    const homeName = homeTeam?.team_name || g.home_team_id;
+    const awayName = awayTeam?.team_name || g.away_team_id;
 
     return (
       <Link
@@ -205,7 +208,7 @@ export default function GamesPage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
-              <Crest teamId={g.home_team_id} teamName={homeName} size={26} />
+              <Crest teamId={g.home_team_id} teamName={homeName} logoUrl={homeTeam?.logo_url} size={26} />
               <span
                 className={`truncate text-xs uppercase ${winner === "home" ? "font-bold" : "font-semibold"}`}
                 style={{ color: winner === "home" ? "var(--text)" : "var(--lose)" }}
@@ -230,7 +233,7 @@ export default function GamesPage() {
 
           <div className="flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
-              <Crest teamId={g.away_team_id} teamName={awayName} size={26} />
+              <Crest teamId={g.away_team_id} teamName={awayName} logoUrl={awayTeam?.logo_url} size={26} />
               <span
                 className={`truncate text-xs uppercase ${winner === "away" ? "font-bold" : "font-semibold"}`}
                 style={{ color: winner === "away" ? "var(--text)" : "var(--lose)" }}
