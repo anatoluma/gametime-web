@@ -139,7 +139,7 @@ export default function PlayerPage() {
 
       const { data: playerData, error: playerError } = await supabase
         .from("players")
-        .select("player_id, team_id, first_name, last_name, jersey_number, photo_url")
+        .select("player_id, team_id, first_name, last_name, jersey_number")
         .eq("player_id", playerId)
         .maybeSingle();
 

@@ -212,22 +212,20 @@ export default function LeadersPage() {
       }
 
       const seasonStats = (statRows ?? []) as SeasonStatRow[];
-      const playerIds = Array.from(new Set(seasonStats.map((s) => s.player_id)));
-
-      if (playerIds.length === 0) {
+      if (seasonStats.length === 0) {
         setRows([]);
         setLoading(false);
         return;
       }
 
       const [{ data: playersData }, { data: teamsData }] = await Promise.all([
-        supabase.from("players").select("player_id, first_name, last_name, team_id, photo_url").in("player_id", playerIds),
+        supabase.from("players").select("player_id, first_name, last_name, team_id"),
         supabase.from("teams").select("team_id, team_name"),
       ]);
 
       if (cancelled) return;
 
-      type PlayerRow = { player_id: string; first_name: string | null; last_name: string | null; team_id: string | null; photo_url: string | null };
+      type PlayerRow = { player_id: string; first_name: string | null; last_name: string | null; team_id: string | null };
       type TeamRow = { team_id: string; team_name: string | null };
 
       const playerById = new Map((playersData ?? []).map((p: PlayerRow) => [p.player_id, p]));
@@ -238,7 +236,7 @@ export default function LeadersPage() {
         const name = p ? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || s.player_id : s.player_id;
         const teamId = p?.team_id ?? s.team_id ?? "";
         const teamName = teamNameById.get(teamId) ?? teamId ?? "—";
-        const photoUrl = p?.photo_url ?? null;
+        const photoUrl = null;
         return { ...s, name, teamName, photoUrl };
       });
 
