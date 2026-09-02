@@ -9,6 +9,8 @@ type CrestProps = {
   logoUrl?: string | null;
   size?: number;
   className?: string;
+  imageClassName?: string;
+  fallbackClassName?: string;
 };
 
 function getInitials(name?: string | null, fallback?: string | null): string {
@@ -33,7 +35,7 @@ function getTeamLogoSrc(teamId?: string | null): string {
   return `/images/teams/${normalizedId}.webp`;
 }
 
-export default function Crest({ teamId, teamName, logoUrl, size = 26, className = "" }: CrestProps) {
+export default function Crest({ teamId, teamName, logoUrl, size = 26, className = "", imageClassName = "h-[70%] w-[70%] object-contain", fallbackClassName = "text-[10px]" }: CrestProps) {
   const [hasError, setHasError] = useState(false);
   const src = useMemo(() => logoUrl || getTeamLogoSrc(teamId), [logoUrl, teamId]);
   const initials = useMemo(() => getInitials(teamName, teamId), [teamName, teamId]);
@@ -50,7 +52,7 @@ export default function Crest({ teamId, teamName, logoUrl, size = 26, className 
       aria-hidden="true"
     >
       {hasError ? (
-        <span className="text-[10px] font-bold tracking-wide" style={{ color: "var(--text)" }}>
+        <span className={`${fallbackClassName} font-bold tracking-wide`} style={{ color: "var(--text)" }}>
           {initials}
         </span>
       ) : (
@@ -59,7 +61,7 @@ export default function Crest({ teamId, teamName, logoUrl, size = 26, className 
           alt={teamName ? `${teamName} logo` : `${teamId ?? "team"} logo`}
           width={size}
           height={size}
-          className="h-[70%] w-[70%] object-contain"
+          className={imageClassName}
           onError={() => setHasError(true)}
           unoptimized
         />

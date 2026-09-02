@@ -44,7 +44,14 @@ export default async function TeamsPage() {
           >
             <div className="flex flex-col gap-2 min-w-0 flex-1">
               <div className="flex items-center gap-3">
-                <Crest teamId={team.team_id} teamName={team.team_name} size={26} />
+                <Crest
+                  teamId={team.team_id}
+                  teamName={team.team_name}
+                  size={28}
+                  className="h-7 w-7 sm:!h-8 sm:!w-8"
+                  imageClassName="h-full w-full object-contain"
+                  fallbackClassName="text-xs sm:text-sm"
+                />
                 <h2 className="truncate text-sm font-semibold uppercase tracking-tight leading-none">
                   {team.team_name}
                 </h2>
