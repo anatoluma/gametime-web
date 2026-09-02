@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import TeamSelect from "./TeamSelect";
+import { adminFetch } from "@/lib/admin-fetch";
 
 type Team = {
   team_id: string;
@@ -43,7 +44,7 @@ export default function BoxScoreUpload() {
     async function loadTeams() {
       setTeamsLoading(true);
       try {
-        const res = await fetch("/api/teams");
+        const res = await adminFetch("/api/admin/teams");
         if (res.ok) {
           const data = await res.json();
           setTeams(data.teams || []);
@@ -74,7 +75,7 @@ export default function BoxScoreUpload() {
       if (homeTeam) form.append("home_team_id", homeTeam);
       if (awayTeam) form.append("away_team_id", awayTeam);
 
-      const res = await fetch("/api/admin/box-scores/upload", {
+      const res = await adminFetch("/api/admin/box-scores/upload", {
         method: "POST",
         body: form,
       });

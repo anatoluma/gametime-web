@@ -1,12 +1,13 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { getPublicSeason, getVisibleSeasonTeams } from '@/lib/league'
 
 const siteUrl = 'https://ligabasket.md'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient()
-  const [teamsResult, playersResult, gamesResult] = await Promise.all([
-    supabase.from('teams').select('team_id').eq('is_active', true),
+  const [teams, playersResult, gamesResult] = await Promise.all([
+    getVisibleSeasonTeams(await getPublicSeason()),
     supabase.from('players').select('player_id'),
     supabase.from('games').select('game_id, tipoff'),
   ])
@@ -19,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}/teams`, changeFrequency: 'weekly', priority: 0.7 },
   ]
 
-  const teamPages = (teamsResult.data ?? []).map((team) => ({
+  const teamPages = teams.map((team) => ({
     url: `${siteUrl}/teams/${encodeURIComponent(team.team_id)}`,
     changeFrequency: 'weekly' as const,
     priority: 0.7,

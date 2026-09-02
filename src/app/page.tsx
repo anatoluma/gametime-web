@@ -9,6 +9,7 @@ import StatTile from "@/app/components/home/StatTile";
 import Eyebrow from "@/app/components/home/Eyebrow";
 import SeasonCountdown from "@/app/components/home/SeasonCountdown";
 import { getWinner } from "@/lib/get-winner";
+import { getPublicSeason, getVisibleSeasonTeams } from "@/lib/league";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body", weight: ["400", "500", "600", "700"] });
 const oswald = Oswald({ subsets: ["latin"], variable: "--font-display", weight: ["500", "600", "700"] });
@@ -58,9 +59,13 @@ function StatIcon({ type }: { type: "teams" | "games" | "players" | "playoffs" }
 
 export default async function Home() {
   const t = await getServerT();
-  const [teamsRes, gamesRes] = await Promise.all([
-    supabase.from("teams").select("team_id, team_name").eq("is_active", true),
-    supabase.from("games").select("*").order("tipoff", { ascending: false }),
+  const season = await getPublicSeason();
+  const [seasonTeams, gamesRes, allTeamsRes] = await Promise.all([
+    getVisibleSeasonTeams(season),
+    supabase.from("games").select("*").eq("season", season).order("tipoff", { ascending: false }),
+    // Every franchise ever, purely for labelling games — the standings set below
+    // is season-scoped, but a game must never render without its team name.
+    supabase.from("teams").select("team_id, team_name"),
   ]);
 
   const statsData: any[] = [];
@@ -76,10 +81,12 @@ export default async function Home() {
     if (!data || data.length < statsPageSize) break;
   }
 
-  const teams = teamsRes.data ?? [];
+  const teams = seasonTeams;
   const allGames = gamesRes.data ?? [];
   const recentGames = allGames.slice(0, 4);
-  const teamMap = new Map(teams.map(t => [t.team_id, t.team_name ?? t.team_id]));
+  const teamMap = new Map(
+    (allTeamsRes.data ?? []).map(t => [t.team_id, t.team_name ?? t.team_id])
+  );
 
   // --- STANDINGS LOGIC ---
   const table: Record<string, any> = {};

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
 import type { NameResolutionResult } from "@/lib/name-resolution";
+import { adminFetch } from "@/lib/admin-fetch";
 
 type Override = {
   extracted_name: string;
@@ -110,11 +110,8 @@ export default function JobActions({
     setLoading(true);
     setActionError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      const res = await fetch(`/api/admin/box-scores/jobs/${jobId}/process`, {
+      const res = await adminFetch(`/api/admin/box-scores/jobs/${jobId}/process`, {
         method: "POST",
-        headers: token ? { authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
@@ -184,7 +181,7 @@ export default function JobActions({
           continue;
         }
 
-        const res = await fetch("/api/admin/players", {
+        const res = await adminFetch("/api/admin/players", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
@@ -208,7 +205,7 @@ export default function JobActions({
         .filter(([, player_id]) => player_id && player_id !== "new")
         .map(([extracted_name, player_id]) => ({ extracted_name, player_id }));
 
-      const res = await fetch(`/api/admin/box-scores/jobs/${jobId}/approve`, {
+      const res = await adminFetch(`/api/admin/box-scores/jobs/${jobId}/approve`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ overrides: overrideList, override_validation: overrideValidation }),
@@ -234,7 +231,7 @@ export default function JobActions({
     setLoading(true);
     setActionError(null);
     try {
-      const res = await fetch(`/api/admin/box-scores/jobs/${jobId}/commit`, {
+      const res = await adminFetch(`/api/admin/box-scores/jobs/${jobId}/commit`, {
         method: "POST",
       });
       if (!res.ok) {
@@ -253,7 +250,7 @@ export default function JobActions({
     setLoading(true);
     setActionError(null);
     try {
-      const res = await fetch(`/api/admin/box-scores/jobs/${jobId}/reject`, {
+      const res = await adminFetch(`/api/admin/box-scores/jobs/${jobId}/reject`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ reason: rejectReason }),

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
 import { getServerT } from "@/lib/i18n/server";
+import { getPublicSeason, getVisibleSeasonTeams, type SeasonTeam } from "@/lib/league";
 import Crest from "@/app/components/home/Crest";
 import SectionHeading from "@/app/components/home/SectionHeading";
 
@@ -8,18 +8,13 @@ export const revalidate = 0;
 
 export default async function TeamsPage() {
   const t = await getServerT();
-  const { data: teams, error } = await supabase
-    .from("teams")
-    .select("team_id, team_name, city, coach")
-    .eq("is_active", true)
-    .neq("team_id", "VET")
-    .order("team_name");
 
-  if (error) {
+  let list: SeasonTeam[];
+  try {
+    list = await getVisibleSeasonTeams(await getPublicSeason());
+  } catch {
     return <div className="p-8 text-red-500 font-bold">{t("teams_error")}</div>;
   }
-
-  const list = teams ?? [];
 
   return (
     <main className="min-h-screen px-3 py-4 sm:px-6" style={{ background: "var(--navy-950)", color: "var(--text)" }}>

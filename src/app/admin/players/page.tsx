@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { adminFetch } from "@/lib/admin-fetch";
 
 type Season = { season: string; is_current: boolean };
 
@@ -31,7 +32,7 @@ export default function AdminPlayersPage() {
   });
 
   useEffect(() => {
-    fetch("/api/admin/seasons")
+    adminFetch("/api/admin/seasons")
       .then((r) => r.json())
       .then(({ seasons: s }: { seasons: Season[] }) => {
         setSeasons(s ?? []);
@@ -41,7 +42,7 @@ export default function AdminPlayersPage() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/admin/teams")
+    adminFetch("/api/admin/teams")
       .then((r) => r.json())
       .then(({ teams: t }: { teams?: Team[] }) => {
         const list: Team[] = t ?? [];
@@ -61,7 +62,7 @@ export default function AdminPlayersPage() {
     const loadRoster = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`/api/admin/players/seasons?season=${encodeURIComponent(selectedSeason)}`);
+        const response = await adminFetch(`/api/admin/players/seasons?season=${encodeURIComponent(selectedSeason)}`);
         const json = await response.json();
 
         if (!isMounted) return;
@@ -97,7 +98,7 @@ export default function AdminPlayersPage() {
   }, [seasons, selectedSeason]);
 
   const handleSetCurrent = async (season: string) => {
-    const res = await fetch(`/api/admin/seasons/${encodeURIComponent(season)}`, {
+    const res = await adminFetch(`/api/admin/seasons/${encodeURIComponent(season)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ is_current: true }),
@@ -123,7 +124,7 @@ export default function AdminPlayersPage() {
       return;
     }
 
-    const res = await fetch("/api/admin/players/seasons", {
+    const res = await adminFetch("/api/admin/players/seasons", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "copy_season", source_season: previousSeason, target_season: selectedSeason }),
@@ -132,7 +133,7 @@ export default function AdminPlayersPage() {
     const json = await res.json();
     if (res.ok) {
       setMessage(`✓ Migrated ${json.copied} players from ${previousSeason} to ${selectedSeason}`);
-      const refreshed = await fetch(`/api/admin/players/seasons?season=${encodeURIComponent(selectedSeason)}`);
+      const refreshed = await adminFetch(`/api/admin/players/seasons?season=${encodeURIComponent(selectedSeason)}`);
       const refreshedJson = await refreshed.json();
       setRows(refreshedJson.player_seasons ?? []);
     } else {
@@ -146,7 +147,7 @@ export default function AdminPlayersPage() {
       return;
     }
 
-    const res = await fetch("/api/admin/players/seasons", {
+    const res = await adminFetch("/api/admin/players/seasons", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ player_id: row.player_id, season: row.season, is_active: !row.is_active }),
@@ -169,7 +170,7 @@ export default function AdminPlayersPage() {
       return;
     }
 
-    const res = await fetch("/api/admin/players/seasons", {
+    const res = await adminFetch("/api/admin/players/seasons", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ player_id: row.player_id, season: row.season, team_id: nextTeamId }),
@@ -214,7 +215,7 @@ export default function AdminPlayersPage() {
       clear_existing_jersey: true,
     };
 
-    const createPlayerRes = await fetch("/api/teams", {
+    const createPlayerRes = await adminFetch("/api/admin/players", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -228,7 +229,7 @@ export default function AdminPlayersPage() {
     }
 
     const player_id = createPlayerJson.player_id;
-    const seasonRowRes = await fetch("/api/admin/players/seasons", {
+    const seasonRowRes = await adminFetch("/api/admin/players/seasons", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -250,7 +251,7 @@ export default function AdminPlayersPage() {
     setAddPlayerForm({ first_name: "", last_name: "", jersey_number: "" });
     setMessage(`✓ Added ${first_name ? `${first_name} ` : ""}${last_name} to ${selectedTeamId}`);
 
-    const refreshed = await fetch(`/api/admin/players/seasons?season=${encodeURIComponent(selectedSeason)}`);
+    const refreshed = await adminFetch(`/api/admin/players/seasons?season=${encodeURIComponent(selectedSeason)}`);
     const refreshedJson = await refreshed.json();
     setRows(refreshedJson.player_seasons ?? []);
   };

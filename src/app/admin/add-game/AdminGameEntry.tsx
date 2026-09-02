@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { normalizeSeasonLabel } from "@/lib/league";
+import { adminFetch } from "@/lib/admin-fetch";
 
 type NewPlayerInput = {
   first_name: string;
@@ -92,7 +93,7 @@ export default function AdminGameEntry({
     if (!gameId) return resetToNewGame();
     setEditingGameId(gameId);
 
-    const resp = await fetch(`/api/admin/game?game_id=${encodeURIComponent(gameId)}`);
+    const resp = await adminFetch(`/api/admin/game?game_id=${encodeURIComponent(gameId)}`);
     const data = await resp.json();
 
     if (!resp.ok || data.error) {
@@ -227,7 +228,7 @@ export default function AdminGameEntry({
     payload: NewPlayerInput,
     setPlayers: React.Dispatch<React.SetStateAction<any[]>>
   ) => {
-    const response = await fetch("/api/admin/player", {
+    const response = await adminFetch("/api/admin/player", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ team_id: teamId, ...payload }),
@@ -281,7 +282,7 @@ export default function AdminGameEntry({
 
     const gameId = editingGameId ?? generateGameId(gameData.tipoff, gameData.home_team_id, gameData.away_team_id);
 
-    const response = await fetch("/api/admin/game", {
+    const response = await adminFetch("/api/admin/game", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -312,7 +313,7 @@ export default function AdminGameEntry({
 
     if (!confirmed) return;
 
-    const response = await fetch(`/api/admin/game?game_id=${encodeURIComponent(editingGameId)}`, {
+    const response = await adminFetch(`/api/admin/game?game_id=${encodeURIComponent(editingGameId)}`, {
       method: "DELETE",
     });
 

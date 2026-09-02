@@ -49,8 +49,10 @@ No test suite is configured. ESLint is the only automated checker — run it bef
 | `name-resolution.ts` | Jaro-Winkler fuzzy match extracted names to player roster |
 | `commit.ts` | Writes approved job data to games + stats tables |
 | `team-codes.ts` | Maps extracted team codes to canonical codes (e.g. EDB → EDI) |
-| `supabase/client.ts` | Anon Supabase client (browser) |
-| `supabase/server.ts` | Service-role Supabase client (server-only) |
+| `supabase/client.ts` | Anon Supabase client (browser); plain `@supabase/supabase-js`, so the session lives in **localStorage** |
+| `supabase/server.ts` | Anon `@supabase/ssr` client that reads the **cookie** session (NOT service-role) |
+| `admin-auth.ts` | `requireAdmin(request)` — verifies the `Authorization: Bearer` token on `/api/admin/*` routes |
+| `admin-fetch.ts` | `adminFetch()` — client-side `fetch` that attaches that Bearer token |
 
 ### Primary Data Entry: Manual Admin Forms
 
@@ -72,12 +74,18 @@ The pipeline exists but is not production-ready. It is the intended future workf
 ### Supabase Clients
 
 - Use `src/lib/supabase/client.ts` (anon) in client components and public pages
-- Use `src/lib/supabase/server.ts` (service-role) in API routes and server components for admin operations
+- `src/lib/supabase/server.ts` is **also anon** — it is the `@supabase/ssr` cookie-reading client, used by `sitemap.ts`. It cannot do service-role writes.
+- For service-role access, API routes create their own client inline:
+  `createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)`
 - RLS policies enforce access control — do not bypass them without understanding the implications
 
 ### Authentication
 
-Magic link OTP flow: email → Supabase `signInWithOtp()` → redirect with hash → `AuthHashHandler.tsx` calls `setSession()` → session in cookies via `@supabase/ssr`.
+Magic link OTP flow: email → Supabase `signInWithOtp()` (with `shouldCreateUser: false`, so only users provisioned in the Supabase dashboard can sign in) → redirect with hash → `AuthHashHandler.tsx` calls `setSession()`.
+
+The browser client is plain `@supabase/supabase-js`, so **the session is in localStorage, not cookies**. Server code therefore cannot read it from a cookie: `/api/admin/*` routes authenticate via an `Authorization: Bearer <access_token>` header instead. Client code must call `adminFetch()` (`src/lib/admin-fetch.ts`) rather than bare `fetch()`, and the route must call `requireAdmin()` (`src/lib/admin-auth.ts`).
+
+Guarded so far: `/api/admin/teams`, `/api/admin/seasons`, `/api/admin/seasons/[season]`, `/api/admin/box-scores/jobs/[job_id]/process`. The remaining `/api/admin/*` routes are still unauthenticated — all client call sites already send the header, so adding `requireAdmin` to them needs no client changes. Set `ADMIN_EMAILS` (comma-separated) to restrict access to specific accounts.
 
 ## Environment Variables
 
@@ -95,5 +103,9 @@ NEXT_PUBLIC_SITE_URL=
 - `player_game_stats.minutes` is stored as `"MM:SS"` string format
 - `games.score_intervals` is JSONB array of cumulative scores per 5-minute interval
 - `player_aliases` table caches fuzzy match results; unconfirmed aliases are stored for future reuse
+- **Teams and seasons:** `teams.is_active` means "the franchise exists in the league"; a `team_seasons` row means "enrolled in that season"; `team_seasons.is_active` means "plays that season". Never write season state into `teams` — the public site reads `teams` for franchise details only.
+- Public pages resolve their season with `getPublicSeason()` (`src/lib/league.ts`) — the newest season that actually **has games**, not `seasons.is_current`. A season is flagged current while it is still being set up, so `is_current` would point the public site at an empty schedule.
+- Team lists on public pages come from `getVisibleSeasonTeams(season)`, which excludes the retired `EXCLUDED_TEAM_IDS` (VET, ALU). Manage season enrollment at `/admin/teams`.
+- Next 16 renames `middleware.ts` to `src/proxy.ts`. `middleware-spec.md` at the repo root is stale and describes an integer-keyed schema that does not exist — ignore it.
 - `scripts/ocr-preview.js` uses CommonJS `require()` and will lint-error — this is known and expected
 - No test suite exists; validate behavior manually through the admin UI and public pages

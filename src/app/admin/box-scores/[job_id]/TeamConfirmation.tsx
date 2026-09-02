@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TEAM_CODE_MAP } from "@/lib/team-codes";
+import { adminFetch } from "@/lib/admin-fetch";
 
 type TeamOption = {
   team_id: string;
@@ -64,7 +65,7 @@ export default function TeamConfirmation({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/box-scores/jobs/${jobId}/remap-teams`, {
+      const res = await adminFetch(`/api/admin/box-scores/jobs/${jobId}/remap-teams`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ home_code: homeCode, away_code: awayCode }),

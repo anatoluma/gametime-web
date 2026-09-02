@@ -3,7 +3,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import SeasonSelector from "@/app/components/SeasonSelector";
 import { getServerT } from "@/lib/i18n/server";
-import { getAvailableSeasons } from "@/lib/league";
+import { getAvailableSeasons, getPublicSeason, getVisibleSeasonTeams } from "@/lib/league";
 import Crest from "@/app/components/home/Crest";
 import RankBadge from "@/app/components/home/RankBadge";
 import SectionHeading from "@/app/components/home/SectionHeading";
@@ -20,6 +20,8 @@ type TeamRow = {
   diff: number;
 };
 
+export const revalidate = 0;
+
 export default async function StandingsPage({
   searchParams,
 }: {
@@ -28,8 +30,7 @@ export default async function StandingsPage({
   const t = await getServerT();
   const { season: seasonParam } = await searchParams;
 
-  const [seasons] = await Promise.all([getAvailableSeasons()]);
-  const defaultSeason = seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season ?? "2025/26";
+  const [seasons, defaultSeason] = await Promise.all([getAvailableSeasons(), getPublicSeason()]);
   const selectedSeason = seasonParam ?? defaultSeason;
 
   const { data: games, error: gamesError } = await supabase
@@ -41,13 +42,13 @@ export default async function StandingsPage({
 
   if (gamesError) return <pre className="p-6">{JSON.stringify(gamesError, null, 2)}</pre>;
 
-  const { data: teams, error: teamsError } = await supabase
-    .from("teams")
-    .select("team_id, team_name")
-    .eq("is_active", true)
-    .order("team_name");
-
-  if (teamsError) return <pre className="p-6">{JSON.stringify(teamsError, null, 2)}</pre>;
+  // Scoped to the selected season, so the season selector actually changes the table.
+  let teams;
+  try {
+    teams = await getVisibleSeasonTeams(selectedSeason);
+  } catch (teamsError) {
+    return <pre className="p-6">{JSON.stringify(teamsError, null, 2)}</pre>;
+  }
 
   const table: Record<string, TeamRow> = {};
 
