@@ -93,7 +93,15 @@ export default function TeamPage() {
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
             <div className="min-w-0">
               <div className="flex items-center gap-4 md:gap-5">
-                <Crest teamId={team.team_id} teamName={team.team_name} logoUrl={team.logo_url} size={44} className="sm:!h-14 sm:!w-14" />
+                <Crest
+                  teamId={team.team_id}
+                  teamName={team.team_name}
+                  logoUrl={team.logo_url}
+                  size={44}
+                  className="sm:!h-14 sm:!w-14"
+                  imageClassName="h-full w-full object-contain"
+                  fallbackClassName="text-lg sm:text-xl"
+                />
                 <h1 className="text-3xl uppercase tracking-tight leading-[0.9] break-words sm:text-5xl lg:text-6xl" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
                   {team.team_name}
                 </h1>
