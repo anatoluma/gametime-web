@@ -56,6 +56,19 @@ function inRange(iso: string | null, start: Date, end: Date) {
   return t >= start.getTime() && t < end.getTime();
 }
 
+function hasKnownTipoff(game: GameRow) {
+  if (!game.tipoff) return false;
+
+  const timeInLeague = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Chisinau",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(game.tipoff));
+
+  return timeInLeague !== "12:00";
+}
+
 export default function GamesPage() {
   const [games, setGames] = useState<GameRow[]>([]);
   const [teamsById, setTeamsById] = useState<Record<string, string>>({});
@@ -160,7 +173,7 @@ export default function GamesPage() {
         : null;
     const now = new Date();
     const isFinished = g.home_score != null && g.away_score != null && dateObj && dateObj < now;
-    const timeText = g.tipoff && dateObj ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Time TBD";
+    const timeText = hasKnownTipoff(g) && dateObj ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Time TBD";
     const dateText = dateObj ? dateObj.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : "";
 
     const winner = getWinner(g.home_score, g.away_score);
