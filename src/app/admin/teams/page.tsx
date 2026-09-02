@@ -9,6 +9,7 @@ type Team = {
   team_name: string | null;
   city: string | null;
   coach: string | null;
+  logo_url?: string | null;
   /** Season-scoped: plays the selected season. */
   is_active: boolean | null;
   /** Global: the franchise exists in the league. */
@@ -39,6 +40,7 @@ export default function AdminTeamsPage() {
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft>({ team_name: "", city: "", coach: "" });
   const [form, setForm] = useState({ team_id: "", team_name: "", city: "", coach: "" });
+  const [uploadingTeamId, setUploadingTeamId] = useState<string | null>(null);
 
   /** Shared response handling: bounces to /login on 401, otherwise surfaces the API's own message. */
   const readResponse = useCallback(
@@ -387,6 +389,33 @@ export default function AdminTeamsPage() {
 
     setTeams((prev) => prev.filter((item) => item.team_id !== team.team_id));
     setBanner({ text: `✓ Removed ${label} from ${selectedSeason}`, kind: "success" });
+  };
+
+  const handleLogoChange = async (team: Team, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+
+    setUploadingTeamId(team.team_id);
+    try {
+      const formData = new FormData();
+      formData.append("team_id", team.team_id);
+      formData.append("file", file);
+
+      const res = await adminFetch("/api/admin/teams/logo", { method: "POST", body: formData });
+      const json = await res.json();
+
+      if (res.ok) {
+        setTeams((prev) =>
+          prev.map((t) => (t.team_id === team.team_id ? { ...t, logo_url: json.logo_url } : t))
+        );
+        setBanner({ text: "✓ Logo updated", kind: "success" });
+      } else {
+        fail(json, "Unable to upload logo");
+      }
+    } finally {
+      setUploadingTeamId(null);
+    }
   };
 
   const seedingButtonClass =
@@ -749,6 +778,16 @@ export default function AdminTeamsPage() {
                       >
                         Edit
                       </button>
+                      <label className="rounded border border-[var(--border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">
+                        {uploadingTeamId === team.team_id ? "Uploading..." : "Logo"}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          disabled={uploadingTeamId === team.team_id}
+                          onChange={(e) => handleLogoChange(team, e)}
+                        />
+                      </label>
                       <button
                         type="button"
                         onClick={() => handleToggleActive(team)}

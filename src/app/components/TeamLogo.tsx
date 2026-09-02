@@ -1,24 +1,30 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type TeamLogoProps = {
   teamId: string;
   teamName?: string;
+  logoUrl?: string | null;
   className?: string;
   size?: number;
 };
 
-export default function TeamLogo({ teamId, teamName, className = "", size = 48 }: TeamLogoProps) {
+export default function TeamLogo({ teamId, teamName, logoUrl, className = "", size = 48 }: TeamLogoProps) {
   const normalizedId = useMemo(() => (teamId || "").trim().toLowerCase(), [teamId]);
   const primarySrc = useMemo(() => {
+    if (logoUrl) return logoUrl;
     if (normalizedId === "bld") {
       return "/images/teams/bld_new.webp";
     }
     return `/images/teams/${normalizedId}.webp`;
-  }, [normalizedId]);
+  }, [logoUrl, normalizedId]);
   const [src, setSrc] = useState(primarySrc);
+
+  useEffect(() => {
+    setSrc(primarySrc);
+  }, [primarySrc]);
 
   return (
     <Image

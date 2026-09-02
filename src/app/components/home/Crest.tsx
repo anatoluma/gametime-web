@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 type CrestProps = {
   teamId?: string | null;
   teamName?: string | null;
+  logoUrl?: string | null;
   size?: number;
   className?: string;
 };
@@ -32,9 +33,9 @@ function getTeamLogoSrc(teamId?: string | null): string {
   return `/images/teams/${normalizedId}.webp`;
 }
 
-export default function Crest({ teamId, teamName, size = 26, className = "" }: CrestProps) {
+export default function Crest({ teamId, teamName, logoUrl, size = 26, className = "" }: CrestProps) {
   const [hasError, setHasError] = useState(false);
-  const src = useMemo(() => getTeamLogoSrc(teamId), [teamId]);
+  const src = useMemo(() => logoUrl || getTeamLogoSrc(teamId), [logoUrl, teamId]);
   const initials = useMemo(() => getInitials(teamName, teamId), [teamName, teamId]);
 
   return (
