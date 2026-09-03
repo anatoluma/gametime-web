@@ -8,8 +8,8 @@ import SectionHeading from "@/app/components/home/SectionHeading";
 import StatTile from "@/app/components/home/StatTile";
 import Eyebrow from "@/app/components/home/Eyebrow";
 import SeasonCountdown from "@/app/components/home/SeasonCountdown";
-import { getWinner } from "@/lib/get-winner";
-import { getPublicSeason, getVisibleSeasonTeams } from "@/lib/league";
+import GameCard from "@/app/components/home/GameCard";
+import { getAvailableSeasons, getPublicSeason, getVisibleSeasonTeams } from "@/lib/league";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body", weight: ["400", "500", "600", "700"] });
 const oswald = Oswald({ subsets: ["latin"], variable: "--font-display", weight: ["500", "600", "700"] });
@@ -59,10 +59,13 @@ function StatIcon({ type }: { type: "teams" | "games" | "players" | "playoffs" }
 
 export default async function Home() {
   const t = await getServerT();
-  const season = await getPublicSeason();
-  const [seasonTeams, gamesRes, allTeamsRes] = await Promise.all([
+  const [season, availableSeasons] = await Promise.all([getPublicSeason(), getAvailableSeasons()]);
+  const nextSeason = availableSeasons.find((availableSeason) => availableSeason.season > season)?.season;
+  const scheduleSeason = nextSeason ?? season;
+  const [seasonTeams, gamesRes, scheduleRes, allTeamsRes] = await Promise.all([
     getVisibleSeasonTeams(season),
     supabase.from("games").select("*").eq("season", season).order("tipoff", { ascending: false }),
+    supabase.from("games").select("*").eq("season", scheduleSeason).order("tipoff", { ascending: true }),
     // Every franchise ever, purely for labelling games — the standings set below
     // is season-scoped, but a game must never render without its team name.
     supabase.from("teams").select("team_id, team_name, logo_url"),
@@ -83,7 +86,13 @@ export default async function Home() {
 
   const teams = seasonTeams;
   const allGames = gamesRes.data ?? [];
-  const recentGames = allGames.slice(0, 4);
+  const now = new Date();
+  const recentGames = allGames
+    .filter((game) => game.home_score !== null && game.away_score !== null && game.tipoff && new Date(game.tipoff) < now)
+    .slice(0, 4);
+  const upcomingGames = (scheduleRes.data ?? [])
+    .filter((game) => game.home_score === null && game.away_score === null && game.tipoff && new Date(game.tipoff) >= now)
+    .slice(0, 4);
   const teamMap = new Map(
     (allTeamsRes.data ?? []).map(t => [t.team_id, { name: t.team_name ?? t.team_id, logoUrl: t.logo_url }])
   );
@@ -199,99 +208,22 @@ export default async function Home() {
           />
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {recentGames.map((game) => {
-              const dateObj = game.tipoff ? new Date(game.tipoff) : null;
-              const now = new Date();
-              const isFinished = game.home_score !== null && game.away_score !== null && dateObj && dateObj < now;
-              const timeText = dateObj
-                ? dateObj.toLocaleTimeString("ro-RO", { timeZone: "Europe/Chisinau", hour: "2-digit", minute: "2-digit" })
-                : "TBD";
-
-              const winner = getWinner(game.home_score, game.away_score);
-              const homeTeam = teamMap.get(game.home_team_id);
-              const awayTeam = teamMap.get(game.away_team_id);
-              const homeName = homeTeam?.name ?? game.home_team_id;
-              const awayName = awayTeam?.name ?? game.away_team_id;
-
-              return (
-                <Link
-                  key={game.game_id}
-                  href={`/games/${game.game_id}`}
-                  className="block border px-3 py-3 transition-colors hover:border-[var(--orange)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--orange)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--navy-900)]"
-                  style={{
-                    borderColor: "var(--line)",
-                    borderRadius: "var(--radius)",
-                    background: "var(--navy-800)",
-                    borderLeft: "3px solid var(--orange)",
-                  }}
-                >
-                  {/* TODO: use team primary_color once available in teams data. */}
-                  <div className="mb-2 flex items-center justify-between text-[11px]">
-                    <div className="flex items-center gap-1" style={{ color: "var(--muted)" }}>
-                      <span>{dateObj ? dateObj.toLocaleDateString("ro-RO", { timeZone: "Europe/Chisinau", month: "short", day: "numeric" }) : ""}</span>
-                      <span>•</span>
-                      <span>{timeText}</span>
-                    </div>
-                    <span style={{ color: isFinished ? "var(--win)" : "var(--orange)" }}>
-                      {isFinished ? t("status_final") : t("status_scheduled")}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <Crest teamId={game.home_team_id} teamName={homeName} logoUrl={homeTeam?.logoUrl} size={26} />
-                        <span
-                          className={`truncate text-xs uppercase ${winner === "home" ? "font-bold" : "font-semibold"}`}
-                          style={{ color: winner === "home" ? "var(--text)" : "var(--lose)" }}
-                        >
-                          {homeName}
-                        </span>
-                      </div>
-                      {isFinished ? (
-                        <span
-                          className="text-right"
-                          style={{
-                            color: winner === "home" ? "var(--orange)" : "var(--lose)",
-                            fontFamily: "var(--font-display)",
-                            fontSize: "17px",
-                            fontWeight: winner === "home" ? 700 : 500,
-                          }}
-                        >
-                          {game.home_score}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <Crest teamId={game.away_team_id} teamName={awayName} logoUrl={awayTeam?.logoUrl} size={26} />
-                        <span
-                          className={`truncate text-xs uppercase ${winner === "away" ? "font-bold" : "font-semibold"}`}
-                          style={{ color: winner === "away" ? "var(--text)" : "var(--lose)" }}
-                        >
-                          {awayName}
-                        </span>
-                      </div>
-                      {isFinished ? (
-                        <span
-                          className="text-right"
-                          style={{
-                            color: winner === "away" ? "var(--orange)" : "var(--lose)",
-                            fontFamily: "var(--font-display)",
-                            fontSize: "17px",
-                            fontWeight: winner === "away" ? 700 : 500,
-                          }}
-                        >
-                          {game.away_score}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+            {recentGames.map((game) => <GameCard key={game.game_id} game={game} teamMap={teamMap} t={t} />)}
           </div>
+
+          {upcomingGames.length > 0 ? (
+            <div className="mt-8">
+              <SectionHeading
+                title={t("home_schedule")}
+                href="/games"
+                linkLabel={t("home_cta_schedule")}
+                headingClassName="text-lg"
+              />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {upcomingGames.map((game) => <GameCard key={game.game_id} game={game} teamMap={teamMap} t={t} />)}
+              </div>
+            </div>
+          ) : null}
         </div>
       </section>
 

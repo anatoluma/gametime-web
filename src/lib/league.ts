@@ -59,6 +59,8 @@ export async function getPublicSeason(): Promise<string> {
       .from("games")
       .select("season")
       .not("season", "is", null)
+      .not("home_score", "is", null)
+      .not("away_score", "is", null)
       .order("season", { ascending: false })
       .limit(1)
       .maybeSingle(),
