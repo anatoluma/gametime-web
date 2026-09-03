@@ -222,13 +222,13 @@ export default function LeadersPage() {
       }
 
       const [{ data: playersData }, { data: teamsData }] = await Promise.all([
-        supabase.from("players").select("player_id, first_name, last_name, team_id"),
+        supabase.from("players").select("player_id, first_name, last_name, team_id, photo_url"),
         supabase.from("teams").select("team_id, team_name"),
       ]);
 
       if (cancelled) return;
 
-      type PlayerRow = { player_id: string; first_name: string | null; last_name: string | null; team_id: string | null };
+      type PlayerRow = { player_id: string; first_name: string | null; last_name: string | null; team_id: string | null; photo_url: string | null };
       type TeamRow = { team_id: string; team_name: string | null };
 
       const playerById = new Map((playersData ?? []).map((p: PlayerRow) => [p.player_id, p]));
@@ -239,7 +239,7 @@ export default function LeadersPage() {
         const name = p ? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || s.player_id : s.player_id;
         const teamId = p?.team_id ?? s.team_id ?? "";
         const teamName = teamNameById.get(teamId) ?? teamId ?? "—";
-        const photoUrl = null;
+        const photoUrl = p?.photo_url ?? null;
         return { ...s, name, teamName, photoUrl };
       });
 
