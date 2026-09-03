@@ -175,41 +175,20 @@ export default function PlayerPage() {
       setSeasonStats((seasonStatsRes.data ?? []) as SeasonStatRow[]);
       setCareerStats((careerStatsRes.data as CareerStatRow) ?? null);
 
-      // player_game_stats has no FK relationship to games in the schema cache,
-      // so fetch each table separately and join them client-side.
-      const { data: statsData, error: statsError } = await supabase
-        .from("player_game_stats")
-        .select("game_id, points, reb_tot, assists")
-        .eq("player_id", playerId);
+      const gameLogResponse = await fetch(`/api/players/${encodeURIComponent(playerId)}/game-log`);
+      const gameLog = await gameLogResponse.json();
 
       if (cancelled) return;
-      if (statsError) {
-        setError(statsError);
+      if (!gameLogResponse.ok) {
+        setError({ message: gameLog.error ?? "Failed to load game log" });
         setLoading(false);
         return;
       }
 
-      const statRows = (statsData ?? []) as GameStatRow[];
-      setGameStats(statRows);
-
-      const gameIds = Array.from(new Set(statRows.map((r) => r.game_id)));
-      if (gameIds.length > 0) {
-        const { data: gamesData, error: gamesError } = await supabase
-          .from("games")
-          .select("game_id, season, tipoff, home_team_id, away_team_id, home_score, away_score")
-          .in("game_id", gameIds);
-
-        if (cancelled) return;
-        if (gamesError) {
-          setError(gamesError);
-          setLoading(false);
-          return;
-        }
-
-        const map: Record<string, GameRow> = {};
-        (gamesData ?? []).forEach((g: GameRow) => (map[g.game_id] = g));
-        setGamesById(map);
-      }
+      setGameStats(gameLog.stats as GameStatRow[]);
+      const map: Record<string, GameRow> = {};
+      (gameLog.games as GameRow[]).forEach((game) => (map[game.game_id] = game));
+      setGamesById(map);
 
       setLoading(false);
     }
