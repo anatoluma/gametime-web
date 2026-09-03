@@ -160,7 +160,7 @@ export default function LeadersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<Category>("PTS");
-  const [ptsSortMode, setPtsSortMode] = useState<"PTS" | "PPG">("PTS");
+  const [ptsSortMode, setPtsSortMode] = useState<"PTS" | "PPG">("PPG");
   const [seasons, setSeasons] = useState<Season[]>([]);
   const { t } = useT();
 
@@ -168,9 +168,13 @@ export default function LeadersPage() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Derive selected season from URL; fall back to is_current once seasons load
+  // Leaderboards should keep showing the latest completed season while the current one is being set up.
   const seasonParam = searchParams.get("season");
-  const currentSeason = seasonParam ?? seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season ?? "2025/26";
+  const defaultSeason = seasons.find((s) => !s.is_current)?.season
+    ?? seasons.find((s) => s.is_current)?.season
+    ?? seasons[0]?.season
+    ?? "2025/26";
+  const currentSeason = seasonParam ?? defaultSeason;
 
   // Load available seasons once
   useEffect(() => {
@@ -184,12 +188,11 @@ export default function LeadersPage() {
   // When seasons load and there's no URL param, set the default in the URL
   useEffect(() => {
     if (seasonParam || seasons.length === 0) return;
-    const defaultSeason = seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season;
     if (!defaultSeason) return;
     const params = new URLSearchParams(searchParams.toString());
     params.set("season", defaultSeason);
     router.replace(`${pathname}?${params.toString()}`);
-  }, [seasons, seasonParam, pathname, router, searchParams]);
+  }, [seasons, seasonParam, pathname, router, searchParams, defaultSeason]);
 
   useEffect(() => {
     if (!currentSeason) return;
