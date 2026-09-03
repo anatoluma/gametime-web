@@ -1,6 +1,8 @@
 -- Temporary team-manager links for short roster/photo maintenance periods.
 -- Apply manually in the Supabase SQL editor.
 
+alter table players add column if not exists photo_url text;
+
 create table if not exists team_access_links (
   id uuid primary key default gen_random_uuid(),
   team_id text not null references teams(team_id) on delete cascade,
