@@ -48,8 +48,13 @@ async function findLinkTeam(token: string): Promise<string[] | null> {
  * a generic Bearer-attaching fetch wrapper, not admin-specific.
  */
 export async function requireTeamManager(request: Request): Promise<ManagerAuthResult> {
-  const authorization = request.headers.get("authorization");
-  if (authorization) {
+  const token = readCookie(request, LINK_COOKIE);
+  const linkedTeamIds = token ? await findLinkTeam(token) : null;
+  if (linkedTeamIds) {
+    return { ok: true, user: null, teamIds: linkedTeamIds };
+  }
+
+  if (request.headers.get("authorization")) {
     const verified = await verifySupabaseUser(request);
     if (!verified.ok) return verified;
 
@@ -73,13 +78,11 @@ export async function requireTeamManager(request: Request): Promise<ManagerAuthR
     return { ok: true, user, teamIds };
   }
 
-  const token = readCookie(request, LINK_COOKIE);
-  const teamIds = token ? await findLinkTeam(token) : null;
-  if (!teamIds) {
+  if (!linkedTeamIds) {
     return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   }
 
-  return { ok: true, user: null, teamIds };
+  return { ok: true, user: null, teamIds: linkedTeamIds };
 }
 
 export { LINK_COOKIE, hashToken };
