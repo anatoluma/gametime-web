@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import ManagerLinksPanel from "./manager-links/ManagerLinksPanel";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -69,6 +70,8 @@ export default function AdminPage() {
           Teams
         </Link>
       </div>
+
+      <ManagerLinksPanel />
     </main>
   );
 }

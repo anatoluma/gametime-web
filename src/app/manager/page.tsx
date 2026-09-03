@@ -22,6 +22,7 @@ export default function ManagerPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [uploadingPlayerId, setUploadingPlayerId] = useState<string | null>(null);
+  const [nameDrafts, setNameDrafts] = useState<Record<string, { first_name: string; last_name: string }>>({});
   const [addPlayerForm, setAddPlayerForm] = useState({
     first_name: "",
     last_name: "",
@@ -30,8 +31,13 @@ export default function ManagerPage() {
 
   useEffect(() => {
     adminFetch("/api/manager/me")
-      .then((r) => r.json())
-      .then(({ teams: t }: { teams?: Team[] }) => {
+      .then(async (r) => ({ ok: r.ok, body: await r.json() }))
+      .then(({ ok, body }: { ok: boolean; body: { teams?: Team[]; error?: string } }) => {
+        if (!ok) {
+          setMessage(`Error: ${body.error ?? "Manager access required"}`);
+          return;
+        }
+        const t = body.teams;
         const list = t ?? [];
         setTeams(list);
         if (list.length > 0) setSelectedTeamId(list[0].team_id);
@@ -45,13 +51,39 @@ export default function ManagerPage() {
       const res = await adminFetch(`/api/manager/roster?team_id=${encodeURIComponent(teamId)}`);
       const json = await res.json();
       if (res.ok) {
-        setRows(json.player_seasons ?? []);
+        const nextRows = json.player_seasons ?? [];
+        setRows(nextRows);
+        setNameDrafts(Object.fromEntries(nextRows.map((row: PlayerSeasonRow) => [row.player_id, {
+          first_name: row.players?.first_name ?? "",
+          last_name: row.players?.last_name ?? "",
+        }])));
       } else {
         setMessage(`Error: ${json.error ?? "Unable to load roster"}`);
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleNameChange = async (row: PlayerSeasonRow) => {
+    const draft = nameDrafts[row.player_id];
+    if (!draft?.last_name.trim()) {
+      setMessage("Last name is required.");
+      return;
+    }
+    const res = await adminFetch("/api/manager/roster", {
+      method: "PATCH",
+      body: JSON.stringify({ player_id: row.player_id, season: row.season, ...draft }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      setMessage(`Error: ${json.error ?? "Unable to update player name"}`);
+      return;
+    }
+    setRows((prev) => prev.map((item) => item.player_id === row.player_id
+      ? { ...item, players: { ...item.players, ...draft } as PlayerSeasonRow["players"] }
+      : item));
+    setMessage("✓ Player name updated");
   };
 
   useEffect(() => {
@@ -273,7 +305,23 @@ export default function ManagerPage() {
                         onBlur={(e) => handleJerseyChange(row, e.target.value)}
                         className="w-14 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-right"
                       />
-                      <span className="text-sm font-medium truncate">{name}</span>
+                      <div className="grid min-w-0 grid-cols-2 gap-2">
+                        <input
+                          value={nameDrafts[row.player_id]?.first_name ?? ""}
+                          onChange={(e) => setNameDrafts((prev) => ({ ...prev, [row.player_id]: { ...prev[row.player_id], first_name: e.target.value } }))}
+                          className="w-full min-w-0 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs"
+                          aria-label={`First name for ${name}`}
+                        />
+                        <input
+                          value={nameDrafts[row.player_id]?.last_name ?? ""}
+                          onChange={(e) => setNameDrafts((prev) => ({ ...prev, [row.player_id]: { ...prev[row.player_id], last_name: e.target.value } }))}
+                          className="w-full min-w-0 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs"
+                          aria-label={`Last name for ${name}`}
+                        />
+                        <button type="button" onClick={() => handleNameChange(row)} className="col-span-2 justify-self-start text-xs text-[var(--accent)] underline">
+                          Save name
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">

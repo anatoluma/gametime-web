@@ -83,8 +83,8 @@ export async function POST(request: Request) {
       ? null
       : Number(jersey_number);
 
-  if (jerseyNum !== null && !Number.isFinite(jerseyNum)) {
-    return NextResponse.json({ error: "Invalid jersey_number" }, { status: 400 });
+  if (jerseyNum !== null && (!Number.isInteger(jerseyNum) || jerseyNum < 0 || jerseyNum > 99)) {
+    return NextResponse.json({ error: "Jersey number must be a whole number from 0 to 99" }, { status: 400 });
   }
 
   const season = await getCurrentSeason();
@@ -127,7 +127,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ player_season: playerSeason });
 }
 
-// PATCH /api/manager/roster — update jersey_number/is_active for one player_season row
+// PATCH /api/manager/roster — update the current-season roster and canonical player name
 export async function PATCH(request: Request) {
   const auth = await requireTeamManager(request);
   if (!auth.ok) return auth.response;
@@ -141,7 +141,7 @@ export async function PATCH(request: Request) {
 
   const { data: existing, error: fetchError } = await supabaseAdmin
     .from("player_seasons")
-    .select("team_id")
+    .select("team_id, jersey_number, is_active")
     .eq("player_id", player_id)
     .eq("season", season)
     .maybeSingle();
@@ -152,21 +152,71 @@ export async function PATCH(request: Request) {
   }
 
   const allowed: Record<string, unknown> = {};
-  if ("jersey_number" in updates) allowed.jersey_number = updates.jersey_number;
-  if ("is_active" in updates) allowed.is_active = updates.is_active;
-
-  if (Object.keys(allowed).length === 0) {
-    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+  if ("jersey_number" in updates) {
+    const jerseyNumber = updates.jersey_number === null || updates.jersey_number === "" ? null : Number(updates.jersey_number);
+    if (jerseyNumber !== null && (!Number.isInteger(jerseyNumber) || jerseyNumber < 0 || jerseyNumber > 99)) {
+      return NextResponse.json({ error: "Jersey number must be a whole number from 0 to 99" }, { status: 400 });
+    }
+    allowed.jersey_number = jerseyNumber;
+  }
+  if ("is_active" in updates) {
+    if (typeof updates.is_active !== "boolean") {
+      return NextResponse.json({ error: "is_active must be boolean" }, { status: 400 });
+    }
+    allowed.is_active = updates.is_active;
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("player_seasons")
-    .update(allowed)
-    .eq("player_id", player_id)
-    .eq("season", season)
-    .select()
-    .single();
+  const firstName = "first_name" in updates ? (typeof updates.first_name === "string" ? updates.first_name.trim() : null) : undefined;
+  const lastName = "last_name" in updates ? (typeof updates.last_name === "string" ? updates.last_name.trim() : null) : undefined;
+  if ("first_name" in updates && firstName === null) {
+    return NextResponse.json({ error: "first_name must be text" }, { status: 400 });
+  }
+  if ("last_name" in updates && (!lastName || lastName.length === 0)) {
+    return NextResponse.json({ error: "last_name is required" }, { status: 400 });
+  }
+
+  const nextJersey = "jersey_number" in allowed ? allowed.jersey_number : existing.jersey_number;
+  const nextActive = "is_active" in allowed ? allowed.is_active : existing.is_active;
+  if (nextActive === true && nextJersey !== null) {
+    const { data: conflict, error: conflictError } = await supabaseAdmin
+      .from("player_seasons")
+      .select("player_id")
+      .eq("season", season)
+      .eq("team_id", existing.team_id)
+      .eq("jersey_number", nextJersey)
+      .eq("is_active", true)
+      .neq("player_id", player_id)
+      .maybeSingle();
+    if (conflictError) return NextResponse.json({ error: conflictError.message }, { status: 500 });
+    if (conflict) return NextResponse.json({ error: "That jersey number is already assigned to an active player" }, { status: 409 });
+  }
+
+  if (Object.keys(allowed).length === 0) {
+    if (firstName === undefined && lastName === undefined) {
+      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    }
+  }
+
+  const { data, error } = Object.keys(allowed).length > 0
+    ? await supabaseAdmin
+      .from("player_seasons")
+      .update(allowed)
+      .eq("player_id", player_id)
+      .eq("season", season)
+      .select()
+      .single()
+    : { data: existing, error: null };
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (firstName !== undefined || lastName !== undefined || "jersey_number" in allowed) {
+    const playerUpdate: Record<string, unknown> = {};
+    if (firstName !== undefined) playerUpdate.first_name = firstName;
+    if (lastName !== undefined) playerUpdate.last_name = lastName;
+    if ("jersey_number" in allowed) playerUpdate.jersey_number = allowed.jersey_number;
+    const { error: playerError } = await supabaseAdmin.from("players").update(playerUpdate).eq("player_id", player_id);
+    if (playerError) return NextResponse.json({ error: playerError.message }, { status: 500 });
+  }
+
   return NextResponse.json({ player_season: data });
 }

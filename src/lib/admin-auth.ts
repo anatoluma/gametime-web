@@ -63,3 +63,18 @@ export async function requireAdmin(request: Request): Promise<AdminAuthResult> {
 
   return { ok: true, user };
 }
+
+export async function requireSuperAdmin(request: Request): Promise<AdminAuthResult> {
+  const verified = await verifySupabaseUser(request);
+  if (!verified.ok) return verified;
+
+  const allowed = (process.env.SUPER_ADMIN_EMAILS ?? process.env.ADMIN_EMAILS)?.split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (!allowed?.length || !allowed.includes((verified.user.email ?? "").toLowerCase())) {
+    return { ok: false, response: NextResponse.json({ error: "Super-admin access required" }, { status: 403 }) };
+  }
+
+  return verified;
+}
