@@ -6,6 +6,7 @@ import { useParams, useSearchParams, useRouter, usePathname } from "next/navigat
 import { supabase } from "@/lib/supabase/client";
 import PlayerAvatar from "@/app/components/PlayerAvatar";
 import SeasonSelector from "@/app/components/SeasonSelector";
+import TeamLogo from "@/app/components/TeamLogo";
 import { useT } from "@/app/components/LanguageProvider";
 import type { Season } from "@/lib/league";
 import SectionHeading from "@/app/components/home/SectionHeading";
@@ -22,6 +23,7 @@ type Player = {
 type Team = {
   team_id: string;
   team_name: string;
+  logo_url: string | null;
 };
 
 // One row per (player, season) from the player_season_stats DB view
@@ -58,6 +60,11 @@ const EMPTY_SEASON_STATS: SeasonStatRow = {
   three_pct: 0, ft_made: 0, ft_att: 0, ft_pct: 0,
 };
 
+const CAREER_COMPARISON_KEYS: Array<keyof CareerStatRow> = [
+  "gp", "pts", "ppg", "reb", "rpg", "ast", "apg", "stl", "spg", "blk", "bpg",
+  "fg_made", "fg_att", "fg_pct", "three_made", "three_att", "three_pct", "ft_made", "ft_att", "ft_pct",
+];
+
 type GameStatRow = {
   game_id: string;
   points: number | null;
@@ -83,6 +90,10 @@ function avg(v: number | null) {
   return (v ?? 0).toFixed(1);
 }
 
+function hasMatchingCareerStats(season: SeasonStatRow, career: CareerStatRow) {
+  return CAREER_COMPARISON_KEYS.every((key) => season[key] === career[key]);
+}
+
 export default function PlayerPage() {
   const params = useParams();
   const { t } = useT();
@@ -92,7 +103,7 @@ export default function PlayerPage() {
   const pathname = usePathname();
 
   const playerId = useMemo(() => {
-    const raw = (params as any)?.player_id;
+    const raw = (params as { player_id?: string | string[] })?.player_id;
     if (Array.isArray(raw)) return raw[0] ?? "";
     return raw ?? "";
   }, [params]);
@@ -104,8 +115,9 @@ export default function PlayerPage() {
   const [careerStats, setCareerStats] = useState<CareerStatRow | null>(null);
   const [gameStats, setGameStats] = useState<GameStatRow[]>([]);
   const [gamesById, setGamesById] = useState<Record<string, GameRow>>({});
+  const [teamsById, setTeamsById] = useState<Record<string, Team>>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<unknown>(null);
 
   const seasonParam = searchParams.get("season");
   const currentSeason = seasonParam ?? seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season ?? "2025/26";
@@ -154,7 +166,7 @@ export default function PlayerPage() {
 
       const { data: teamData } = await supabase
         .from("teams")
-        .select("team_id, team_name")
+        .select("team_id, team_name, logo_url")
         .eq("team_id", (playerData as Player).team_id)
         .maybeSingle();
 
@@ -187,8 +199,22 @@ export default function PlayerPage() {
 
       setGameStats(gameLog.stats as GameStatRow[]);
       const map: Record<string, GameRow> = {};
-      (gameLog.games as GameRow[]).forEach((game) => (map[game.game_id] = game));
+      const gameRows = gameLog.games as GameRow[];
+      gameRows.forEach((game) => (map[game.game_id] = game));
       setGamesById(map);
+
+      const teamIds = Array.from(new Set(gameRows.flatMap((game) => [game.home_team_id, game.away_team_id])));
+      if (teamIds.length > 0) {
+        const { data: gameTeams } = await supabase
+          .from("teams")
+          .select("team_id, team_name, logo_url")
+          .in("team_id", teamIds);
+
+        if (cancelled) return;
+        const teamMap: Record<string, Team> = {};
+        (gameTeams as Team[] ?? []).forEach((gameTeam) => (teamMap[gameTeam.team_id] = gameTeam));
+        setTeamsById(teamMap);
+      }
 
       setLoading(false);
     }
@@ -214,6 +240,7 @@ export default function PlayerPage() {
     if (ia !== -1 && ib !== -1) return ia - ib;
     return b.season.localeCompare(a.season);
   });
+  const showCareerRow = careerStats !== null && (seasonRows.length !== 1 || !hasMatchingCareerStats(seasonRows[0], careerStats));
 
   const rows = gameStats
     .filter((s) => gamesById[s.game_id]?.season === currentSeason)
@@ -227,32 +254,38 @@ export default function PlayerPage() {
     <main className="min-h-screen px-3 py-4 sm:px-6" style={{ background: "var(--navy-950)", color: "var(--text)" }}>
       <div className="mx-auto max-w-5xl">
       {/* Header Section */}
-      <div className="mb-6 flex flex-col justify-between gap-6 border-b pb-6 md:flex-row md:items-end" style={{ borderColor: "var(--line)" }}>
-        <div className="flex items-end gap-4">
+      <div className="relative mb-6 flex flex-col justify-between gap-6 overflow-hidden border-b pb-10 md:flex-row md:items-end" style={{ borderColor: "var(--line)" }}>
+        {team && (
+          <div aria-hidden="true" className="pointer-events-none absolute -right-6 top-1/2 z-0 hidden -translate-y-1/2 opacity-[0.06] sm:block md:-right-10 md:opacity-[0.08]">
+            <TeamLogo teamId={team.team_id} teamName={team.team_name} logoUrl={team.logo_url} size={260} className="h-[140px] w-[140px] object-contain md:h-[260px] md:w-[260px]" />
+          </div>
+        )}
+        <div className="relative z-10 flex items-end gap-4">
           <PlayerAvatar
             playerId={player.player_id}
             playerName={`${player.first_name} ${player.last_name}`}
             photoUrl={player.photo_url}
-            width={96}
-            height={120}
-            className="h-24 w-20 shrink-0 rounded-[var(--radius)] object-cover md:h-[120px] md:w-24"
+            width={128}
+            height={160}
+            className="h-28 w-[90px] shrink-0 rounded-[var(--radius)] object-cover sm:h-32 sm:w-[102px] md:h-40 md:w-32"
           />
 
           <div>
           <h1 className="text-4xl uppercase tracking-tight md:text-5xl" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
             {player.first_name} {player.last_name}
           </h1>
-          <div className="flex items-center gap-3 mt-4 text-lg">
+          <div className="mt-4 flex items-center gap-3 text-lg">
             <span className="px-3 py-1 text-sm uppercase" style={{ background: "var(--orange)", color: "#1f1309", borderRadius: "var(--radius)", fontFamily: "var(--font-display)", fontWeight: 700 }}>#{player.jersey_number ?? "?"}</span>
-            <Link href={`/teams/${player.team_id}`} className="font-semibold uppercase tracking-tight underline decoration-[var(--orange)] decoration-2 underline-offset-4 transition-colors hover:text-[var(--orange)]" style={{ color: "var(--muted)" }}>
-              {team?.team_name ?? player.team_id}
+            <Link href={`/teams/${player.team_id}`} className="flex min-w-0 items-center gap-2 font-semibold uppercase tracking-tight underline decoration-[var(--orange)] decoration-2 underline-offset-4 transition-colors hover:text-[var(--orange)]" style={{ color: "var(--muted)" }}>
+              <TeamLogo teamId={team?.team_id ?? player.team_id} teamName={team?.team_name ?? player.team_id} logoUrl={team?.logo_url} size={28} className="h-7 w-7 shrink-0 object-contain" />
+              <span className="truncate">{team?.team_name ?? player.team_id}</span>
             </Link>
           </div>
           </div>
         </div>
 
         {seasons.length > 0 && currentSeason && (
-          <SeasonSelector seasons={seasons} currentSeason={currentSeason} />
+          <div className="relative z-10"><SeasonSelector seasons={seasons} currentSeason={currentSeason} /></div>
         )}
       </div>
 
@@ -309,7 +342,7 @@ export default function PlayerPage() {
                 <td className="px-3 py-2">{pct(s.ft_pct)}</td>
               </tr>
             ))}
-            {careerStats && (
+            {showCareerRow && careerStats && (
               <tr className="border-t tabular-nums" style={{ borderColor: "var(--line)", background: "var(--navy-950)" }}>
                 <td className="px-3 py-2 text-left font-semibold uppercase" style={{ color: "var(--muted)" }}>{t("player_career_row_label")}</td>
                 <td className="px-3 py-2">{careerStats.gp}</td>
@@ -324,7 +357,7 @@ export default function PlayerPage() {
                 <td className="px-3 py-2">{pct(careerStats.ft_pct)}</td>
               </tr>
             )}
-            {seasonRows.length === 0 && !careerStats && (
+            {seasonRows.length === 0 && !showCareerRow && (
               <tr>
                 <td colSpan={11} className="py-6 text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }}>{t("player_no_data")}</td>
               </tr>
@@ -336,13 +369,14 @@ export default function PlayerPage() {
       <SectionHeading title={t("player_game_log")} href="/games" linkLabel={t("home_cta_results")} headingClassName="text-lg" />
 
       {/* GAME LOG LIST */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {rows.map((s) => {
           const g = gamesById[s.game_id];
           if (!g) return null;
 
           const isHome = g.home_team_id === player.team_id;
           const opponent = isHome ? g.away_team_id : g.home_team_id;
+          const opponentTeam = teamsById[opponent];
           
           let resultChar = "—";
           let resultColor = "text-gray-300";
@@ -358,31 +392,25 @@ export default function PlayerPage() {
           const formattedDate = dateObj ? dateObj.toLocaleDateString('ro-MD', { month: 'short', day: 'numeric' }) : "TBD";
 
           return (
-            /* CLICKABLE WRAPPER: Now links to the specific Game Page */
-            <Link 
-              key={s.game_id} 
-              href={`/games/${s.game_id}`} 
-              className="group flex items-center justify-between border p-4 transition-colors hover:border-[var(--orange)]"
+            <div
+              key={s.game_id}
+              className="grid min-h-[68px] grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-3 border px-3 py-2 transition-colors hover:border-[var(--orange)] sm:grid-cols-[62px_minmax(0,1fr)_144px] sm:gap-4"
               style={{ borderColor: "var(--line)", borderRadius: "var(--radius)", background: "var(--navy-800)" }}
             >
-              <div className="flex items-center gap-4">
-                {/* Date & Result */}
-                <div className="text-center min-w-[45px]">
-                  <div className="mb-1 text-[10px] font-semibold uppercase leading-none" style={{ color: "var(--muted)" }}>{formattedDate}</div>
-                  <div className={`text-xl font-black ${resultColor} leading-none italic`}>{resultChar}</div>
-                </div>
-                
-                {/* Opponent & Match Score */}
-                <div className="border-l pl-4" style={{ borderColor: "var(--line)" }}>
-                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-tight" style={{ color: "var(--muted)" }}>
-                    {isHome ? "vs" : "@"} <span style={{ color: "var(--text)" }} className="transition-colors group-hover:text-[var(--orange)]">{opponent}</span>
-                  </div>
-                  <div className="text-xs tabular-nums" style={{ color: "var(--muted)", fontFamily: "var(--font-display)", fontWeight: 600 }}>{g.home_score} : {g.away_score}</div>
-                </div>
-              </div>
+              <Link href={`/games/${s.game_id}`} className="self-stretch content-center text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orange)]">
+                <div className="mb-1 text-[10px] font-semibold uppercase leading-none" style={{ color: "var(--muted)" }}>{formattedDate}</div>
+                <div className={`text-xl font-black leading-none ${resultColor}`}>{resultChar}</div>
+              </Link>
 
-              {/* Individual Player PTS / REB / AST */}
-              <div className="flex items-center gap-3">
+              <Link href={`/teams/${opponent}`} className="flex min-w-0 items-center gap-2 border-l pl-3 transition-colors hover:text-[var(--orange)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orange)]" style={{ borderColor: "var(--line)" }}>
+                <TeamLogo teamId={opponent} teamName={opponentTeam?.team_name ?? opponent} logoUrl={opponentTeam?.logo_url} size={32} className="h-8 w-8 shrink-0 object-contain" />
+                <div className="min-w-0">
+                  <div className="truncate text-xs font-semibold uppercase" style={{ color: "var(--text)" }}>{isHome ? "vs " : "@ "}{opponentTeam?.team_name ?? opponent}</div>
+                  <div className="mt-1 text-xs tabular-nums" style={{ color: "var(--muted)", fontFamily: "var(--font-display)", fontWeight: 600 }}>{g.home_score ?? "-"} : {g.away_score ?? "-"}</div>
+                </div>
+              </Link>
+
+              <Link href={`/games/${s.game_id}`} className="flex items-center gap-2 sm:gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--orange)]">
                 <div className="text-center w-[36px]">
                   <div className="mb-1 text-[9px] font-semibold uppercase leading-none" style={{ color: "var(--muted)" }}>PTS</div>
                   <div className="text-xl leading-none" style={{ color: "var(--orange)", fontFamily: "var(--font-display)", fontWeight: 700 }}>{s.points ?? 0}</div>
@@ -395,8 +423,8 @@ export default function PlayerPage() {
                   <div className="mb-1 text-[9px] font-semibold uppercase leading-none" style={{ color: "var(--muted)" }}>AST</div>
                   <div className="text-xl leading-none" style={{ color: "var(--text)", fontFamily: "var(--font-display)", fontWeight: 600 }}>{s.assists ?? 0}</div>
                 </div>
-              </div>
-            </Link>
+              </Link>
+            </div>
           );
         })}
 
