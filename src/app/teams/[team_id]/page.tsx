@@ -32,6 +32,17 @@ function formatGameTime(game: Game) {
   return Number.isNaN(date.getTime()) ? null : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function compareRosterPlayers(left: Player, right: Player) {
+  const leftNumber = left.jersey_number;
+  const rightNumber = right.jersey_number;
+  const hasLeftNumber = Number.isInteger(leftNumber) && (leftNumber as number) >= 0;
+  const hasRightNumber = Number.isInteger(rightNumber) && (rightNumber as number) >= 0;
+
+  if (hasLeftNumber && hasRightNumber && leftNumber !== rightNumber) return (leftNumber as number) - (rightNumber as number);
+  if (hasLeftNumber !== hasRightNumber) return hasLeftNumber ? -1 : 1;
+  return `${left.last_name} ${left.first_name}`.localeCompare(`${right.last_name} ${right.first_name}`, undefined, { sensitivity: "base" });
+}
+
 export default function TeamPage() {
   const params = useParams();
   const { t } = useT();
@@ -73,7 +84,7 @@ export default function TeamPage() {
       ]);
 
       if (cancelled) return;
-      setRoster((rosterRes.data ?? []) as Player[]);
+      setRoster([...(rosterRes.data ?? []) as Player[]].sort(compareRosterPlayers));
       const allGames = (gamesRes.data ?? []) as Game[];
       setGames(allGames);
 
