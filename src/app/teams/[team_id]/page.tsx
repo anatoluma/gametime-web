@@ -178,7 +178,7 @@ export default function TeamPage() {
         <section>
           {(() => {
             const completedGames = games.filter(isCompletedGame).slice(0, 8);
-            const upcomingGames = games.filter((game) => !isCompletedGame(game)).slice(0, 8);
+            const upcomingGames = games.filter((game) => !isCompletedGame(game)).slice(0, 1);
             const renderGames = (items: Game[], emptyLabel: string) => items.length ? <div className="space-y-3">{items.map((g) => {
               const played = isCompletedGame(g);
               const teamIsHome = g.home_team_id === teamId;
