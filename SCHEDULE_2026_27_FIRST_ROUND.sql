@@ -54,15 +54,14 @@ FROM (VALUES
 ) AS teams(team_id)
 ON CONFLICT (team_id, season) DO UPDATE SET is_active = EXCLUDED.is_active;
 
-WITH fixtures(round_number, scheduled_date, home_team_id, away_team_id, venue) AS (
+WITH fixtures(round_number, scheduled_date, tipoff_time, home_team_id, away_team_id, venue) AS (
   VALUES
-    (1,  '2026-09-12'::date, 'MET',  'COM',  'Ribnita'),
-    (1,  '2026-09-12'::date, 'HAI',  'ADM',  'Blijnii Hutor'),
-    (1,  '2026-09-13'::date, 'CAS',  'STR',  'Chisinau'),
-    (1,  '2026-09-13'::date, 'AMB',  'CN2',  'Chisinau'),
-    (1,  '2026-09-13'::date, 'GTM',  'BLD',  'Chisinau'),
-    (1,  '2026-09-13'::date, 'USM',  'WOL',  'Chisinau'),
-    (1,  '2026-09-13'::date, 'EDI',  'DRO',  'Edinet'),
+    (1,  '2026-09-12'::date, '12:00'::time, 'MET',  'COM',  'Ribnita'),
+    (1,  '2026-09-12'::date, '16:00'::time, 'HAI',  'ADM',  'Blijnii Hutor'),
+    (1,  '2026-09-13'::date, '10:00'::time, 'USM',  'WOL',  'Chisinau'),
+    (1,  '2026-09-13'::date, '11:30'::time, 'AMB',  'CN2',  'Chisinau'),
+    (1,  '2026-09-13'::date, '13:00'::time, 'EDI',  'DRO',  'Chisinau'),
+    (1,  '2026-09-13'::date, '14:30'::time, 'GTM',  'BLD',  'Chisinau'),
 
     (2,  '2026-09-19'::date, 'HAI',  'EDI',  'Blijnii Hutor'),
     (2,  '2026-09-19'::date, 'DRO',  'BLD',  'Drochia'),
@@ -167,13 +166,14 @@ INSERT INTO public.games (
 SELECT
   'g_' || replace(scheduled_date::text, '-', '_') || '_' || home_team_id || '_' || away_team_id,
   '2026/27', scheduled_date, round_number,
-  (scheduled_date::timestamp + time '12:00') AT TIME ZONE 'Europe/Chisinau', venue,
+  (scheduled_date::timestamp + tipoff_time) AT TIME ZONE 'Europe/Chisinau', venue,
   home_team_id, away_team_id, NULL, NULL
 FROM fixtures
 ON CONFLICT (game_id) DO UPDATE SET
   season = EXCLUDED.season,
   scheduled_date = EXCLUDED.scheduled_date,
   round_number = EXCLUDED.round_number,
+  tipoff = EXCLUDED.tipoff,
   venue = EXCLUDED.venue,
   home_team_id = EXCLUDED.home_team_id,
   away_team_id = EXCLUDED.away_team_id;
