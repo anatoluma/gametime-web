@@ -39,8 +39,7 @@ WHERE season = '2026/27' AND team_id = 'CAS2';
 
 INSERT INTO public.teams (team_id, team_name, city, is_active)
 VALUES
-  ('COM', 'COMRAT', 'Comrat', true),
-  ('STR', 'STRASENI', 'Straseni', true)
+  ('COM', 'COMRAT', 'Comrat', true)
 ON CONFLICT (team_id) DO UPDATE SET
   team_name = EXCLUDED.team_name,
   city = EXCLUDED.city,
@@ -50,7 +49,7 @@ INSERT INTO public.team_seasons (team_id, season, is_active)
 SELECT team_id, '2026/27', true
 FROM (VALUES
   ('ADM'), ('AMB'), ('BLD'), ('CAS'), ('CN2'), ('COM'), ('DRO'),
-  ('EDI'), ('GTM'), ('HAI'), ('MET'), ('STR'), ('USM'), ('WOL')
+  ('EDI'), ('GTM'), ('HAI'), ('MET'), ('USM'), ('WOL')
 ) AS teams(team_id)
 ON CONFLICT (team_id, season) DO UPDATE SET is_active = EXCLUDED.is_active;
 
@@ -69,11 +68,9 @@ WITH fixtures(round_number, scheduled_date, tipoff_time, home_team_id, away_team
     (2,  '2026-09-20'::date, 'ADM',  'AMB',  'Chisinau'),
     (2,  '2026-09-20'::date, 'USM',  'COM',  'Chisinau'),
     (2,  '2026-09-20'::date, 'CN2',  'CAS',  'Chisinau'),
-    (2,  '2026-09-20'::date, 'STR',  'MET',  'Chisinau'),
 
     (3,  '2026-09-26'::date, 'MET',  'CN2',  'Ribnita'),
     (3,  '2026-09-26'::date, 'DRO',  'WOL',  'Drochia'),
-    (3,  '2026-09-27'::date, 'COM',  'STR',  'Comrat'),
     (3,  '2026-09-27'::date, 'BLD',  'HAI',  'Chisinau'),
     (3,  '2026-09-27'::date, 'AMB',  'EDI',  'Chisinau'),
     (3,  '2026-09-27'::date, 'GTM',  'USM',  'Chisinau'),
@@ -82,7 +79,6 @@ WITH fixtures(round_number, scheduled_date, tipoff_time, home_team_id, away_team
     (4,  '2026-10-03'::date, 'MET',  'ADM',  'Ribnita'),
     (4,  '2026-10-03'::date, 'HAI',  'WOL',  'Blijnii Hutor'),
     (4,  '2026-10-04'::date, 'USM',  'DRO',  'Chisinau'),
-    (4,  '2026-10-04'::date, 'CN2',  'STR',  'Chisinau'),
     (4,  '2026-10-04'::date, 'BLD',  'AMB',  'Chisinau'),
     (4,  '2026-10-04'::date, 'GTM',  'COM',  'Chisinau'),
     (4,  '2026-10-04'::date, 'EDI',  'CAS',  'Edinet'),
@@ -90,7 +86,6 @@ WITH fixtures(round_number, scheduled_date, tipoff_time, home_team_id, away_team
     (5,  '2026-10-10'::date, 'COM',  'CN2',  'Comrat'),
     (5,  '2026-10-10'::date, 'HAI',  'USM',  'Blijnii Hutor'),
     (5,  '2026-10-10'::date, 'MET',  'EDI',  'Ribnita'),
-    (5,  '2026-10-11'::date, 'STR',  'ADM',  'Chisinau'),
     (5,  '2026-10-11'::date, 'CAS',  'BLD',  'Chisinau'),
     (5,  '2026-10-11'::date, 'AMB',  'WOL',  'Chisinau'),
     (5,  '2026-10-11'::date, 'GTM',  'DRO',  'Chisinau'),
@@ -100,7 +95,6 @@ WITH fixtures(round_number, scheduled_date, tipoff_time, home_team_id, away_team
     (6,  '2026-10-18'::date, 'USM',  'AMB',  'Chisinau'),
     (6,  '2026-10-18'::date, 'BLD',  'MET',  'Chisinau'),
     (6,  '2026-10-18'::date, 'WOL',  'CAS',  'Chisinau'),
-    (6,  '2026-10-18'::date, 'EDI',  'STR',  'Edinet'),
     (6,  '2026-10-18'::date, 'ADM',  'CN2',  'Chisinau'),
 
     (7,  '2026-10-24'::date, 'MET',  'WOL',  'Ribnita'),
@@ -108,14 +102,12 @@ WITH fixtures(round_number, scheduled_date, tipoff_time, home_team_id, away_team
     (7,  '2026-10-24'::date, 'COM',  'ADM',  'Comrat'),
     (7,  '2026-10-25'::date, 'CN2',  'EDI',  'Chisinau'),
     (7,  '2026-10-25'::date, 'AMB',  'GTM',  'Chisinau'),
-    (7,  '2026-10-25'::date, 'STR',  'BLD',  'Chisinau'),
     (7,  '2026-10-25'::date, 'CAS',  'USM',  'Chisinau'),
 
     (8,  '2026-10-31'::date, 'HAI',  'COM',  'Blijnii Hutor'),
     (8,  '2026-10-31'::date, 'DRO',  'AMB',  'Drochia'),
     (8,  '2026-11-01'::date, 'GTM',  'CAS',  'Chisinau'),
     (8,  '2026-11-01'::date, 'USM',  'MET',  'Chisinau'),
-    (8,  '2026-11-01'::date, 'WOL',  'STR',  'Chisinau'),
     (8,  '2026-11-01'::date, 'BLD',  'CN2',  'Chisinau'),
     (8,  '2026-11-01'::date, 'EDI',  'ADM',  'Edinet'),
 
@@ -123,13 +115,11 @@ WITH fixtures(round_number, scheduled_date, tipoff_time, home_team_id, away_team
     (9,  '2026-11-07'::date, 'MET',  'GTM',  'Ribnita'),
     (9,  '2026-11-08'::date, 'ADM',  'BLD',  'Chisinau'),
     (9,  '2026-11-08'::date, 'CN2',  'WOL',  'Chisinau'),
-    (9,  '2026-11-08'::date, 'STR',  'USM',  'Chisinau'),
     (9,  '2026-11-08'::date, 'CAS',  'DRO',  'Chisinau'),
     (9,  '2026-11-08'::date, 'AMB',  'HAI',  'Chisinau'),
 
     (10, '2026-11-14'::date, 'DRO',  'MET',  'Drochia'),
     (10, '2026-11-14'::date, 'HAI',  'CAS',  'Blijnii Hutor'),
-    (10, '2026-11-15'::date, 'GTM',  'STR',  'Chisinau'),
     (10, '2026-11-15'::date, 'USM',  'CN2',  'Chisinau'),
     (10, '2026-11-15'::date, 'WOL',  'ADM',  'Chisinau'),
     (10, '2026-11-15'::date, 'BLD',  'EDI',  'Chisinau'),
@@ -141,9 +131,7 @@ WITH fixtures(round_number, scheduled_date, tipoff_time, home_team_id, away_team
     (11, '2026-11-22'::date, 'ADM',  'USM',  'Chisinau'),
     (11, '2026-11-22'::date, 'CAS',  'AMB',  'Chisinau'),
     (11, '2026-11-22'::date, 'EDI',  'WOL',  'Edinet'),
-    (11, '2026-11-22'::date, 'STR',  'DRO',  'Chisinau'),
 
-    (12, '2026-11-28'::date, 'HAI',  'STR',  'Blijnii Hutor'),
     (12, '2026-11-28'::date, 'DRO',  'CN2',  'Drochia'),
     (12, '2026-11-29'::date, 'CAS',  'COM',  'Chisinau'),
     (12, '2026-11-29'::date, 'AMB',  'MET',  'Chisinau'),
@@ -156,7 +144,6 @@ WITH fixtures(round_number, scheduled_date, tipoff_time, home_team_id, away_team
     (13, '2026-12-06'::date, 'BLD',  'USM',  'Chisinau'),
     (13, '2026-12-06'::date, 'EDI',  'GTM',  'Edinet'),
     (13, '2026-12-06'::date, 'ADM',  'DRO',  'Chisinau'),
-    (13, '2026-12-06'::date, 'STR',  'AMB',  'Chisinau'),
     (13, '2026-12-06'::date, 'CN2',  'HAI',  'Chisinau')
 )
 INSERT INTO public.games (
