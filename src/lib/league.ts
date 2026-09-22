@@ -59,8 +59,6 @@ export async function getPublicSeason(): Promise<string> {
       .from("games")
       .select("season")
       .not("season", "is", null)
-      .not("home_score", "is", null)
-      .not("away_score", "is", null)
       .order("season", { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -70,7 +68,7 @@ export async function getPublicSeason(): Promise<string> {
   const candidate = newest.data?.season?.trim();
   if (candidate && seasons.some((s) => s.season === candidate)) return candidate;
 
-  return seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season ?? "2025/26";
+  return seasons[0]?.season ?? "2025/26";
 }
 
 /**
