@@ -70,18 +70,12 @@ export default async function Home() {
     supabase.from("teams").select("team_id, team_name, logo_url"),
   ]);
 
-  const statsData: any[] = [];
-  const statsPageSize = 1000;
-  for (let start = 0; ; start += statsPageSize) {
-    const { data } = await supabase
-      .from("player_game_stats")
-      .select("player_id, points, players(first_name, last_name, team_id)")
-      .order("game_id")
-      .order("player_id")
-      .range(start, start + statsPageSize - 1);
-    statsData.push(...(data ?? []));
-    if (!data || data.length < statsPageSize) break;
-  }
+  // Same source as /leaders: the player_season_stats view, scoped to this season.
+  const [{ data: seasonStatRows }, { data: leaderPlayers }] = await Promise.all([
+    supabase.from("player_season_stats").select("player_id, team_id, gp, pts, ppg").eq("season", season),
+    supabase.from("players").select("player_id, first_name, last_name, team_id"),
+  ]);
+  const leaderPlayerById = new Map((leaderPlayers ?? []).map((p) => [p.player_id, p]));
 
   const teams = seasonTeams;
   const allGames = gamesRes.data ?? [];
@@ -126,21 +120,17 @@ export default async function Home() {
   const seasonComplete = allGames.length > 0 && allGames.every((g) => g.home_score !== null && g.away_score !== null);
 
   // --- LEADERS LOGIC ---
-  const totalPlayers = new Set(statsData.map((s: any) => s.player_id)).size;
-  const ptsByPlayer: Record<string, { name: string; teamId: string; gp: number; pts: number }> = {};
-  statsData.forEach((s: any) => {
-    if (!s.player_id || !s.players) return;
-    const fullName = [s.players.first_name, s.players.last_name].filter(Boolean).join(' ') || s.player_id;
-    if (!ptsByPlayer[s.player_id]) {
-      ptsByPlayer[s.player_id] = { name: fullName, teamId: s.players.team_id, gp: 0, pts: 0 };
-    }
-    ptsByPlayer[s.player_id].gp += 1;
-    ptsByPlayer[s.player_id].pts += Number(s.points ?? 0);
-  });
-  const sortedLeaders = Object.entries(ptsByPlayer)
-    .map(([id, v]) => ({ id, ...v, ppg: v.gp > 0 ? v.pts / v.gp : 0 }))
+  const totalPlayers = (seasonStatRows ?? []).length;
+  const sortedLeaders = (seasonStatRows ?? [])
+    .map((s) => {
+      const p = leaderPlayerById.get(s.player_id);
+      const name = p ? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || s.player_id : s.player_id;
+      const teamId = p?.team_id ?? s.team_id ?? "";
+      return { id: s.player_id, name, teamId, gp: s.gp, pts: s.pts ?? 0, ppg: s.ppg ?? 0 };
+    })
     .sort((a, b) => b.pts - a.pts || b.ppg - a.ppg)
     .slice(0, 5);
+
 
   return (
     <main className={`${inter.variable} ${oswald.variable} min-h-screen`} style={{ background: "var(--navy-950)", color: "var(--text)", fontFamily: "var(--font-body)" }}>
