@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import PlayerAvatar from "@/app/components/PlayerAvatar";
 import SeasonSelector from "@/app/components/SeasonSelector";
 import { useT } from "@/app/components/LanguageProvider";
+import { getPublicSeason } from "@/lib/league";
 import type { Season } from "@/lib/league";
 import RankBadge from "@/app/components/home/RankBadge";
 import SectionHeading from "@/app/components/home/SectionHeading";
@@ -162,37 +163,42 @@ export default function LeadersPage() {
   const [category, setCategory] = useState<Category>("PTS");
   const [ptsSortMode, setPtsSortMode] = useState<"PTS" | "PPG">("PPG");
   const [seasons, setSeasons] = useState<Season[]>([]);
+  const [publicSeason, setPublicSeason] = useState<string | null>(null);
   const { t } = useT();
 
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  // Leaderboards should keep showing the latest completed season while the current one is being set up.
   const seasonParam = searchParams.get("season");
-  const defaultSeason = seasons.find((s) => !s.is_current)?.season
-    ?? seasons.find((s) => s.is_current)?.season
-    ?? seasons[0]?.season
-    ?? "2025/26";
-  const currentSeason = seasonParam ?? defaultSeason;
+  const currentSeason = seasonParam ?? publicSeason ?? "";
 
   // Load available seasons once
   useEffect(() => {
-    supabase
-      .from("seasons")
-      .select("season, is_current")
-      .order("season", { ascending: false })
-      .then(({ data }) => setSeasons((data ?? []) as Season[]));
+    let cancelled = false;
+
+    Promise.all([
+      supabase
+        .from("seasons")
+        .select("season, is_current")
+        .order("season", { ascending: false }),
+      getPublicSeason(),
+    ]).then(([{ data }, season]) => {
+      if (cancelled) return;
+      setSeasons((data ?? []) as Season[]);
+      setPublicSeason(season);
+    });
+
+    return () => { cancelled = true; };
   }, []);
 
   // When seasons load and there's no URL param, set the default in the URL
   useEffect(() => {
-    if (seasonParam || seasons.length === 0) return;
-    if (!defaultSeason) return;
+    if (seasonParam || !publicSeason) return;
     const params = new URLSearchParams(searchParams.toString());
-    params.set("season", defaultSeason);
+    params.set("season", publicSeason);
     router.replace(`${pathname}?${params.toString()}`);
-  }, [seasons, seasonParam, pathname, router, searchParams, defaultSeason]);
+  }, [seasonParam, pathname, router, searchParams, publicSeason]);
 
   useEffect(() => {
     if (!currentSeason) return;

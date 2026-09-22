@@ -8,6 +8,7 @@ import PlayerAvatar from "@/app/components/PlayerAvatar";
 import SeasonSelector from "@/app/components/SeasonSelector";
 import TeamLogo from "@/app/components/TeamLogo";
 import { useT } from "@/app/components/LanguageProvider";
+import { getPublicSeason } from "@/lib/league";
 import type { Season } from "@/lib/league";
 import SectionHeading from "@/app/components/home/SectionHeading";
 
@@ -111,6 +112,7 @@ export default function PlayerPage() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
   const [seasons, setSeasons] = useState<Season[]>([]);
+  const [publicSeason, setPublicSeason] = useState<string | null>(null);
   const [seasonStats, setSeasonStats] = useState<SeasonStatRow[]>([]);
   const [careerStats, setCareerStats] = useState<CareerStatRow | null>(null);
   const [gameStats, setGameStats] = useState<GameStatRow[]>([]);
@@ -120,26 +122,34 @@ export default function PlayerPage() {
   const [error, setError] = useState<unknown>(null);
 
   const seasonParam = searchParams.get("season");
-  const currentSeason = seasonParam ?? seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season ?? "2025/26";
+  const currentSeason = seasonParam ?? publicSeason ?? "";
 
   // Load available seasons once
   useEffect(() => {
-    supabase
-      .from("seasons")
-      .select("season, is_current")
-      .order("season", { ascending: false })
-      .then(({ data }) => setSeasons((data ?? []) as Season[]));
+    let cancelled = false;
+
+    Promise.all([
+      supabase
+        .from("seasons")
+        .select("season, is_current")
+        .order("season", { ascending: false }),
+      getPublicSeason(),
+    ]).then(([{ data }, season]) => {
+      if (cancelled) return;
+      setSeasons((data ?? []) as Season[]);
+      setPublicSeason(season);
+    });
+
+    return () => { cancelled = true; };
   }, []);
 
   // When seasons load and there's no URL param, set the default in the URL
   useEffect(() => {
-    if (seasonParam || seasons.length === 0) return;
-    const defaultSeason = seasons.find((s) => s.is_current)?.season ?? seasons[0]?.season;
-    if (!defaultSeason) return;
+    if (seasonParam || !publicSeason) return;
     const params2 = new URLSearchParams(searchParams.toString());
-    params2.set("season", defaultSeason);
+    params2.set("season", publicSeason);
     router.replace(`${pathname}?${params2.toString()}`);
-  }, [seasons, seasonParam, pathname, router, searchParams]);
+  }, [seasonParam, pathname, router, searchParams, publicSeason]);
 
   useEffect(() => {
     let cancelled = false;
