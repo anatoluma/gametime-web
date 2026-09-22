@@ -122,6 +122,8 @@ export default async function Home() {
     .slice(0, 5);
 
   const gamesPlayed = allGames.filter(g => g.home_score !== null).length;
+  // Season is only "complete" once every fetched game for it has a final score.
+  const seasonComplete = allGames.length > 0 && allGames.every((g) => g.home_score !== null && g.away_score !== null);
 
   // --- LEADERS LOGIC ---
   const totalPlayers = new Set(statsData.map((s: any) => s.player_id)).size;
@@ -144,14 +146,14 @@ export default async function Home() {
     <main className={`${inter.variable} ${oswald.variable} min-h-screen`} style={{ background: "var(--navy-950)", color: "var(--text)", fontFamily: "var(--font-body)" }}>
       <section className="lbm-hero-bg border-b px-3 pb-6 pt-6 sm:px-6 sm:pt-7" style={{ borderColor: "var(--line)" }}>
         <div className="mx-auto max-w-5xl">
-          <Eyebrow>{t("home_eyebrow")}</Eyebrow>
+          <Eyebrow>{t(seasonComplete ? "home_eyebrow_complete" : "home_eyebrow_live")}</Eyebrow>
 
           <h1 className="mt-3 text-4xl leading-none sm:text-5xl" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>
-            {t("home_title")}
+            {t("home_title_prefix")}{season}{t("home_title_suffix")}
           </h1>
 
           <p className="mt-3 max-w-3xl text-sm sm:text-base" style={{ color: "var(--muted)" }}>
-            {t("home_subtitle")}
+            {t(seasonComplete ? "home_subtitle_complete" : "home_subtitle_live")}
           </p>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -186,7 +188,7 @@ export default async function Home() {
             <StatTile icon={<StatIcon type="teams" />} value={teams.length} label={t("home_stat_teams")} href="/teams" />
             <StatTile icon={<StatIcon type="games" />} value={gamesPlayed} label={t("home_stat_games")} href="/games" />
             <StatTile icon={<StatIcon type="players" />} value={totalPlayers} label={t("home_stat_players")} href="/leaders" />
-            <StatTile icon={<StatIcon type="playoffs" />} value={t("home_stat_playoffs")} label={t("home_stat_playoffs_sub")} href="/games" />
+            <StatTile icon={<StatIcon type="playoffs" />} value={t("home_stat_playoffs")} label={t(seasonComplete ? "home_stat_playoffs_sub_complete" : "home_stat_playoffs_sub_live")} href="/games" />
           </div>
         </div>
       </section>
