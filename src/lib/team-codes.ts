@@ -6,6 +6,7 @@ export const TEAM_CODE_MAP: Record<string, string> = {
   BLD: "BLD",
   BRI: "BRI",
   CAS: "CAS",
+  CN2: "CN2",
   COM: "COM",
   DRO: "DRO",
   EDI: "EDI",
