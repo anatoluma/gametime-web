@@ -209,6 +209,7 @@ DECLARE
   canonical_id TEXT;
   duplicate_id TEXT;
   next_number INTEGER;
+  target_jersey SMALLINT;
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.seasons WHERE season = ${sqlString(season)}) THEN
     RAISE EXCEPTION 'Missing required season ${season}';
@@ -253,14 +254,24 @@ ${additions.map(({ teamId, name }) => {
       INSERT INTO public.players (player_id, team_id, first_name, last_name, jersey_number, photo_url)
       VALUES (canonical_id, target.team_id, target.first_name, target.last_name, NULL, NULL);
     END IF;
+    SELECT jersey_number INTO target_jersey FROM public.players WHERE player_id = canonical_id;
+    IF target_jersey IS NOT NULL AND EXISTS (
+      SELECT 1 FROM public.player_seasons occupied
+      WHERE occupied.season = ${sqlString(season)} AND occupied.team_id = target.team_id
+        AND occupied.jersey_number = target_jersey AND occupied.is_active = true
+        AND occupied.player_id <> canonical_id
+    ) THEN
+      target_jersey := NULL;
+      UPDATE public.players SET jersey_number = NULL WHERE player_id = canonical_id;
+    END IF;
     INSERT INTO public.player_seasons (player_id, season, team_id, jersey_number, is_active)
-    VALUES (canonical_id, ${sqlString(season)}, target.team_id, (SELECT jersey_number FROM public.players WHERE player_id = canonical_id), true)
-    ON CONFLICT (player_id, season) DO UPDATE SET team_id = EXCLUDED.team_id, is_active = true;
+    VALUES (canonical_id, ${sqlString(season)}, target.team_id, target_jersey, true)
+    ON CONFLICT (player_id, season) DO UPDATE SET team_id = EXCLUDED.team_id, jersey_number = EXCLUDED.jersey_number, is_active = true;
     UPDATE public.players SET team_id = target.team_id WHERE player_id = canonical_id;
   END LOOP;
 
   -- Explicitly reconnect the six abbreviated COM identities before any cleanup.
-${reconnects.map(([from, to]) => { const parts = to.split(" "); return `  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE lower(coalesce(p.first_name, '')) = lower(left(${sqlString(from)}, 1)) AND lower(p.last_name) = lower(split_part(${sqlString(from)}, ' ', 2));
+${reconnects.map(([from, to]) => { const parts = to.split(" "); return `  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE (lower(coalesce(p.first_name, '')) = lower(split_part(${sqlString(from)}, ' ', 1)) OR lower(coalesce(p.first_name, '')) = lower(left(${sqlString(from)}, 1))) AND lower(p.last_name) = lower(split_part(${sqlString(from)}, ' ', 2));
   SELECT p.player_id INTO canonical_id FROM public.players p WHERE lower(concat_ws(' ', p.first_name, p.last_name)) = lower(${sqlString(to)}) OR lower(concat_ws(' ', p.last_name, p.first_name)) = lower(${sqlString(to)});
   IF duplicate_id IS NULL THEN RAISE EXCEPTION 'Missing temporary COM identity: %', ${sqlString(from)}; END IF;
   IF canonical_id IS NULL THEN
@@ -274,8 +285,13 @@ ${reconnects.map(([from, to]) => { const parts = to.split(" "); return `  SELECT
   -- Preserve history while moving confirmed 2026/27 memberships.
 ${transfers.map(([, to, name]) => `  SELECT p.player_id INTO canonical_id FROM public.players p WHERE lower(concat_ws(' ', p.first_name, p.last_name)) = lower(${sqlString(name)}) OR lower(concat_ws(' ', p.last_name, p.first_name)) = lower(${sqlString(name)});
   IF canonical_id IS NULL THEN RAISE EXCEPTION 'Missing transfer player: %', ${sqlString(name)}; END IF;
-  UPDATE public.player_seasons SET team_id = ${sqlString(to)}, is_active = true WHERE player_id = canonical_id AND season = ${sqlString(season)};
-  IF NOT FOUND THEN INSERT INTO public.player_seasons (player_id, season, team_id, is_active) VALUES (canonical_id, ${sqlString(season)}, ${sqlString(to)}, true); END IF;
+  SELECT jersey_number INTO target_jersey FROM public.players WHERE player_id = canonical_id;
+  IF target_jersey IS NOT NULL AND EXISTS (SELECT 1 FROM public.player_seasons occupied WHERE occupied.season = ${sqlString(season)} AND occupied.team_id = ${sqlString(to)} AND occupied.jersey_number = target_jersey AND occupied.is_active = true AND occupied.player_id <> canonical_id) THEN
+    target_jersey := NULL;
+    UPDATE public.players SET jersey_number = NULL WHERE player_id = canonical_id;
+  END IF;
+  UPDATE public.player_seasons SET team_id = ${sqlString(to)}, jersey_number = target_jersey, is_active = true WHERE player_id = canonical_id AND season = ${sqlString(season)};
+  IF NOT FOUND THEN INSERT INTO public.player_seasons (player_id, season, team_id, jersey_number, is_active) VALUES (canonical_id, ${sqlString(season)}, ${sqlString(to)}, target_jersey, true); END IF;
   UPDATE public.players SET team_id = ${sqlString(to)} WHERE player_id = canonical_id;`).join("\n")}
 
   -- Apply canonical renames and then merge only explicitly confirmed duplicates.

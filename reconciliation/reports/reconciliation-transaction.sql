@@ -12,6 +12,7 @@ DECLARE
   canonical_id TEXT;
   duplicate_id TEXT;
   next_number INTEGER;
+  target_jersey SMALLINT;
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.seasons WHERE season = '2026/27') THEN
     RAISE EXCEPTION 'Missing required season 2026/27';
@@ -77,14 +78,24 @@ BEGIN
       INSERT INTO public.players (player_id, team_id, first_name, last_name, jersey_number, photo_url)
       VALUES (canonical_id, target.team_id, target.first_name, target.last_name, NULL, NULL);
     END IF;
+    SELECT jersey_number INTO target_jersey FROM public.players WHERE player_id = canonical_id;
+    IF target_jersey IS NOT NULL AND EXISTS (
+      SELECT 1 FROM public.player_seasons occupied
+      WHERE occupied.season = '2026/27' AND occupied.team_id = target.team_id
+        AND occupied.jersey_number = target_jersey AND occupied.is_active = true
+        AND occupied.player_id <> canonical_id
+    ) THEN
+      target_jersey := NULL;
+      UPDATE public.players SET jersey_number = NULL WHERE player_id = canonical_id;
+    END IF;
     INSERT INTO public.player_seasons (player_id, season, team_id, jersey_number, is_active)
-    VALUES (canonical_id, '2026/27', target.team_id, (SELECT jersey_number FROM public.players WHERE player_id = canonical_id), true)
-    ON CONFLICT (player_id, season) DO UPDATE SET team_id = EXCLUDED.team_id, is_active = true;
+    VALUES (canonical_id, '2026/27', target.team_id, target_jersey, true)
+    ON CONFLICT (player_id, season) DO UPDATE SET team_id = EXCLUDED.team_id, jersey_number = EXCLUDED.jersey_number, is_active = true;
     UPDATE public.players SET team_id = target.team_id WHERE player_id = canonical_id;
   END LOOP;
 
   -- Explicitly reconnect the six abbreviated COM identities before any cleanup.
-  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE lower(coalesce(p.first_name, '')) = lower(left('Leonid G', 1)) AND lower(p.last_name) = lower(split_part('Leonid G', ' ', 2));
+  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE (lower(coalesce(p.first_name, '')) = lower(split_part('Leonid G', ' ', 1)) OR lower(coalesce(p.first_name, '')) = lower(left('Leonid G', 1))) AND lower(p.last_name) = lower(split_part('Leonid G', ' ', 2));
   SELECT p.player_id INTO canonical_id FROM public.players p WHERE lower(concat_ws(' ', p.first_name, p.last_name)) = lower('Leonid Gherciu-Peev') OR lower(concat_ws(' ', p.last_name, p.first_name)) = lower('Leonid Gherciu-Peev');
   IF duplicate_id IS NULL THEN RAISE EXCEPTION 'Missing temporary COM identity: %', 'Leonid G'; END IF;
   IF canonical_id IS NULL THEN
@@ -94,7 +105,7 @@ BEGIN
   IF duplicate_id <> canonical_id THEN UPDATE public.player_game_stats SET player_id = canonical_id WHERE player_id = duplicate_id; END IF;
   INSERT INTO public.player_seasons (player_id, season, team_id, is_active) VALUES (canonical_id, '2026/27', 'COM', true) ON CONFLICT (player_id, season) DO UPDATE SET team_id = 'COM', is_active = true;
   UPDATE public.players SET team_id = 'COM' WHERE player_id = canonical_id;
-  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE lower(coalesce(p.first_name, '')) = lower(left('Arthur P', 1)) AND lower(p.last_name) = lower(split_part('Arthur P', ' ', 2));
+  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE (lower(coalesce(p.first_name, '')) = lower(split_part('Arthur P', ' ', 1)) OR lower(coalesce(p.first_name, '')) = lower(left('Arthur P', 1))) AND lower(p.last_name) = lower(split_part('Arthur P', ' ', 2));
   SELECT p.player_id INTO canonical_id FROM public.players p WHERE lower(concat_ws(' ', p.first_name, p.last_name)) = lower('Artur Popovici') OR lower(concat_ws(' ', p.last_name, p.first_name)) = lower('Artur Popovici');
   IF duplicate_id IS NULL THEN RAISE EXCEPTION 'Missing temporary COM identity: %', 'Arthur P'; END IF;
   IF canonical_id IS NULL THEN
@@ -104,7 +115,7 @@ BEGIN
   IF duplicate_id <> canonical_id THEN UPDATE public.player_game_stats SET player_id = canonical_id WHERE player_id = duplicate_id; END IF;
   INSERT INTO public.player_seasons (player_id, season, team_id, is_active) VALUES (canonical_id, '2026/27', 'COM', true) ON CONFLICT (player_id, season) DO UPDATE SET team_id = 'COM', is_active = true;
   UPDATE public.players SET team_id = 'COM' WHERE player_id = canonical_id;
-  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE lower(coalesce(p.first_name, '')) = lower(left('Denis R', 1)) AND lower(p.last_name) = lower(split_part('Denis R', ' ', 2));
+  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE (lower(coalesce(p.first_name, '')) = lower(split_part('Denis R', ' ', 1)) OR lower(coalesce(p.first_name, '')) = lower(left('Denis R', 1))) AND lower(p.last_name) = lower(split_part('Denis R', ' ', 2));
   SELECT p.player_id INTO canonical_id FROM public.players p WHERE lower(concat_ws(' ', p.first_name, p.last_name)) = lower('Denis Rozengravt') OR lower(concat_ws(' ', p.last_name, p.first_name)) = lower('Denis Rozengravt');
   IF duplicate_id IS NULL THEN RAISE EXCEPTION 'Missing temporary COM identity: %', 'Denis R'; END IF;
   IF canonical_id IS NULL THEN
@@ -114,7 +125,7 @@ BEGIN
   IF duplicate_id <> canonical_id THEN UPDATE public.player_game_stats SET player_id = canonical_id WHERE player_id = duplicate_id; END IF;
   INSERT INTO public.player_seasons (player_id, season, team_id, is_active) VALUES (canonical_id, '2026/27', 'COM', true) ON CONFLICT (player_id, season) DO UPDATE SET team_id = 'COM', is_active = true;
   UPDATE public.players SET team_id = 'COM' WHERE player_id = canonical_id;
-  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE lower(coalesce(p.first_name, '')) = lower(left('Ivan+0 D', 1)) AND lower(p.last_name) = lower(split_part('Ivan+0 D', ' ', 2));
+  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE (lower(coalesce(p.first_name, '')) = lower(split_part('Ivan+0 D', ' ', 1)) OR lower(coalesce(p.first_name, '')) = lower(left('Ivan+0 D', 1))) AND lower(p.last_name) = lower(split_part('Ivan+0 D', ' ', 2));
   SELECT p.player_id INTO canonical_id FROM public.players p WHERE lower(concat_ws(' ', p.first_name, p.last_name)) = lower('Ivan Dologlu') OR lower(concat_ws(' ', p.last_name, p.first_name)) = lower('Ivan Dologlu');
   IF duplicate_id IS NULL THEN RAISE EXCEPTION 'Missing temporary COM identity: %', 'Ivan+0 D'; END IF;
   IF canonical_id IS NULL THEN
@@ -124,7 +135,7 @@ BEGIN
   IF duplicate_id <> canonical_id THEN UPDATE public.player_game_stats SET player_id = canonical_id WHERE player_id = duplicate_id; END IF;
   INSERT INTO public.player_seasons (player_id, season, team_id, is_active) VALUES (canonical_id, '2026/27', 'COM', true) ON CONFLICT (player_id, season) DO UPDATE SET team_id = 'COM', is_active = true;
   UPDATE public.players SET team_id = 'COM' WHERE player_id = canonical_id;
-  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE lower(coalesce(p.first_name, '')) = lower(left('Mix K', 1)) AND lower(p.last_name) = lower(split_part('Mix K', ' ', 2));
+  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE (lower(coalesce(p.first_name, '')) = lower(split_part('Mix K', ' ', 1)) OR lower(coalesce(p.first_name, '')) = lower(left('Mix K', 1))) AND lower(p.last_name) = lower(split_part('Mix K', ' ', 2));
   SELECT p.player_id INTO canonical_id FROM public.players p WHERE lower(concat_ws(' ', p.first_name, p.last_name)) = lower('Mihail Cristov') OR lower(concat_ws(' ', p.last_name, p.first_name)) = lower('Mihail Cristov');
   IF duplicate_id IS NULL THEN RAISE EXCEPTION 'Missing temporary COM identity: %', 'Mix K'; END IF;
   IF canonical_id IS NULL THEN
@@ -134,7 +145,7 @@ BEGIN
   IF duplicate_id <> canonical_id THEN UPDATE public.player_game_stats SET player_id = canonical_id WHERE player_id = duplicate_id; END IF;
   INSERT INTO public.player_seasons (player_id, season, team_id, is_active) VALUES (canonical_id, '2026/27', 'COM', true) ON CONFLICT (player_id, season) DO UPDATE SET team_id = 'COM', is_active = true;
   UPDATE public.players SET team_id = 'COM' WHERE player_id = canonical_id;
-  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE lower(coalesce(p.first_name, '')) = lower(left('Serghei G', 1)) AND lower(p.last_name) = lower(split_part('Serghei G', ' ', 2));
+  SELECT p.player_id INTO duplicate_id FROM public.players p WHERE (lower(coalesce(p.first_name, '')) = lower(split_part('Serghei G', ' ', 1)) OR lower(coalesce(p.first_name, '')) = lower(left('Serghei G', 1))) AND lower(p.last_name) = lower(split_part('Serghei G', ' ', 2));
   SELECT p.player_id INTO canonical_id FROM public.players p WHERE lower(concat_ws(' ', p.first_name, p.last_name)) = lower('Serghei Garciu') OR lower(concat_ws(' ', p.last_name, p.first_name)) = lower('Serghei Garciu');
   IF duplicate_id IS NULL THEN RAISE EXCEPTION 'Missing temporary COM identity: %', 'Serghei G'; END IF;
   IF canonical_id IS NULL THEN
@@ -148,23 +159,43 @@ BEGIN
   -- Preserve history while moving confirmed 2026/27 memberships.
   SELECT p.player_id INTO canonical_id FROM public.players p WHERE lower(concat_ws(' ', p.first_name, p.last_name)) = lower('Nichita Visneacov') OR lower(concat_ws(' ', p.last_name, p.first_name)) = lower('Nichita Visneacov');
   IF canonical_id IS NULL THEN RAISE EXCEPTION 'Missing transfer player: %', 'Nichita Visneacov'; END IF;
-  UPDATE public.player_seasons SET team_id = 'AMB', is_active = true WHERE player_id = canonical_id AND season = '2026/27';
-  IF NOT FOUND THEN INSERT INTO public.player_seasons (player_id, season, team_id, is_active) VALUES (canonical_id, '2026/27', 'AMB', true); END IF;
+  SELECT jersey_number INTO target_jersey FROM public.players WHERE player_id = canonical_id;
+  IF target_jersey IS NOT NULL AND EXISTS (SELECT 1 FROM public.player_seasons occupied WHERE occupied.season = '2026/27' AND occupied.team_id = 'AMB' AND occupied.jersey_number = target_jersey AND occupied.is_active = true AND occupied.player_id <> canonical_id) THEN
+    target_jersey := NULL;
+    UPDATE public.players SET jersey_number = NULL WHERE player_id = canonical_id;
+  END IF;
+  UPDATE public.player_seasons SET team_id = 'AMB', jersey_number = target_jersey, is_active = true WHERE player_id = canonical_id AND season = '2026/27';
+  IF NOT FOUND THEN INSERT INTO public.player_seasons (player_id, season, team_id, jersey_number, is_active) VALUES (canonical_id, '2026/27', 'AMB', target_jersey, true); END IF;
   UPDATE public.players SET team_id = 'AMB' WHERE player_id = canonical_id;
   SELECT p.player_id INTO canonical_id FROM public.players p WHERE lower(concat_ws(' ', p.first_name, p.last_name)) = lower('Ion Golovco') OR lower(concat_ws(' ', p.last_name, p.first_name)) = lower('Ion Golovco');
   IF canonical_id IS NULL THEN RAISE EXCEPTION 'Missing transfer player: %', 'Ion Golovco'; END IF;
-  UPDATE public.player_seasons SET team_id = 'AMB', is_active = true WHERE player_id = canonical_id AND season = '2026/27';
-  IF NOT FOUND THEN INSERT INTO public.player_seasons (player_id, season, team_id, is_active) VALUES (canonical_id, '2026/27', 'AMB', true); END IF;
+  SELECT jersey_number INTO target_jersey FROM public.players WHERE player_id = canonical_id;
+  IF target_jersey IS NOT NULL AND EXISTS (SELECT 1 FROM public.player_seasons occupied WHERE occupied.season = '2026/27' AND occupied.team_id = 'AMB' AND occupied.jersey_number = target_jersey AND occupied.is_active = true AND occupied.player_id <> canonical_id) THEN
+    target_jersey := NULL;
+    UPDATE public.players SET jersey_number = NULL WHERE player_id = canonical_id;
+  END IF;
+  UPDATE public.player_seasons SET team_id = 'AMB', jersey_number = target_jersey, is_active = true WHERE player_id = canonical_id AND season = '2026/27';
+  IF NOT FOUND THEN INSERT INTO public.player_seasons (player_id, season, team_id, jersey_number, is_active) VALUES (canonical_id, '2026/27', 'AMB', target_jersey, true); END IF;
   UPDATE public.players SET team_id = 'AMB' WHERE player_id = canonical_id;
   SELECT p.player_id INTO canonical_id FROM public.players p WHERE lower(concat_ws(' ', p.first_name, p.last_name)) = lower('Stanislav Goldstein') OR lower(concat_ws(' ', p.last_name, p.first_name)) = lower('Stanislav Goldstein');
   IF canonical_id IS NULL THEN RAISE EXCEPTION 'Missing transfer player: %', 'Stanislav Goldstein'; END IF;
-  UPDATE public.player_seasons SET team_id = 'CAS', is_active = true WHERE player_id = canonical_id AND season = '2026/27';
-  IF NOT FOUND THEN INSERT INTO public.player_seasons (player_id, season, team_id, is_active) VALUES (canonical_id, '2026/27', 'CAS', true); END IF;
+  SELECT jersey_number INTO target_jersey FROM public.players WHERE player_id = canonical_id;
+  IF target_jersey IS NOT NULL AND EXISTS (SELECT 1 FROM public.player_seasons occupied WHERE occupied.season = '2026/27' AND occupied.team_id = 'CAS' AND occupied.jersey_number = target_jersey AND occupied.is_active = true AND occupied.player_id <> canonical_id) THEN
+    target_jersey := NULL;
+    UPDATE public.players SET jersey_number = NULL WHERE player_id = canonical_id;
+  END IF;
+  UPDATE public.player_seasons SET team_id = 'CAS', jersey_number = target_jersey, is_active = true WHERE player_id = canonical_id AND season = '2026/27';
+  IF NOT FOUND THEN INSERT INTO public.player_seasons (player_id, season, team_id, jersey_number, is_active) VALUES (canonical_id, '2026/27', 'CAS', target_jersey, true); END IF;
   UPDATE public.players SET team_id = 'CAS' WHERE player_id = canonical_id;
   SELECT p.player_id INTO canonical_id FROM public.players p WHERE lower(concat_ws(' ', p.first_name, p.last_name)) = lower('Alic Tonciu') OR lower(concat_ws(' ', p.last_name, p.first_name)) = lower('Alic Tonciu');
   IF canonical_id IS NULL THEN RAISE EXCEPTION 'Missing transfer player: %', 'Alic Tonciu'; END IF;
-  UPDATE public.player_seasons SET team_id = 'CN2', is_active = true WHERE player_id = canonical_id AND season = '2026/27';
-  IF NOT FOUND THEN INSERT INTO public.player_seasons (player_id, season, team_id, is_active) VALUES (canonical_id, '2026/27', 'CN2', true); END IF;
+  SELECT jersey_number INTO target_jersey FROM public.players WHERE player_id = canonical_id;
+  IF target_jersey IS NOT NULL AND EXISTS (SELECT 1 FROM public.player_seasons occupied WHERE occupied.season = '2026/27' AND occupied.team_id = 'CN2' AND occupied.jersey_number = target_jersey AND occupied.is_active = true AND occupied.player_id <> canonical_id) THEN
+    target_jersey := NULL;
+    UPDATE public.players SET jersey_number = NULL WHERE player_id = canonical_id;
+  END IF;
+  UPDATE public.player_seasons SET team_id = 'CN2', jersey_number = target_jersey, is_active = true WHERE player_id = canonical_id AND season = '2026/27';
+  IF NOT FOUND THEN INSERT INTO public.player_seasons (player_id, season, team_id, jersey_number, is_active) VALUES (canonical_id, '2026/27', 'CN2', target_jersey, true); END IF;
   UPDATE public.players SET team_id = 'CN2' WHERE player_id = canonical_id;
 
   -- Apply canonical renames and then merge only explicitly confirmed duplicates.

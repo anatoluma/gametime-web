@@ -9,16 +9,16 @@
       "estimatedRows": 243
     },
     {
-      "name": "player_seasons_rows.sql",
-      "status": "found",
-      "bytes": 32762,
-      "estimatedRows": 438
-    },
-    {
       "name": "teams_rows.sql",
       "status": "found",
       "bytes": 2207,
       "estimatedRows": 16
+    },
+    {
+      "name": "player_seasons_rows.sql",
+      "status": "found",
+      "bytes": 32762,
+      "estimatedRows": 438
     },
     {
       "name": "player_game_stats_rows.sql",
