@@ -1,13 +1,18 @@
 # Roster reconciliation
 
-Place the five supplied source files in `reconciliation/input/` (or set
+Place the four database snapshot exports in `reconciliation/input/` (or set
 `ROSTER_INPUT_DIR`):
 
-- `players_rows (6).csv`
-- `player_seasons_rows.csv`
-- `player_season_stats_rows.csv`
-- `official-2026-27-roster.json`
-- `LBM_2026-27_names_to_clarify(1).xlsx`
+- `players_rows.sql`
+- `player_seasons_rows.sql`
+- `player_game_stats_rows.sql`
+- `teams_rows.sql`
+
+Also place the official roster workbook in this folder:
+`LBM_official_team_rosters_extracted.xlsx`. The separate validation workbook is
+`LBM_2026-27_names_to_clarify(1).xlsx`. Missing either workbook blocks
+personal-data imports and unresolved identity decisions, but does not block
+reading the database snapshot.
 
 Run `npm run roster:dry-run`. The command writes `reports/dry-run.json` and
 prints the same report. It never writes to the database. Missing inputs,

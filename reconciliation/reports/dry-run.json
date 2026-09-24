@@ -3,24 +3,57 @@
   "season": "2026/27",
   "inputs": [
     {
-      "name": "player_season_stats_rows.csv",
-      "status": "missing"
+      "name": "players_rows.sql",
+      "status": "found",
+      "bytes": 13683,
+      "estimatedRows": 243
     },
     {
-      "name": "official-2026-27-roster.json",
-      "status": "missing"
+      "name": "player_seasons_rows.sql",
+      "status": "found",
+      "bytes": 32762,
+      "estimatedRows": 438
     },
     {
-      "name": "players_rows (6).csv",
-      "status": "missing"
+      "name": "teams_rows.sql",
+      "status": "found",
+      "bytes": 2207,
+      "estimatedRows": 16
     },
     {
-      "name": "player_seasons_rows.csv",
-      "status": "missing"
+      "name": "player_game_stats_rows.sql",
+      "status": "found",
+      "bytes": 263757,
+      "estimatedRows": 1405
     },
     {
       "name": "LBM_2026-27_names_to_clarify(1).xlsx",
-      "status": "missing"
+      "status": "found",
+      "bytes": 20810,
+      "estimatedRows": 0
+    },
+    {
+      "name": "LBM_official_team_rosters_extracted.xlsx",
+      "status": "parsed",
+      "sheets": [
+        "Teams",
+        "Players",
+        "Staff",
+        "Review Needed"
+      ],
+      "playerRows": 200,
+      "staffRows": 20,
+      "reviewRows": 116
+    },
+    {
+      "name": "LBM_2026-27_names_to_clarify(1).xlsx",
+      "status": "parsed",
+      "sheets": [
+        "Names to clarify",
+        "Roster membership"
+      ],
+      "namesToClarifyRows": 73,
+      "rosterMembershipRows": 57
     }
   ],
   "playersToCreate": [
@@ -601,14 +634,180 @@
       "season": "2026/27"
     }
   ],
-  "transliterationsForReview": [],
-  "unresolved": [
-    "Missing required source: player_season_stats_rows.csv",
-    "Missing required source: official-2026-27-roster.json",
-    "Missing required source: players_rows (6).csv",
-    "Missing required source: player_seasons_rows.csv",
-    "Missing required source: LBM_2026-27_names_to_clarify(1).xlsx"
+  "identityResolutions": [
+    {
+      "source": "Герчу-Пеев Леонид",
+      "canonicalName": "Gherciu-Peev Leonid",
+      "playerId": "04dd727a-2871-428e-9379-34aab92af12d",
+      "method": "explicit reconciliation alias"
+    },
+    {
+      "source": "Кристов Михаил",
+      "canonicalName": "Cristov Mihail",
+      "playerId": "5e38bd87-7fb2-4293-9c2d-897f859732ef",
+      "method": "explicit reconciliation alias"
+    },
+    {
+      "source": "Попович Артур",
+      "canonicalName": "Popovici Artur",
+      "playerId": "3906b804-01cd-4ce7-9f53-b9a168582bb3",
+      "method": "explicit reconciliation alias"
+    },
+    {
+      "source": "Розенкранц Денис",
+      "canonicalName": "Rozengravt Denis",
+      "playerId": "1137ebf0-03a9-4d6d-801c-4932df84e52d",
+      "method": "explicit reconciliation alias"
+    },
+    {
+      "source": "Дулоглу Иван",
+      "canonicalName": "Dologlu Ivan",
+      "playerId": "3cdf9a2d-322d-4b07-974a-ba644d289922",
+      "method": "explicit reconciliation alias"
+    },
+    {
+      "source": "Гарчу Сергей",
+      "canonicalName": "Garciu Serghei",
+      "playerId": "f9815d99-b115-4b16-aa29-c569a04ff8a3",
+      "method": "explicit reconciliation alias"
+    }
   ],
+  "transliterationsForReview": [
+    {
+      "source": "Димогло Владимир",
+      "team": "BC Comrat",
+      "proposed": "Dimoglo Vladimir",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    },
+    {
+      "source": "Герчу-Пеев Леонид",
+      "team": "BC Comrat",
+      "proposed": "Gherciu-Peev Leonid",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": "04dd727a-2871-428e-9379-34aab92af12d"
+    },
+    {
+      "source": "Димитрогло Даниил",
+      "team": "BC Comrat",
+      "proposed": "Dimitroglo Daniil",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    },
+    {
+      "source": "Кристов Михаил",
+      "team": "BC Comrat",
+      "proposed": "Cristov Mihail",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": "5e38bd87-7fb2-4293-9c2d-897f859732ef"
+    },
+    {
+      "source": "Дудогло Максим",
+      "team": "BC Comrat",
+      "proposed": "Dudoglo Maxim",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    },
+    {
+      "source": "Барладян Роман",
+      "team": "BC Comrat",
+      "proposed": "Barladean Roman",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    },
+    {
+      "source": "Попович Артур",
+      "team": "BC Comrat",
+      "proposed": "Popovici Artur",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": "3906b804-01cd-4ce7-9f53-b9a168582bb3"
+    },
+    {
+      "source": "Розенкранц Денис",
+      "team": "BC Comrat",
+      "proposed": "Rozengravt Denis",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": "1137ebf0-03a9-4d6d-801c-4932df84e52d"
+    },
+    {
+      "source": "Лейчу Виктор",
+      "team": "BC Comrat",
+      "proposed": "Leiciu Victor",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    },
+    {
+      "source": "Златов Артем",
+      "team": "BC Comrat",
+      "proposed": "Zlatov Arteom",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    },
+    {
+      "source": "Иваненко Никита",
+      "team": "BC Comrat",
+      "proposed": "Ivanenco Nichita",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    },
+    {
+      "source": "Дюльгер Роман",
+      "team": "BC Comrat",
+      "proposed": "Diulgher Roman",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    },
+    {
+      "source": "Константинов Петр",
+      "team": "BC Comrat",
+      "proposed": "Constantinov Petru",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    },
+    {
+      "source": "Дулоглу Иван",
+      "team": "BC Comrat",
+      "proposed": "Dologlu Ivan",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": "3cdf9a2d-322d-4b07-974a-ba644d289922"
+    },
+    {
+      "source": "Топал Николай",
+      "team": "BC Comrat",
+      "proposed": "Topal Nicolai",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    },
+    {
+      "source": "Гарчу Сергей",
+      "team": "BC Comrat",
+      "proposed": "Garciu Serghei",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": "f9815d99-b115-4b16-aa29-c569a04ff8a3"
+    },
+    {
+      "source": "Пядышев Степан",
+      "team": "BC Comrat",
+      "proposed": "Peadisev Stepan",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    },
+    {
+      "source": "Барладян Александр",
+      "team": "BC Comrat",
+      "proposed": "Barladean Alexandr",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    },
+    {
+      "source": "Кыльчик Вадим",
+      "team": "BC Comrat",
+      "proposed": "Cilcic Vadim",
+      "sameAsCandidate": "Unclear",
+      "resolvedPlayerId": null
+    }
+  ],
+  "unresolved": [],
   "constraintViolations": [],
   "skipped": [
     {
@@ -666,6 +865,9 @@
     }
   ],
   "assertions": [
+    "Parsed 243 players from players_rows.sql",
+    "57 workbook roster memberships remain unchanged unless explicitly decided",
+    "All four database snapshot exports are present",
     "COM has exactly 19 official players",
     "Confirmed separate identities are protected from merging",
     "Unreadable identities are skipped"
