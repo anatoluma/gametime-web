@@ -1,0 +1,20 @@
+{
+  "season": "2026/27",
+  "teams": {
+    "COM": {
+      "officialPlayers": ["Vladimir Dimoglo", "Leonid Gherciu-Peev", "Daniil Dimitroglo", "Mihail Cristov", "Maxim Dudoglo", "Roman Barladean", "Artur Popovici", "Denis Rozengravt", "Victor Leiciu", "Arteom Zlatov", "Nichita Ivanenco", "Roman Diulgher", "Petru Constantinov", "Ivan Dologlu", "Nicolai Topal", "Serghei Garciu", "Stepan Peadisev", "Alexandr Barladean", "Vadim Cilcic"],
+      "temporaryAliases": {"Leonid G": "Leonid Gherciu-Peev", "Arthur P": "Artur Popovici", "Denis R": "Denis Rozengravt", "Ivan+0 D": "Ivan Dologlu", "Mix K": "Mihail Cristov", "Serghei G": "Serghei Garciu"}
+    },
+    "CN2": {"add": ["Alexandr Harevschi", "Alic Tonciu", "Genadii Kuceriavii"], "keep": ["N Morari"], "deactivate": ["A Streapko"]},
+    "AMB": {"transfersIn": ["Ion Golovco", "Nichita Visneacov"], "deactivate": ["M Solosciuc", "V Juganaru", "V Arnaut", "D Grosu", "K Osjovschi", "B Bejinari"]},
+    "CAS": {"transfersIn": ["Stanislav Goldstein"], "add": ["Semen Goldstein", "Danila Kravchenko", "Martin Arzumanian"], "deactivate": ["Pavel Tibrigan", "Alexandr Ceaicovschii", "Vladislav Solopa"]},
+    "ADM": {"add": ["Alexei Turcanu", "Stefan Placinta", "Bogdan Gutu"], "deactivate": ["F Rodion", "D Alexei", "A Gincul", "M Cernei", "D Corobcov", "A Covaliucuc", "N Vitneanschii", "A Dragomir", "D Mihai", "G Alexandr", "V Matco"]},
+    "BRI": {"deactivateForTransfers": ["Alic Tonciu", "Nichita Visneacov", "Stanislav Goldstein"]},
+    "BLD": {"coach": "Artur Tonciu", "keep": ["Artur Tonciu", "T Elizarov", "S Moraru"]}
+  },
+  "renames": {"D Chislih": "Daniel Chislin", "V Dronicov": "Veaceslav Dronnicov", "D Kalashnikov": "Alexandr Kalashnikov", "S Golistein": "Stanislav Goldstein"},
+  "merges": [{"duplicate": "A Harevschii", "canonical": "Alexandr Harevschi"}, {"duplicate": "G ComnatnIi", "canonical": "Gleb Comnotnii"}],
+  "doNotMerge": ["N Vitneanschii", "Semen Goldstein", "Bogdan Gutu"],
+  "skip": ["Anton (surname unclear)", "Grabovski (given name unclear)", "Player 8 unclear", "Player 12 unclear"],
+  "coaches": [{"team_id": "BLD", "coach_name": "Artur Tonciu"}]
+}

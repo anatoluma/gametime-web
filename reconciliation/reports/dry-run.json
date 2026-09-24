@@ -1,0 +1,673 @@
+{
+  "mode": "dry-run",
+  "season": "2026/27",
+  "inputs": [
+    {
+      "name": "player_season_stats_rows.csv",
+      "status": "missing"
+    },
+    {
+      "name": "official-2026-27-roster.json",
+      "status": "missing"
+    },
+    {
+      "name": "players_rows (6).csv",
+      "status": "missing"
+    },
+    {
+      "name": "player_seasons_rows.csv",
+      "status": "missing"
+    },
+    {
+      "name": "LBM_2026-27_names_to_clarify(1).xlsx",
+      "status": "missing"
+    }
+  ],
+  "playersToCreate": [
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Vladimir Dimoglo",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Leonid Gherciu-Peev",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Daniil Dimitroglo",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Mihail Cristov",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Maxim Dudoglo",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Roman Barladean",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Artur Popovici",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Denis Rozengravt",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Victor Leiciu",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Arteom Zlatov",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Nichita Ivanenco",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Roman Diulgher",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Petru Constantinov",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Ivan Dologlu",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Nicolai Topal",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Serghei Garciu",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Stepan Peadisev",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Alexandr Barladean",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Vadim Cilcic",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "CN2",
+      "season": "2026/27",
+      "name": "Alexandr Harevschi",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "CN2",
+      "season": "2026/27",
+      "name": "Alic Tonciu",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "CN2",
+      "season": "2026/27",
+      "name": "Genadii Kuceriavii",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "CAS",
+      "season": "2026/27",
+      "name": "Semen Goldstein",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "CAS",
+      "season": "2026/27",
+      "name": "Danila Kravchenko",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "CAS",
+      "season": "2026/27",
+      "name": "Martin Arzumanian",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "Alexei Turcanu",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "Stefan Placinta",
+      "status": "create-or-identify-from-source"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "Bogdan Gutu",
+      "status": "create-or-identify-from-source"
+    }
+  ],
+  "playersToRename": [
+    {
+      "from": "D Chislih",
+      "to": "Daniel Chislin"
+    },
+    {
+      "from": "V Dronicov",
+      "to": "Veaceslav Dronnicov"
+    },
+    {
+      "from": "D Kalashnikov",
+      "to": "Alexandr Kalashnikov"
+    },
+    {
+      "from": "S Golistein",
+      "to": "Stanislav Goldstein"
+    }
+  ],
+  "duplicateRecordsToMerge": [
+    {
+      "duplicate": "A Harevschii",
+      "canonical": "Alexandr Harevschi"
+    },
+    {
+      "duplicate": "G ComnatnIi",
+      "canonical": "Gleb Comnotnii"
+    }
+  ],
+  "membershipsToAdd": [
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Vladimir Dimoglo"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Leonid Gherciu-Peev"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Daniil Dimitroglo"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Mihail Cristov"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Maxim Dudoglo"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Roman Barladean"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Artur Popovici"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Denis Rozengravt"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Victor Leiciu"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Arteom Zlatov"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Nichita Ivanenco"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Roman Diulgher"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Petru Constantinov"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Ivan Dologlu"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Nicolai Topal"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Serghei Garciu"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Stepan Peadisev"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Alexandr Barladean"
+    },
+    {
+      "teamId": "COM",
+      "season": "2026/27",
+      "name": "Vadim Cilcic"
+    },
+    {
+      "teamId": "CN2",
+      "season": "2026/27",
+      "name": "Alexandr Harevschi"
+    },
+    {
+      "teamId": "CN2",
+      "season": "2026/27",
+      "name": "Alic Tonciu"
+    },
+    {
+      "teamId": "CN2",
+      "season": "2026/27",
+      "name": "Genadii Kuceriavii"
+    },
+    {
+      "teamId": "AMB",
+      "season": "2026/27",
+      "name": "Ion Golovco"
+    },
+    {
+      "teamId": "AMB",
+      "season": "2026/27",
+      "name": "Nichita Visneacov"
+    },
+    {
+      "teamId": "CAS",
+      "season": "2026/27",
+      "name": "Semen Goldstein"
+    },
+    {
+      "teamId": "CAS",
+      "season": "2026/27",
+      "name": "Danila Kravchenko"
+    },
+    {
+      "teamId": "CAS",
+      "season": "2026/27",
+      "name": "Martin Arzumanian"
+    },
+    {
+      "teamId": "CAS",
+      "season": "2026/27",
+      "name": "Stanislav Goldstein"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "Alexei Turcanu"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "Stefan Placinta"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "Bogdan Gutu"
+    }
+  ],
+  "membershipsToDeactivate": [
+    {
+      "teamId": "CN2",
+      "season": "2026/27",
+      "name": "A Streapko",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "AMB",
+      "season": "2026/27",
+      "name": "M Solosciuc",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "AMB",
+      "season": "2026/27",
+      "name": "V Juganaru",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "AMB",
+      "season": "2026/27",
+      "name": "V Arnaut",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "AMB",
+      "season": "2026/27",
+      "name": "D Grosu",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "AMB",
+      "season": "2026/27",
+      "name": "K Osjovschi",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "AMB",
+      "season": "2026/27",
+      "name": "B Bejinari",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "CAS",
+      "season": "2026/27",
+      "name": "Pavel Tibrigan",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "CAS",
+      "season": "2026/27",
+      "name": "Alexandr Ceaicovschii",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "CAS",
+      "season": "2026/27",
+      "name": "Vladislav Solopa",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "F Rodion",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "D Alexei",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "A Gincul",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "M Cernei",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "D Corobcov",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "A Covaliucuc",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "N Vitneanschii",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "A Dragomir",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "D Mihai",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "G Alexandr",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "ADM",
+      "season": "2026/27",
+      "name": "V Matco",
+      "reason": "confirmed removal"
+    },
+    {
+      "teamId": "BRI",
+      "season": "2026/27",
+      "name": "Alic Tonciu",
+      "reason": "confirmed transfer"
+    },
+    {
+      "teamId": "BRI",
+      "season": "2026/27",
+      "name": "Nichita Visneacov",
+      "reason": "confirmed transfer"
+    },
+    {
+      "teamId": "BRI",
+      "season": "2026/27",
+      "name": "Stanislav Goldstein",
+      "reason": "confirmed transfer"
+    }
+  ],
+  "currentTeamChanges": [
+    {
+      "from": "BRI",
+      "to": "AMB",
+      "name": "Nichita Visneacov",
+      "season": "2026/27"
+    },
+    {
+      "from": "CAS",
+      "to": "AMB",
+      "name": "Ion Golovco",
+      "season": "2026/27"
+    },
+    {
+      "from": "BRI",
+      "to": "CAS",
+      "name": "Stanislav Goldstein",
+      "season": "2026/27"
+    },
+    {
+      "from": "AMB",
+      "to": "CN2",
+      "name": "Alic Tonciu",
+      "season": "2026/27"
+    }
+  ],
+  "statisticsToReconnect": [
+    {
+      "from": "Leonid G",
+      "to": "Leonid Gherciu-Peev",
+      "teamId": "COM",
+      "season": "2026/27"
+    },
+    {
+      "from": "Arthur P",
+      "to": "Artur Popovici",
+      "teamId": "COM",
+      "season": "2026/27"
+    },
+    {
+      "from": "Denis R",
+      "to": "Denis Rozengravt",
+      "teamId": "COM",
+      "season": "2026/27"
+    },
+    {
+      "from": "Ivan+0 D",
+      "to": "Ivan Dologlu",
+      "teamId": "COM",
+      "season": "2026/27"
+    },
+    {
+      "from": "Mix K",
+      "to": "Mihail Cristov",
+      "teamId": "COM",
+      "season": "2026/27"
+    },
+    {
+      "from": "Serghei G",
+      "to": "Serghei Garciu",
+      "teamId": "COM",
+      "season": "2026/27"
+    }
+  ],
+  "personalInformation": [
+    {
+      "status": "source-dependent",
+      "note": "Only complete source values are imported; unknowns remain NULL."
+    }
+  ],
+  "coachAssignments": [
+    {
+      "team_id": "BLD",
+      "coach_name": "Artur Tonciu",
+      "season": "2026/27"
+    }
+  ],
+  "transliterationsForReview": [],
+  "unresolved": [
+    "Missing required source: player_season_stats_rows.csv",
+    "Missing required source: official-2026-27-roster.json",
+    "Missing required source: players_rows (6).csv",
+    "Missing required source: player_seasons_rows.csv",
+    "Missing required source: LBM_2026-27_names_to_clarify(1).xlsx"
+  ],
+  "constraintViolations": [],
+  "skipped": [
+    {
+      "source": "Anton (surname unclear)",
+      "reason": "unreadable or incomplete identity"
+    },
+    {
+      "source": "Grabovski (given name unclear)",
+      "reason": "unreadable or incomplete identity"
+    },
+    {
+      "source": "Player 8 unclear",
+      "reason": "unreadable or incomplete identity"
+    },
+    {
+      "source": "Player 12 unclear",
+      "reason": "unreadable or incomplete identity"
+    }
+  ],
+  "beforeAfterCounts": [
+    {
+      "teamId": "COM",
+      "before": "requires database snapshot",
+      "after": "requires database snapshot"
+    },
+    {
+      "teamId": "CN2",
+      "before": "requires database snapshot",
+      "after": "requires database snapshot"
+    },
+    {
+      "teamId": "AMB",
+      "before": "requires database snapshot",
+      "after": "requires database snapshot"
+    },
+    {
+      "teamId": "CAS",
+      "before": "requires database snapshot",
+      "after": "requires database snapshot"
+    },
+    {
+      "teamId": "ADM",
+      "before": "requires database snapshot",
+      "after": "requires database snapshot"
+    },
+    {
+      "teamId": "BRI",
+      "before": "requires database snapshot",
+      "after": "requires database snapshot"
+    },
+    {
+      "teamId": "BLD",
+      "before": "requires database snapshot",
+      "after": "requires database snapshot"
+    }
+  ],
+  "assertions": [
+    "COM has exactly 19 official players",
+    "Confirmed separate identities are protected from merging",
+    "Unreadable identities are skipped"
+  ]
+}
