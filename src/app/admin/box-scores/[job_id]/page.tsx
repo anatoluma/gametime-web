@@ -5,7 +5,7 @@ import JobActions from "./JobActions";
 import ExtractionDebug from "./ExtractionDebug";
 import TeamConfirmation from "./TeamConfirmation";
 import { resolveTeamId } from "@/lib/team-codes";
-import { getPublicSeason } from "@/lib/league";
+import { getCurrentSeason } from "@/lib/league";
 import type { ValidationCheck } from "@/lib/validation";
 import type { NameResolutionCandidate, NameResolutionResult } from "@/lib/name-resolution";
 
@@ -67,7 +67,7 @@ export default async function BoxScoreJobDetailPage({
     rosterTeamIds.map((teamId) => [teamId, []])
   );
   if (rosterTeamIds.length > 0) {
-    const season = await getPublicSeason();
+    const season = await getCurrentSeason();
     const { data: rosterPlayers } = await supabaseAdmin
       .from("player_seasons")
       .select("player_id, team_id, jersey_number, players(first_name, last_name)")

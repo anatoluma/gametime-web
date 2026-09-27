@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import { getPublicSeason } from "@/lib/league";
+import { getCurrentSeason } from "@/lib/league";
 import { useT } from "@/app/components/LanguageProvider";
 import Crest from "@/app/components/home/Crest";
 import SectionHeading from "@/app/components/home/SectionHeading";
@@ -79,7 +79,7 @@ export default function TeamPage() {
       if (!teamData) { setTeam(null); setLoading(false); return; }
       setTeam(teamData as Team);
 
-      const season = await getPublicSeason();
+      const season = await getCurrentSeason();
       const [rosterRes, gamesRes] = await Promise.all([
         supabase
           .from("player_seasons")
