@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { NameResolutionResult } from "@/lib/name-resolution";
+import type { NameResolutionCandidate, NameResolutionResult } from "@/lib/name-resolution";
+import { resolveTeamId } from "@/lib/team-codes";
 import { adminFetch } from "@/lib/admin-fetch";
 
 type Override = {
@@ -31,6 +32,7 @@ type ConflictChoice = "a" | "b" | "c";
 type Props = {
   jobId: string;
   resolutionResults: NameResolutionResult[];
+  playersByTeam: Record<string, NameResolutionCandidate[]>;
   hasHardFailure: boolean;
   currentStatus: string;
   errorMessage?: string | null;
@@ -42,6 +44,7 @@ const RETRIABLE_STATUSES = new Set(["pending", "failed", "needs_review"]);
 export default function JobActions({
   jobId,
   resolutionResults,
+  playersByTeam,
   hasHardFailure,
   currentStatus,
   errorMessage,
@@ -317,6 +320,9 @@ export default function JobActions({
                     const key = `${r.team_code}-${r.number}-${r.extracted_name}`;
                     const conflict = jerseyConflicts[r.extracted_name];
                     const conflictChoice = conflictChoices[r.extracted_name];
+                    const candidateScores = new Map((r.candidates ?? []).map((candidate) => [candidate.player_id, candidate.confidence]));
+                    const teamId = resolveTeamId(r.team_code);
+                    const roster = teamId ? playersByTeam[teamId] ?? [] : [];
 
                     return (
                       <tr
@@ -335,12 +341,12 @@ export default function JobActions({
                                 onChange={(e) => setOverride(r.extracted_name, e.target.value)}
                               >
                                 <option value="">— pick player —</option>
-                                {(r.candidates ?? []).map((c) => (
+                                {roster.map((c) => (
                                   <option key={c.player_id} value={c.player_id}>
                                     {c.player_id === r.resolved_player_id ? "✓ " : ""}
                                     {c.name}
                                     {c.jersey_number != null ? ` #${c.jersey_number}` : ""}
-                                    {` (${Math.round(c.confidence * 100)}%)`}
+                                    {candidateScores.has(c.player_id) ? ` (${Math.round(candidateScores.get(c.player_id)! * 100)}%)` : ""}
                                   </option>
                                 ))}
                                 <option value="new">➕ New player</option>

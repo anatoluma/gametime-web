@@ -6,7 +6,7 @@ import ExtractionDebug from "./ExtractionDebug";
 import TeamConfirmation from "./TeamConfirmation";
 import { resolveTeamId } from "@/lib/team-codes";
 import type { ValidationCheck } from "@/lib/validation";
-import type { NameResolutionResult } from "@/lib/name-resolution";
+import type { NameResolutionCandidate, NameResolutionResult } from "@/lib/name-resolution";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +57,43 @@ export default async function BoxScoreJobDetailPage({
   const extraction = job.extraction_json as ExtractionData | null;
   const validationChecks = (job.validation_json ?? []) as ValidationCheck[];
   const resolutionResults = (job.resolution_json ?? []) as NameResolutionResult[];
+  const rosterTeamIds = [...new Set(
+    resolutionResults
+      .map((result) => resolveTeamId(result.team_code))
+      .filter((teamId): teamId is string => teamId !== null)
+  )];
+  const playersByTeam: Record<string, NameResolutionCandidate[]> = Object.fromEntries(
+    rosterTeamIds.map((teamId) => [teamId, []])
+  );
+  if (rosterTeamIds.length > 0) {
+    const { data: rosterPlayers } = await supabaseAdmin
+      .from("players")
+      .select("player_id, team_id, first_name, last_name, jersey_number")
+      .in("team_id", rosterTeamIds);
+
+    for (const player of rosterPlayers ?? []) {
+      const teamRoster = playersByTeam[player.team_id] ?? [];
+      teamRoster.push({
+        player_id: player.player_id,
+        name: `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim(),
+        confidence: 0,
+        jersey_number: player.jersey_number,
+      });
+      playersByTeam[player.team_id] = teamRoster;
+    }
+
+    for (const teamRoster of Object.values(playersByTeam)) {
+      teamRoster.sort((left, right) => {
+        const leftHasNumber = Number.isInteger(left.jersey_number) && (left.jersey_number as number) >= 0;
+        const rightHasNumber = Number.isInteger(right.jersey_number) && (right.jersey_number as number) >= 0;
+        if (leftHasNumber && rightHasNumber && left.jersey_number !== right.jersey_number) {
+          return (left.jersey_number as number) - (right.jersey_number as number);
+        }
+        if (leftHasNumber !== rightHasNumber) return leftHasNumber ? -1 : 1;
+        return left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
+      });
+    }
+  }
   const home = extraction?.home_team;
   const away = extraction?.away_team;
   const hasHardFailure = validationChecks.some((c) => c.severity === "hard" && !c.passed);
@@ -229,6 +266,7 @@ export default async function BoxScoreJobDetailPage({
       <JobActions
         jobId={job_id as string}
         resolutionResults={resolutionResults}
+        playersByTeam={playersByTeam}
         hasHardFailure={hasHardFailure}
         currentStatus={job.status as string}
         errorMessage={job.error_message as string | null}
