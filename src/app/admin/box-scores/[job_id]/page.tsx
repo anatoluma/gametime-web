@@ -5,6 +5,7 @@ import JobActions from "./JobActions";
 import ExtractionDebug from "./ExtractionDebug";
 import TeamConfirmation from "./TeamConfirmation";
 import { resolveTeamId } from "@/lib/team-codes";
+import { getPublicSeason } from "@/lib/league";
 import type { ValidationCheck } from "@/lib/validation";
 import type { NameResolutionCandidate, NameResolutionResult } from "@/lib/name-resolution";
 
@@ -66,16 +67,21 @@ export default async function BoxScoreJobDetailPage({
     rosterTeamIds.map((teamId) => [teamId, []])
   );
   if (rosterTeamIds.length > 0) {
+    const season = await getPublicSeason();
     const { data: rosterPlayers } = await supabaseAdmin
-      .from("players")
-      .select("player_id, team_id, first_name, last_name, jersey_number")
+      .from("player_seasons")
+      .select("player_id, team_id, jersey_number, players(first_name, last_name)")
+      .eq("season", season)
+      .eq("is_active", true)
       .in("team_id", rosterTeamIds);
 
     for (const player of rosterPlayers ?? []) {
+      const playerDetails = Array.isArray(player.players) ? player.players[0] : player.players;
+      if (!playerDetails) continue;
       const teamRoster = playersByTeam[player.team_id] ?? [];
       teamRoster.push({
         player_id: player.player_id,
-        name: `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim(),
+        name: `${playerDetails.first_name ?? ""} ${playerDetails.last_name ?? ""}`.trim(),
         confidence: 0,
         jersey_number: player.jersey_number,
       });

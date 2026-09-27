@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { getPublicSeason } from "@/lib/league";
 import { useT } from "@/app/components/LanguageProvider";
 import Crest from "@/app/components/home/Crest";
 import SectionHeading from "@/app/components/home/SectionHeading";
@@ -78,13 +79,28 @@ export default function TeamPage() {
       if (!teamData) { setTeam(null); setLoading(false); return; }
       setTeam(teamData as Team);
 
+      const season = await getPublicSeason();
       const [rosterRes, gamesRes] = await Promise.all([
-        supabase.from("players").select("*").eq("team_id", teamId).order("last_name"),
+        supabase
+          .from("player_seasons")
+          .select("jersey_number, players(player_id, first_name, last_name, photo_url, position)")
+          .eq("team_id", teamId)
+          .eq("season", season)
+          .eq("is_active", true)
+          .order("jersey_number"),
         supabase.from("games").select("*").or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`).order("tipoff", { ascending: false })
       ]);
 
       if (cancelled) return;
-      setRoster([...(rosterRes.data ?? []) as Player[]].sort(compareRosterPlayers));
+      const rosterRows = (rosterRes.data ?? []) as unknown as Array<{
+        jersey_number: number | null;
+        players: Player | Player[] | null;
+      }>;
+      const currentRoster = rosterRows.flatMap((row) => {
+        const player = Array.isArray(row.players) ? row.players[0] : row.players;
+        return player ? [{ ...player, jersey_number: row.jersey_number }] : [];
+      });
+      setRoster(currentRoster.sort(compareRosterPlayers));
       const allGames = (gamesRes.data ?? []) as Game[];
       setGames(allGames);
 
