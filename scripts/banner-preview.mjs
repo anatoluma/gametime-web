@@ -66,22 +66,20 @@ const { data: teams, error: teamsError } = await supabase
 if (teamsError) throw new Error(teamsError.message);
 const team = (id) => teams.find((t) => t.team_id === id) ?? { team_id: id, team_name: id, logo_url: null };
 
-const photosByTeam = flag("no-photo")
-  ? {}
+const local = (file, teamId) => ({ file, team_id: teamId, second_team_id: null, is_neutral: false });
+const photos = flag("no-photo")
+  ? []
   : option("photo")
-    ? { [game.home_team_id]: [path.resolve(root, option("photo"))], [game.away_team_id]: [] }
-    : {
-      [game.home_team_id]: listLocalPhotos(game.home_team_id),
-      [game.away_team_id]: listLocalPhotos(game.away_team_id),
-    };
+    ? [local(path.resolve(root, option("photo")), game.home_team_id)]
+    : [game.home_team_id, game.away_team_id].flatMap((id) => listLocalPhotos(id).map((f) => local(f, id)));
 
 const content = await buildBannerContent(game, {
   home: team(game.home_team_id),
   away: team(game.away_team_id),
-  photosByTeam,
+  photos,
   headline: option("headline") ?? null,
   loadLogo: loadTeamLogo,
-  loadPhoto: preparePhoto,
+  loadPhoto: (p) => preparePhoto(p.file),
 });
 
 const png = await renderBannerPng(content, await loadBannerFonts(), ImageResponse);

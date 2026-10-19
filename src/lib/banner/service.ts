@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { BannerRenderError, renderGameBanner, type PhotoChoice } from "./generate";
+import { gameSnapshot } from "./auto-plan";
 
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -10,7 +11,7 @@ const SIGNED_URL_TTL_SECONDS = 3600;
 const MAX_PNG_BYTES = 5 * 1024 * 1024; // matches both buckets' file_size_limit
 
 const ROW_COLUMNS =
-  "banner_id, game_id, status, photo_id, headline, image_path, published_path, image_version, sort_order, generated_at, reviewed_by, reviewed_at, created_at, updated_at";
+  "banner_id, game_id, status, photo_id, headline, image_path, published_path, image_version, sort_order, generated_at, reviewed_by, reviewed_at, created_at, updated_at, source_snapshot, photo_choice";
 
 export type BannerRow = {
   banner_id: string;
@@ -27,6 +28,10 @@ export type BannerRow = {
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;
+  /** home|away|homeScore|awayScore the image was rendered from; null for banners created before tracking. */
+  source_snapshot: string | null;
+  /** "auto", "none" or a photo id: what the administrator (or automation) asked for. */
+  photo_choice: string;
 };
 
 export type ServiceResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string };
@@ -86,12 +91,17 @@ export async function listBanners() {
   }
 
   return ok({
-    banners: banners.map((b) => ({
-      ...b,
-      game: gameById.get(b.game_id) ?? null,
-      preview_url: b.image_path ? (signed.get(b.image_path) ?? null) : null,
-      published_url: b.published_path ? db.storage.from(PUBLIC_BUCKET).getPublicUrl(b.published_path).data.publicUrl : null,
-    })),
+    banners: banners.map((b) => {
+      const game = gameById.get(b.game_id) ?? null;
+      return {
+        ...b,
+        game,
+        // Flagged when the game's teams or score changed since the image was rendered.
+        outdated: Boolean(game && b.source_snapshot && gameSnapshot(game) !== b.source_snapshot),
+        preview_url: b.image_path ? (signed.get(b.image_path) ?? null) : null,
+        published_url: b.published_path ? db.storage.from(PUBLIC_BUCKET).getPublicUrl(b.published_path).data.publicUrl : null,
+      };
+    }),
     games: recentGames.data ?? [],
     teams: teams.data ?? [],
   });
@@ -100,10 +110,11 @@ export async function listBanners() {
 /** Creates the draft for a game, or re-renders its existing draft/rejected banner. Never touches an approved one. */
 export async function generateDraft(
   gameId: string,
-  options: { headline: string | null; photo: PhotoChoice }
+  options: { headline?: string | null; photo: PhotoChoice }
 ): Promise<ServiceResult<BannerRow>> {
-  const headline = options.headline?.trim() || null;
-  if (headline && headline.length > MAX_HEADLINE) return fail(400, `Headline is limited to ${MAX_HEADLINE} characters`);
+  // undefined = keep the stored headline; an explicit null or "" clears it (administrator's choice).
+  const requested = options.headline === undefined ? undefined : options.headline?.trim() || null;
+  if (requested && requested.length > MAX_HEADLINE) return fail(400, `Headline is limited to ${MAX_HEADLINE} characters`);
 
   const { data: existingData, error: readError } = await db
     .from("homepage_banners")
@@ -115,10 +126,13 @@ export async function generateDraft(
 
   if (existing?.status === "approved") return fail(409, "This banner is published. Unpublish it before regenerating.");
 
+  const headline = requested === undefined ? (existing?.headline ?? null) : requested;
+
   let png: Buffer;
   let photoId: string | null;
+  let snapshot: string;
   try {
-    ({ png, photoId } = await renderGameBanner(db, gameId, { headline, photo: options.photo }));
+    ({ png, photoId, snapshot } = await renderGameBanner(db, gameId, { headline, photo: options.photo }));
   } catch (err) {
     if (err instanceof BannerRenderError) return fail(err.status, err.message);
     return fail(500, err instanceof Error ? err.message : "Banner rendering failed");
@@ -140,6 +154,8 @@ export async function generateDraft(
     status: "draft" as const,
     photo_id: photoId,
     headline,
+    source_snapshot: snapshot,
+    photo_choice: options.photo,
     image_path: path,
     image_version: version,
     generated_at: new Date().toISOString(),
@@ -149,6 +165,7 @@ export async function generateDraft(
 
   let saved: BannerRow | null = null;
   let dbError: string | null = null;
+  let duplicate = false;
 
   if (existing) {
     // Optimistic lock on image_version + status guard so a concurrent approve/regenerate wins cleanly.
@@ -170,10 +187,12 @@ export async function generateDraft(
       .maybeSingle();
     saved = (data as BannerRow | null) ?? null;
     dbError = error?.message ?? null;
+    duplicate = error?.code === "23505";
   }
 
   if (!saved) {
     await removeFiles(DRAFTS_BUCKET, [path]);
+    if (duplicate) return fail(409, "A banner for this game was created concurrently.");
     return fail(dbError ? 500 : 409, dbError ?? "The banner changed while generating. Reload and try again.");
   }
 

@@ -94,13 +94,15 @@ export async function POST(
 
   // Commit the approved job — writes to games and player_game_stats, marks status committed
   let game_id: string;
+  let banner: unknown;
   try {
     const result = await commitJob(job_id);
     game_id = result.game_id;
+    banner = result.banner;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Commit failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  return NextResponse.json({ job_id, status: "committed", game_id });
+  return NextResponse.json({ job_id, status: "committed", game_id, banner });
 }

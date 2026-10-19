@@ -20,6 +20,8 @@ export type AdminBanner = {
   reviewed_by: string | null;
   published_path: string | null;
   game: Game | null;
+  /** The game's teams or score changed after this banner was rendered. */
+  outdated?: boolean;
   /** Short-lived signed URL of the private draft image. */
   preview_url: string | null;
   published_url: string | null;

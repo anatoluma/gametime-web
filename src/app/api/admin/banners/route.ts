@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "photo must be 'auto', 'none' or a photo id" }, { status: 400 });
   }
 
-  const result = await generateDraft(body.game_id.trim(), { headline: body.headline ?? null, photo });
+  const result = await generateDraft(body.game_id.trim(), { headline: body.headline, photo });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ banner: result.data });
 }

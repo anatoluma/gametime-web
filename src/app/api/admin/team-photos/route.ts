@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { requireAdmin } from "@/lib/admin-auth";
+import { validatePhotoTeams } from "@/lib/team-photo-meta";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,6 +34,8 @@ function matchesSignature(type: string, bytes: Uint8Array): boolean {
 type PhotoRow = {
   photo_id: string;
   team_id: string;
+  second_team_id: string | null;
+  is_neutral: boolean;
   storage_path: string;
   original_name: string | null;
   content_type: string;
@@ -41,6 +44,25 @@ type PhotoRow = {
   created_at: string;
 };
 
+const PHOTO_COLUMNS =
+  "photo_id, team_id, second_team_id, is_neutral, storage_path, original_name, content_type, size_bytes, is_active, created_at";
+
+/** Reads optional Team 2 / neutral from a request body; an error string means the input is malformed. */
+function readTeamsInput(body: Record<string, unknown>): { second_team_id: string | null; is_neutral: boolean } | string {
+  const rawSecond = body.second_team_id;
+  if (rawSecond != null && typeof rawSecond !== "string") return "second_team_id must be a string or null";
+  if (body.is_neutral != null && typeof body.is_neutral !== "boolean") return "is_neutral must be a boolean";
+  return { second_team_id: rawSecond?.trim() || null, is_neutral: body.is_neutral === true };
+}
+
+async function teamsExist(ids: string[]): Promise<string | null> {
+  const { data, error } = await supabaseAdmin.from("teams").select("team_id").in("team_id", ids);
+  if (error) return `Team lookup failed: ${error.message}`;
+  const found = new Set((data ?? []).map((t) => t.team_id));
+  const missing = ids.find((id) => !found.has(id));
+  return missing ? `Team not found: ${missing}` : null;
+}
+
 function withUrl(row: PhotoRow) {
   const {
     data: { publicUrl },
@@ -48,7 +70,7 @@ function withUrl(row: PhotoRow) {
   return { ...row, url: publicUrl };
 }
 
-// GET /api/admin/team-photos?team_id=EDI — list photos (all teams if omitted)
+// GET /api/admin/team-photos?team_id=EDI — list photos with that team as Team 1 or Team 2 (all if omitted)
 export async function GET(request: Request) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
@@ -57,10 +79,13 @@ export async function GET(request: Request) {
 
   let query = supabaseAdmin
     .from("team_photos")
-    .select("photo_id, team_id, storage_path, original_name, content_type, size_bytes, is_active, created_at")
+    .select(PHOTO_COLUMNS)
     .order("created_at", { ascending: false });
 
-  if (team_id) query = query.eq("team_id", team_id);
+  if (team_id && !/^[\w-]+$/.test(team_id)) {
+    return NextResponse.json({ error: "Invalid team_id" }, { status: 400 });
+  }
+  if (team_id) query = query.or(`team_id.eq.${team_id},second_team_id.eq.${team_id}`);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -84,8 +109,8 @@ const PATH_PATTERN = /^([^/]+)\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
 /**
  * POST /api/admin/team-photos — JSON, two steps so file bytes never pass through this
  * function (hosting caps request bodies far below the 10 MB photo limit):
- *   { action: "sign", team_id, content_type, size }  -> { path, token }  (short-lived signed upload)
- *   { action: "finalize", path, original_name }      -> { photo }        (verifies bytes, inserts row)
+ *   { action: "sign", team_id, second_team_id?, is_neutral?, content_type, size }  -> { path, token }  (short-lived signed upload)
+ *   { action: "finalize", path, second_team_id?, is_neutral?, original_name }      -> { photo }        (verifies bytes, inserts row)
  */
 export async function POST(request: Request) {
   const auth = await requireAdmin(request);
@@ -126,6 +151,15 @@ export async function POST(request: Request) {
     }
     if (!team) return NextResponse.json({ error: "Team not found" }, { status: 404 });
 
+    const extra = readTeamsInput(body);
+    if (typeof extra === "string") return NextResponse.json({ error: extra }, { status: 400 });
+    const teamsError = validatePhotoTeams({ team_id: team.team_id, ...extra });
+    if (teamsError) return NextResponse.json({ error: teamsError }, { status: 400 });
+    if (extra.second_team_id) {
+      const missing = await teamsExist([extra.second_team_id]);
+      if (missing) return NextResponse.json({ error: missing }, { status: 404 });
+    }
+
     // Server-generated name; the user-supplied filename is never used in the path.
     const path = `${team.team_id}/${randomUUID()}.${ext}`;
     const { data, error } = await supabaseAdmin.storage.from(TEAM_PHOTOS_BUCKET).createSignedUploadUrl(path);
@@ -146,6 +180,14 @@ export async function POST(request: Request) {
     const [, team_id, ext] = match;
     const contentType = Object.keys(ALLOWED_TYPES).find((t) => ALLOWED_TYPES[t] === ext)!;
 
+    const extra = readTeamsInput(body);
+    if (typeof extra === "string") return NextResponse.json({ error: extra }, { status: 400 });
+    const teamsError = validatePhotoTeams({ team_id, ...extra });
+    if (teamsError) return NextResponse.json({ error: teamsError }, { status: 400 });
+    if (extra.second_team_id) {
+      const missing = await teamsExist([extra.second_team_id]);
+      if (missing) return NextResponse.json({ error: missing }, { status: 404 });
+    }
     const { data: blob, error: downloadError } = await supabaseAdmin.storage
       .from(TEAM_PHOTOS_BUCKET)
       .download(path);
@@ -173,13 +215,15 @@ export async function POST(request: Request) {
       .from("team_photos")
       .insert({
         team_id,
+        second_team_id: extra.second_team_id,
+        is_neutral: extra.is_neutral,
         storage_path: path,
         original_name: typeof original_name === "string" ? original_name.slice(0, 200) : null,
         content_type: contentType,
         size_bytes: blob.size,
         uploaded_by: auth.user.email ?? auth.user.id,
       })
-      .select("photo_id, team_id, storage_path, original_name, content_type, size_bytes, is_active, created_at")
+      .select(PHOTO_COLUMNS)
       .single();
 
     if (insertError || !row) {
@@ -197,21 +241,57 @@ export async function POST(request: Request) {
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }
 
-// PATCH /api/admin/team-photos — { photo_id, is_active }
+// PATCH /api/admin/team-photos — { photo_id, is_active?, team_id?, second_team_id?, is_neutral? }
 export async function PATCH(request: Request) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   const body = await request.json().catch(() => null);
-  if (!body || typeof body.photo_id !== "string" || typeof body.is_active !== "boolean") {
-    return NextResponse.json({ error: "photo_id and is_active (boolean) are required" }, { status: 400 });
+  if (!body || typeof body.photo_id !== "string") {
+    return NextResponse.json({ error: "photo_id is required" }, { status: 400 });
   }
+  if (body.is_active != null && typeof body.is_active !== "boolean") {
+    return NextResponse.json({ error: "is_active must be a boolean" }, { status: 400 });
+  }
+  if (body.team_id != null && (typeof body.team_id !== "string" || !body.team_id.trim())) {
+    return NextResponse.json({ error: "team_id must be a non-empty string" }, { status: 400 });
+  }
+
+  const { data: current, error: readError } = await supabaseAdmin
+    .from("team_photos")
+    .select("team_id, second_team_id, is_neutral")
+    .eq("photo_id", body.photo_id)
+    .maybeSingle();
+  if (readError) return NextResponse.json({ error: readError.message }, { status: 500 });
+  if (!current) return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+
+  const update: Record<string, unknown> = {};
+  if (typeof body.is_active === "boolean") update.is_active = body.is_active;
+
+  const touchesTeams = ["team_id", "second_team_id", "is_neutral"].some((k) => k in body);
+  if (touchesTeams) {
+    const input = readTeamsInput({
+      second_team_id: "second_team_id" in body ? body.second_team_id : current.second_team_id,
+      // Clearing Team 2 without an explicit flag resets neutral, mirroring the admin form.
+      is_neutral: "is_neutral" in body ? body.is_neutral : body.second_team_id == null ? false : current.is_neutral,
+    });
+    if (typeof input === "string") return NextResponse.json({ error: input }, { status: 400 });
+    const next = { team_id: typeof body.team_id === "string" ? body.team_id.trim() : current.team_id, ...input };
+
+    const teamsError = validatePhotoTeams(next);
+    if (teamsError) return NextResponse.json({ error: teamsError }, { status: 400 });
+    const missing = await teamsExist(next.second_team_id ? [next.team_id, next.second_team_id] : [next.team_id]);
+    if (missing) return NextResponse.json({ error: missing }, { status: 404 });
+    Object.assign(update, next);
+  }
+
+  if (!Object.keys(update).length) return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
 
   const { data, error } = await supabaseAdmin
     .from("team_photos")
-    .update({ is_active: body.is_active })
+    .update(update)
     .eq("photo_id", body.photo_id)
-    .select("photo_id, team_id, storage_path, original_name, content_type, size_bytes, is_active, created_at")
+    .select(PHOTO_COLUMNS)
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

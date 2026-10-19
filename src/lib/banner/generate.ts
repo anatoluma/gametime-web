@@ -1,13 +1,14 @@
 import { ImageResponse } from "next/og";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { buildBannerContent, type BannerGameInput } from "./content";
+import { buildBannerContent, classifyPhoto, type BannerGameInput, type PhotoCandidate } from "./content";
+import { gameSnapshot } from "./auto-plan";
 import { loadBannerFonts } from "./fonts";
 import { loadTeamLogo, preparePhoto } from "./images";
 import { renderBannerPng } from "./render";
 
 export const TEAM_PHOTOS_BUCKET = "team-photos";
 
-/** "auto" = winner's photo then opponent's, "none" = gradient only, otherwise a team_photos.photo_id. */
+/** "auto" = priority selection, "none" = gradient only, otherwise a team_photos.photo_id. */
 export type PhotoChoice = "auto" | "none" | string;
 
 export class BannerRenderError extends Error {
@@ -19,13 +20,13 @@ export class BannerRenderError extends Error {
   }
 }
 
-type PhotoRow = { photo_id: string; team_id: string; storage_path: string };
+type PhotoRow = PhotoCandidate & { photo_id: string; storage_path: string };
 
 export async function renderGameBanner(
   db: SupabaseClient,
   gameId: string,
   options: { headline: string | null; photo: PhotoChoice }
-): Promise<{ png: Buffer; photoId: string | null }> {
+): Promise<{ png: Buffer; photoId: string | null; snapshot: string }> {
   const { data: game, error: gameError } = await db
     .from("games")
     .select("game_id, tipoff, season, home_team_id, away_team_id, home_score, away_score")
@@ -43,8 +44,8 @@ export async function renderGameBanner(
     db.from("teams").select("team_id, team_name, logo_url").in("team_id", teamIds),
     db
       .from("team_photos")
-      .select("photo_id, team_id, storage_path")
-      .in("team_id", teamIds)
+      .select("photo_id, team_id, second_team_id, is_neutral, storage_path")
+      .or(`team_id.in.(${teamIds.join(",")}),second_team_id.in.(${teamIds.join(",")})`)
       .eq("is_active", true),
   ]);
   if (teamsError) throw new BannerRenderError(500, teamsError.message);
@@ -53,24 +54,22 @@ export async function renderGameBanner(
   const teamRow = (id: string) =>
     teams?.find((t) => t.team_id === id) ?? { team_id: id, team_name: id, logo_url: null };
 
-  let candidates = (photos ?? []) as PhotoRow[];
+  // Photos showing a team outside this matchup never qualify, including as a manual override.
+  let candidates = ((photos ?? []) as PhotoRow[]).filter((p) => classifyPhoto(game, p) !== null);
   if (options.photo === "none") {
     candidates = [];
   } else if (options.photo !== "auto") {
     candidates = candidates.filter((p) => p.photo_id === options.photo);
     if (!candidates.length) {
-      throw new BannerRenderError(400, "Selected photo is not an active photo of either team");
+      throw new BannerRenderError(400, "Selected photo is not an active photo of this matchup");
     }
   }
-
-  const photosByTeam: Record<string, PhotoRow[]> = { [teamIds[0]]: [], [teamIds[1]]: [] };
-  for (const photo of candidates) photosByTeam[photo.team_id].push(photo);
 
   let photoId: string | null = null;
   const content = await buildBannerContent<PhotoRow>(game as BannerGameInput, {
     home: teamRow(game.home_team_id),
     away: teamRow(game.away_team_id),
-    photosByTeam,
+    photos: candidates,
     headline: options.headline,
     loadLogo: loadTeamLogo,
     loadPhoto: async (photo) => {
@@ -82,5 +81,5 @@ export async function renderGameBanner(
   });
 
   const png = await renderBannerPng(content, await loadBannerFonts(), ImageResponse);
-  return { png, photoId };
+  return { png, photoId, snapshot: gameSnapshot(game) };
 }

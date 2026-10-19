@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { TEAM_CODE_MAP, resolveTeamId } from "@/lib/team-codes";
+import { generateBannerAfterCommit, type AutoBannerResult } from "@/lib/banner/auto";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -257,7 +258,7 @@ async function setCommitError(jobId: string, message: string): Promise<void> {
     .eq("id", jobId);
 }
 
-export async function commitJob(jobId: string): Promise<{ game_id: string }> {
+export async function commitJob(jobId: string): Promise<{ game_id: string; banner: AutoBannerResult }> {
   console.log("TEAM_CODE_MAP keys:", Object.keys(TEAM_CODE_MAP));
   try {
     const { data: job, error: jobError } = await supabaseAdmin
@@ -563,7 +564,11 @@ export async function commitJob(jobId: string): Promise<{ game_id: string }> {
       throw new Error(`Failed to update job to committed: ${jobUpdateError.message}`);
     }
 
-    return { game_id: game.game_id };
+    // Scores and stats are persisted and the job is committed: only now generate the draft banner.
+    // generateBannerAfterCommit never throws, so a banner problem cannot invalidate this commit.
+    const banner = await generateBannerAfterCommit(job.id, game.game_id);
+
+    return { game_id: game.game_id, banner };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown commit error";
     await setCommitError(jobId, message);

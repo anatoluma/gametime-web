@@ -89,7 +89,8 @@ function score(value: number, won: boolean) {
 }
 
 export function BannerTemplate({ content }: { content: BannerContent }) {
-  const { home, away, winner } = content;
+  const { home, away } = content;
+  const winner = content.narrative === "winner" ? content.winner : "draw";
 
   const meta = [content.dateLabel, content.season].filter(Boolean);
 

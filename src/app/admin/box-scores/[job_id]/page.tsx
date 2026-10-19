@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import JobActions from "./JobActions";
 import ExtractionDebug from "./ExtractionDebug";
 import TeamConfirmation from "./TeamConfirmation";
+import BannerResult from "./BannerResult";
 import { resolveTeamId } from "@/lib/team-codes";
 import { getCurrentSeason } from "@/lib/league";
 import type { ValidationCheck } from "@/lib/validation";
@@ -55,6 +56,12 @@ export default async function BoxScoreJobDetailPage({
 
   if (!job) notFound();
 
+  // Separate query: the page must keep working if the banner_result migration has not been applied yet.
+  const { data: bannerRow } =
+    job.status === "committed"
+      ? await supabaseAdmin.from("processing_jobs").select("banner_result").eq("id", job_id).maybeSingle()
+      : { data: null };
+  const bannerResult = (bannerRow?.banner_result ?? null) as { status: string; message: string; outdated?: boolean } | null;
   const extraction = job.extraction_json as ExtractionData | null;
   const validationChecks = (job.validation_json ?? []) as ValidationCheck[];
   const resolutionResults = (job.resolution_json ?? []) as NameResolutionResult[];
@@ -267,6 +274,8 @@ export default async function BoxScoreJobDetailPage({
           )}
         </section>
       )}
+
+      {job.status === "committed" && <BannerResult jobId={job_id as string} result={bannerResult} />}
 
       {/* Interactive: name resolution + action buttons (client component) */}
       <JobActions

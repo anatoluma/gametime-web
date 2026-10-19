@@ -4,7 +4,7 @@ import { useState } from "react";
 import { adminFetch } from "@/lib/admin-fetch";
 import { gameLabel, type AdminBanner, type PhotoChoice } from "./types";
 
-type Photo = { photo_id: string; team_id: string; is_active: boolean; url: string };
+type Photo = { photo_id: string; team_id: string; second_team_id: string | null; is_active: boolean; url: string };
 
 type Props = {
   banner: AdminBanner;
@@ -45,7 +45,15 @@ export default function BannerCard({ banner, teams, busy, position, onRegenerate
           return (json.photos as Photo[]).filter((p) => p.is_active);
         })
       );
-      setPhotos(lists.flat());
+      const matchup = [banner.game.home_team_id, banner.game.away_team_id];
+      const unique = new Map<string, Photo>();
+      for (const photo of lists.flat()) unique.set(photo.photo_id, photo);
+      // Photos of a third team never qualify; two-team photos are matched regardless of order.
+      setPhotos(
+        [...unique.values()].filter(
+          (p) => matchup.includes(p.team_id) && (!p.second_team_id || matchup.includes(p.second_team_id))
+        )
+      );
     } catch (err) {
       setPhotoError(err instanceof Error ? err.message : "Failed to load photos");
     }
@@ -73,6 +81,14 @@ export default function BannerCard({ banner, teams, busy, position, onRegenerate
             {position ? ` · #${position.index + 1}` : ""}
           </span>
         </div>
+
+        {banner.outdated && (
+          <p className="rounded border border-amber-500 px-3 py-2 text-xs text-amber-600">
+            {published
+              ? "The game's teams or score changed after this banner was published. It was not changed automatically; unpublish and regenerate it to update the image."
+              : "The game's teams or score changed after this image was generated. Regenerate it."}
+          </p>
+        )}
 
         <p className="text-xs text-[var(--text-muted)]">
           {banner.headline ? `Headline: “${banner.headline}”` : "No headline"} · v{banner.image_version}
@@ -107,7 +123,7 @@ export default function BannerCard({ banner, teams, busy, position, onRegenerate
                     onClick={() => setChoice(value)}
                     className={`rounded border px-3 py-2 text-xs ${choice === value ? "border-orange-500 bg-orange-500/10" : "border-[var(--border)]"}`}
                   >
-                    {value === "auto" ? "Auto (winner first)" : "No photo"}
+                    {value === "auto" ? "Auto (best match first)" : "No photo"}
                   </button>
                 ))}
                 {photos?.map((photo) => (
@@ -121,7 +137,7 @@ export default function BannerCard({ banner, teams, busy, position, onRegenerate
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={photo.url} alt={`${teamName(photo.team_id)} photo`} loading="lazy" className="h-16 w-24 object-cover" />
-                    <span className="block bg-black/70 px-1 text-[10px] text-white">{photo.team_id}</span>
+                    <span className="block bg-black/70 px-1 text-[10px] text-white">{photo.second_team_id ? `${photo.team_id} + ${photo.second_team_id}` : photo.team_id}</span>
                   </button>
                 ))}
                 {!photos && !photoError && <span className="text-xs text-[var(--text-muted)]">Loading photos…</span>}

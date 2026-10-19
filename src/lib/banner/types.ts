@@ -15,6 +15,8 @@ export type BannerContent = {
   dateLabel: string;
   season: string | null;
   headline: string | null;
+  /** "winner" highlights the winning score; "matchup" presents both sides evenly. */
+  narrative: "winner" | "matchup";
   /** JPEG/PNG data URI sized for 1600x600; null renders the branded gradient. */
   photo: string | null;
 };
