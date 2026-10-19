@@ -39,13 +39,12 @@ export type AdminAuthResult =
   | { ok: false; response: NextResponse };
 
 /**
- * Verifies the caller holds a valid Supabase session. Use `adminFetch` on the
- * client.
+ * Verifies the caller holds a valid Supabase session AND is on the admin
+ * allowlist. Use `adminFetch` on the client.
  *
- * Any authenticated user counts as an admin: `src/app/login/page.tsx` calls
- * signInWithOtp with `shouldCreateUser: false`, so auth.users is itself the
- * allowlist — accounts can only be created from the Supabase dashboard.
- * Set ADMIN_EMAILS (comma-separated) to narrow it further.
+ * Fails closed: allowlist is ADMIN_EMAILS plus SUPER_ADMIN_EMAILS (comma-
+ * separated). If neither is configured, every caller is rejected, since other
+ * Supabase accounts (e.g. team managers) exist and must not become admins.
  */
 export async function requireAdmin(request: Request): Promise<AdminAuthResult> {
   const verified = await verifySupabaseUser(request);
@@ -53,11 +52,12 @@ export async function requireAdmin(request: Request): Promise<AdminAuthResult> {
 
   const { user } = verified;
 
-  const allowed = process.env.ADMIN_EMAILS?.split(",")
+  const allowed = `${process.env.ADMIN_EMAILS ?? ""},${process.env.SUPER_ADMIN_EMAILS ?? ""}`
+    .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
 
-  if (allowed?.length && !allowed.includes((user.email ?? "").toLowerCase())) {
+  if (!user.email || !allowed.includes(user.email.toLowerCase())) {
     return { ok: false, response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
 

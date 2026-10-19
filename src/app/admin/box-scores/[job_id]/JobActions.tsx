@@ -150,7 +150,7 @@ export default function JobActions({
         if (conflictChoices[extractedName] === "b") continue;
 
         const r = resultByName.get(extractedName);
-        const res = await fetch(
+        const res = await adminFetch(
           `/api/admin/players?team_code=${encodeURIComponent(r?.team_code ?? "")}&jersey_number=${encodeURIComponent(draft.jersey_number.trim())}`
         );
         const body = (await res.json()) as { existing: ConflictInfo | null };

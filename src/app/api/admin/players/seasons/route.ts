@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAdmin } from "@/lib/admin-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +11,9 @@ const supabaseAdmin = createClient(
 // POST /api/admin/players/seasons  — upsert one row OR bulk-copy from previous season
 
 export async function GET(request: Request) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   const { searchParams } = new URL(request.url);
   const season = searchParams.get("season");
 
@@ -37,6 +41,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   const body = await request.json();
 
   // Bulk copy: copy all player_seasons from source_season into target_season
@@ -99,6 +106,9 @@ export async function POST(request: Request) {
 
 // PATCH /api/admin/players/seasons — update a single player_season row
 export async function PATCH(request: Request) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   const body = await request.json();
   const { player_id, season, ...updates } = body ?? {};
 

@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { commitJob } from "@/lib/commit";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ job_id: string }> }
 ) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   const { job_id } = await params;
 
   try {

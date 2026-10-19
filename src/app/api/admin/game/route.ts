@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { normalizeSeasonLabel } from "@/lib/league";
+import { requireAdmin } from "@/lib/admin-auth";
 
 // Server-only admin client with service role key
 const supabaseAdmin = createClient(
@@ -9,6 +10,9 @@ const supabaseAdmin = createClient(
 );
 
 export async function GET(request: Request) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   const url = new URL(request.url);
   const gameId = url.searchParams.get("game_id");
 
@@ -43,6 +47,9 @@ export async function GET(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   const url = new URL(request.url);
   const gameId = url.searchParams.get("game_id");
 
@@ -74,6 +81,9 @@ export async function DELETE(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
   const body = await request.json();
   const { gamePayload, homePlayers, awayPlayers, editingGameId } = body;
 

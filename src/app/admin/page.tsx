@@ -69,6 +69,13 @@ export default function AdminPage() {
         >
           Teams
         </Link>
+
+        <Link
+          href="/admin/media"
+          className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-4 text-lg font-medium hover:bg-[var(--surface-muted)]"
+        >
+          Team photos
+        </Link>
       </div>
 
       <ManagerLinksPanel />
