@@ -3,20 +3,17 @@
 // Reads public game/team data with the anon key from .env.local; never uses the service-role key.
 import fs from "node:fs";
 import path from "node:path";
-import { createRequire } from "node:module";
 import { createClient } from "@supabase/supabase-js";
 import { ImageResponse } from "next/og.js";
 import { buildBannerContent } from "../src/lib/banner/content.ts";
 import { loadBannerFonts } from "../src/lib/banner/fonts.ts";
+import { loadTeamLogo, preparePhoto } from "../src/lib/banner/images.ts";
 import { renderBannerPng, BANNER_WIDTH, BANNER_HEIGHT } from "../src/lib/banner/render.ts";
 
 if (process.env.NODE_ENV === "production") {
   console.error("banner:preview is a local development tool and refuses to run in production.");
   process.exit(1);
 }
-
-// sharp ships with Next.js; it is only used here to downscale photos and convert WebP logos.
-const sharp = createRequire(import.meta.url)("sharp");
 
 const root = process.cwd();
 const args = process.argv.slice(2);
@@ -34,32 +31,6 @@ function loadEnv() {
     if (i > 0 && !t.startsWith("#")) env[t.slice(0, i)] = t.slice(i + 1).replace(/^["']|["']$/g, "");
   }
   return env;
-}
-
-const dataUri = (mime, buf) => `data:${mime};base64,${buf.toString("base64")}`;
-
-function findCaseInsensitive(dir, name) {
-  if (!fs.existsSync(dir)) return null;
-  const hit = fs.readdirSync(dir).find((f) => f.toLowerCase() === name.toLowerCase());
-  return hit ? path.join(dir, hit) : null;
-}
-
-async function loadLogo(team) {
-  let input = null;
-  if (team.logo_url) {
-    const res = await fetch(team.logo_url).catch(() => null);
-    if (res?.ok) input = Buffer.from(await res.arrayBuffer());
-  }
-  if (!input) {
-    const local = findCaseInsensitive(path.join(root, "public/images/teams"), `${team.team_id}.webp`);
-    if (local) input = fs.readFileSync(local);
-  }
-  if (!input) return null;
-  const png = await sharp(input)
-    .resize(240, 240, { fit: "contain", background: { r: 255, g: 255, b: 255, alpha: 0 } })
-    .png()
-    .toBuffer();
-  return dataUri("image/png", png);
 }
 
 function listLocalPhotos(teamId) {
@@ -109,15 +80,8 @@ const content = await buildBannerContent(game, {
   away: team(game.away_team_id),
   photosByTeam,
   headline: option("headline") ?? null,
-  loadLogo,
-  loadPhoto: async (file) => {
-    const jpeg = await sharp(file)
-      .rotate()
-      .resize(BANNER_WIDTH, BANNER_HEIGHT, { fit: "cover", position: "attention" })
-      .jpeg({ quality: 82 })
-      .toBuffer();
-    return dataUri("image/jpeg", jpeg);
-  },
+  loadLogo: loadTeamLogo,
+  loadPhoto: preparePhoto,
 });
 
 const png = await renderBannerPng(content, await loadBannerFonts(), ImageResponse);

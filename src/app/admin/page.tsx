@@ -76,6 +76,13 @@ export default function AdminPage() {
         >
           Team photos
         </Link>
+
+        <Link
+          href="/admin/banners"
+          className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-4 text-lg font-medium hover:bg-[var(--surface-muted)]"
+        >
+          Homepage banners
+        </Link>
       </div>
 
       <ManagerLinksPanel />

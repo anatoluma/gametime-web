@@ -8,6 +8,8 @@ import SectionHeading from "@/app/components/home/SectionHeading";
 import StatTile from "@/app/components/home/StatTile";
 import Eyebrow from "@/app/components/home/Eyebrow";
 import GameCard from "@/app/components/home/GameCard";
+import BannerCarousel from "@/app/components/home/BannerCarousel";
+import { getPublicBanners } from "@/lib/banner/public";
 import { getAvailableSeasons, getPublicSeason, getVisibleSeasonTeams } from "@/lib/league";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body", weight: ["400", "500", "600", "700"] });
@@ -58,6 +60,7 @@ function StatIcon({ type }: { type: "teams" | "games" | "players" | "playoffs" }
 
 export default async function Home() {
   const t = await getServerT();
+  const bannersPromise = getPublicBanners();
   const [season, availableSeasons] = await Promise.all([getPublicSeason(), getAvailableSeasons()]);
   const nextSeason = availableSeasons.find((availableSeason) => availableSeason.season > season)?.season;
   const scheduleSeason = nextSeason ?? season;
@@ -132,8 +135,17 @@ export default async function Home() {
     .slice(0, 5);
 
 
+  const carouselBanners = (await bannersPromise).map((banner) => {
+    const game = allGames.find((g) => g.game_id === banner.game_id);
+    const label = game
+      ? `${teamMap.get(game.home_team_id)?.name ?? game.home_team_id} ${game.home_score}–${game.away_score} ${teamMap.get(game.away_team_id)?.name ?? game.away_team_id}`
+      : (banner.headline ?? "Match result");
+    return { id: banner.banner_id, href: `/games/${banner.game_id}`, imageUrl: banner.image_url, alt: label };
+  });
+
   return (
     <main className={`${inter.variable} ${oswald.variable} min-h-screen`} style={{ background: "var(--navy-950)", color: "var(--text)", fontFamily: "var(--font-body)" }}>
+      <BannerCarousel banners={carouselBanners} />
       <section className="lbm-hero-bg border-b px-3 pb-6 pt-6 sm:px-6 sm:pt-7" style={{ borderColor: "var(--line)" }}>
         <div className="mx-auto max-w-5xl">
           <Eyebrow>{t(seasonComplete ? "home_eyebrow_complete" : "home_eyebrow_live")}</Eyebrow>
