@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { adminFetch } from "@/lib/admin-fetch";
+import { supabase } from "@/lib/supabase/client";
 
 type Team = { team_id: string; team_name: string | null };
 
@@ -18,6 +19,7 @@ type Photo = {
 };
 
 type Notice = { text: string; kind: "success" | "error" } | null;
+type UploadResult = { name: string; ok: boolean; message?: string };
 
 const ACCEPT = "image/jpeg,image/png,image/webp";
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -32,6 +34,7 @@ export default function AdminMediaPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
+  const [results, setResults] = useState<UploadResult[]>([]);
 
   const readResponse = useCallback(
     async (res: Response) => {
@@ -81,32 +84,57 @@ export default function AdminMediaPage() {
 
     setUploading(true);
     setNotice(null);
-    let done = 0;
-    const errors: string[] = [];
+    setResults([]);
+    const collected: UploadResult[] = [];
 
     for (const file of Array.from(files)) {
-      if (file.size > MAX_BYTES) {
-        errors.push(`${file.name}: exceeds 10 MB`);
-        continue;
+      try {
+        await uploadOne(file);
+        collected.push({ name: file.name, ok: true });
+      } catch (err) {
+        collected.push({ name: file.name, ok: false, message: err instanceof Error ? err.message : "Upload failed" });
       }
-      const body = new FormData();
-      body.append("team_id", uploadTeam);
-      body.append("file", file);
-
-      const { ok, json } = await readResponse(await adminFetch("/api/admin/team-photos", { method: "POST", body }));
-      if (ok && json?.photo) {
-        done += 1;
-        setPhotos((prev) => [json.photo as Photo, ...prev]);
-      } else {
-        errors.push(`${file.name}: ${json?.error ?? "upload failed"}`);
-      }
+      setResults([...collected]);
     }
 
     setUploading(false);
+    const failed = collected.filter((r) => !r.ok).length;
     setNotice({
-      text: [done ? `${done} photo(s) uploaded.` : "", ...errors].filter(Boolean).join(" "),
-      kind: errors.length ? "error" : "success",
+      text: `${collected.length - failed} of ${collected.length} photo(s) uploaded${failed ? `, ${failed} failed` : ""}.`,
+      kind: failed ? "error" : "success",
     });
+  };
+
+  // Bytes go straight to Supabase Storage via a server-authorized signed URL; the API only sees JSON.
+  const uploadOne = async (file: File) => {
+    if (file.size === 0) throw new Error("File is empty");
+    if (file.size > MAX_BYTES) throw new Error(`Exceeds 10 MB (${(file.size / 1024 / 1024).toFixed(1)} MB)`);
+
+    const call = async (payload: object) => {
+      const res = await adminFetch("/api/admin/team-photos", { method: "POST", body: JSON.stringify(payload) });
+      if (res.status === 401) {
+        router.replace("/login");
+        throw new Error("Session expired, please sign in again");
+      }
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error ?? `Server error (HTTP ${res.status})`);
+      return json;
+    };
+
+    const { path, token } = await call({
+      action: "sign",
+      team_id: uploadTeam,
+      content_type: file.type,
+      size: file.size,
+    });
+
+    const { error } = await supabase.storage.from("team-photos").uploadToSignedUrl(path, token, file, {
+      contentType: file.type,
+    });
+    if (error) throw new Error(`Storage upload failed: ${error.message}`);
+
+    const { photo } = await call({ action: "finalize", path, original_name: file.name });
+    setPhotos((prev) => [photo as Photo, ...prev]);
   };
 
   const toggleActive = async (photo: Photo) => {
@@ -189,6 +217,16 @@ export default function AdminMediaPage() {
           {uploading && <span className="text-sm text-[var(--text-muted)]">Uploading…</span>}
         </div>
         <p className="mt-2 text-xs text-[var(--text-muted)]">JPEG, PNG or WebP, up to 10 MB each.</p>
+        {results.length > 0 && (
+          <ul className="mt-3 space-y-1 text-sm">
+            {results.map((r, i) => (
+              <li key={`${r.name}-${i}`} className={r.ok ? "text-green-600" : "text-red-600"}>
+                {r.ok ? "Uploaded" : "Failed"}: {r.name}
+                {r.message ? ` — ${r.message}` : ""}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <div className="mb-4 flex items-center gap-3">

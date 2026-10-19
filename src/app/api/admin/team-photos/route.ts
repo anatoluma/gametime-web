@@ -68,86 +68,133 @@ export async function GET(request: Request) {
   return NextResponse.json({ photos: ((data ?? []) as PhotoRow[]).map(withUrl) });
 }
 
-// POST /api/admin/team-photos — multipart { team_id, file }
+function logFailure(step: string, detail: Record<string, unknown>, error: unknown) {
+  const e = error as { message?: string; name?: string; status?: number; statusCode?: string | number; code?: string } | null;
+  console.error("[team-photos]", step, {
+    ...detail,
+    errorName: e?.name,
+    errorCode: e?.code,
+    errorStatus: e?.status ?? e?.statusCode,
+    errorMessage: e?.message,
+  });
+}
+
+const PATH_PATTERN = /^([^/]+)\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
+
+/**
+ * POST /api/admin/team-photos — JSON, two steps so file bytes never pass through this
+ * function (hosting caps request bodies far below the 10 MB photo limit):
+ *   { action: "sign", team_id, content_type, size }  -> { path, token }  (short-lived signed upload)
+ *   { action: "finalize", path, original_name }      -> { photo }        (verifies bytes, inserts row)
+ */
 export async function POST(request: Request) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  let formData: FormData;
-  try {
-    formData = await request.formData();
-  } catch {
-    return NextResponse.json({ error: "Invalid multipart form data" }, { status: 400 });
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Expected a JSON body" }, { status: 400 });
   }
 
-  const file = formData.get("file");
-  const team_id = formData.get("team_id");
+  if (body.action === "sign") {
+    const { team_id, content_type, size } = body;
+    if (typeof team_id !== "string" || !team_id.trim()) {
+      return NextResponse.json({ error: "team_id is required" }, { status: 400 });
+    }
+    const ext = typeof content_type === "string" ? ALLOWED_TYPES[content_type] : undefined;
+    if (!ext) {
+      return NextResponse.json(
+        { error: "Unsupported file type. Accepted: image/jpeg, image/png, image/webp" },
+        { status: 415 }
+      );
+    }
+    if (typeof size !== "number" || !Number.isFinite(size) || size <= 0) {
+      return NextResponse.json({ error: "File is empty" }, { status: 400 });
+    }
+    if (size > MAX_SIZE_BYTES) {
+      return NextResponse.json({ error: "File exceeds 10 MB limit" }, { status: 413 });
+    }
 
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "file is required" }, { status: 400 });
-  }
-  if (typeof team_id !== "string" || !team_id.trim()) {
-    return NextResponse.json({ error: "team_id is required" }, { status: 400 });
-  }
+    const { data: team, error: teamError } = await supabaseAdmin
+      .from("teams")
+      .select("team_id")
+      .eq("team_id", team_id.trim())
+      .maybeSingle();
+    if (teamError) {
+      logFailure("sign:team-lookup", { team_id }, teamError);
+      return NextResponse.json({ error: `Team lookup failed: ${teamError.message}` }, { status: 500 });
+    }
+    if (!team) return NextResponse.json({ error: "Team not found" }, { status: 404 });
 
-  const ext = ALLOWED_TYPES[file.type];
-  if (!ext) {
-    return NextResponse.json(
-      { error: "Unsupported file type. Accepted: image/jpeg, image/png, image/webp" },
-      { status: 415 }
-    );
-  }
-  if (file.size === 0) {
-    return NextResponse.json({ error: "File is empty" }, { status: 400 });
-  }
-  if (file.size > MAX_SIZE_BYTES) {
-    return NextResponse.json({ error: "File exceeds 10 MB limit" }, { status: 413 });
-  }
-
-  const buffer = await file.arrayBuffer();
-  if (!matchesSignature(file.type, new Uint8Array(buffer, 0, Math.min(12, buffer.byteLength)))) {
-    return NextResponse.json({ error: "File content does not match its declared type" }, { status: 415 });
-  }
-
-  const { data: team, error: teamError } = await supabaseAdmin
-    .from("teams")
-    .select("team_id")
-    .eq("team_id", team_id.trim())
-    .maybeSingle();
-
-  if (teamError) return NextResponse.json({ error: teamError.message }, { status: 500 });
-  if (!team) return NextResponse.json({ error: "Team not found" }, { status: 404 });
-
-  // Server-generated name; the user-supplied filename is never used in the path.
-  const storagePath = `${team.team_id}/${randomUUID()}.${ext}`;
-
-  const { error: storageError } = await supabaseAdmin.storage
-    .from(TEAM_PHOTOS_BUCKET)
-    .upload(storagePath, buffer, { contentType: file.type, upsert: false });
-
-  if (storageError) {
-    return NextResponse.json({ error: `Storage upload failed: ${storageError.message}` }, { status: 500 });
+    // Server-generated name; the user-supplied filename is never used in the path.
+    const path = `${team.team_id}/${randomUUID()}.${ext}`;
+    const { data, error } = await supabaseAdmin.storage.from(TEAM_PHOTOS_BUCKET).createSignedUploadUrl(path);
+    if (error || !data) {
+      logFailure("sign:create-signed-url", { path }, error);
+      return NextResponse.json(
+        { error: `Could not authorize upload: ${error?.message ?? "unknown error"}` },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ path, token: data.token });
   }
 
-  const { data: row, error: insertError } = await supabaseAdmin
-    .from("team_photos")
-    .insert({
-      team_id: team.team_id,
-      storage_path: storagePath,
-      original_name: file.name.slice(0, 200),
-      content_type: file.type,
-      size_bytes: file.size,
-      uploaded_by: auth.user.email ?? auth.user.id,
-    })
-    .select("photo_id, team_id, storage_path, original_name, content_type, size_bytes, is_active, created_at")
-    .single();
+  if (body.action === "finalize") {
+    const { path, original_name } = body;
+    const match = typeof path === "string" ? PATH_PATTERN.exec(path) : null;
+    if (!match) return NextResponse.json({ error: "Invalid storage path" }, { status: 400 });
+    const [, team_id, ext] = match;
+    const contentType = Object.keys(ALLOWED_TYPES).find((t) => ALLOWED_TYPES[t] === ext)!;
 
-  if (insertError || !row) {
-    await supabaseAdmin.storage.from(TEAM_PHOTOS_BUCKET).remove([storagePath]);
-    return NextResponse.json({ error: insertError?.message ?? "Insert failed" }, { status: 500 });
+    const { data: blob, error: downloadError } = await supabaseAdmin.storage
+      .from(TEAM_PHOTOS_BUCKET)
+      .download(path);
+    if (downloadError || !blob) {
+      logFailure("finalize:download", { path }, downloadError);
+      return NextResponse.json(
+        { error: "Uploaded file was not found in storage (the upload to Supabase did not complete)" },
+        { status: 400 }
+      );
+    }
+
+    const discard = () => supabaseAdmin.storage.from(TEAM_PHOTOS_BUCKET).remove([path]);
+
+    if (blob.size === 0 || blob.size > MAX_SIZE_BYTES) {
+      await discard();
+      return NextResponse.json({ error: blob.size ? "File exceeds 10 MB limit" : "File is empty" }, { status: 400 });
+    }
+    const head = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
+    if (!matchesSignature(contentType, head)) {
+      await discard();
+      return NextResponse.json({ error: "File content does not match its declared type" }, { status: 415 });
+    }
+
+    const { data: row, error: insertError } = await supabaseAdmin
+      .from("team_photos")
+      .insert({
+        team_id,
+        storage_path: path,
+        original_name: typeof original_name === "string" ? original_name.slice(0, 200) : null,
+        content_type: contentType,
+        size_bytes: blob.size,
+        uploaded_by: auth.user.email ?? auth.user.id,
+      })
+      .select("photo_id, team_id, storage_path, original_name, content_type, size_bytes, is_active, created_at")
+      .single();
+
+    if (insertError || !row) {
+      logFailure("finalize:insert", { path, team_id }, insertError);
+      // A duplicate means this path was already registered; its file must stay.
+      if (insertError?.code !== "23505") await discard();
+      return NextResponse.json(
+        { error: `Could not save photo record: ${insertError?.message ?? "unknown error"}` },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ photo: withUrl(row as PhotoRow) }, { status: 201 });
   }
 
-  return NextResponse.json({ photo: withUrl(row as PhotoRow) }, { status: 201 });
+  return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }
 
 // PATCH /api/admin/team-photos — { photo_id, is_active }
