@@ -1,6 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
 import sharp from "sharp";
+import { getTeamLogoUrl } from "../team-logo.ts";
 
 const dataUri = (mime: string, buf: Buffer) => `data:${mime};base64,${buf.toString("base64")}`;
 
@@ -23,22 +22,13 @@ export async function prepareLogo(input: Buffer): Promise<string> {
   return dataUri("image/png", png);
 }
 
-function findLocalTeamLogo(teamId: string): Buffer | null {
-  const dir = path.join(process.cwd(), "public", "images", "teams");
-  if (!fs.existsSync(dir)) return null;
-  const hit = fs.readdirSync(dir).find((f) => f.toLowerCase() === `${teamId}.webp`.toLowerCase());
-  return hit ? fs.readFileSync(path.join(dir, hit)) : null;
-}
+/** Fetches the team logo from the authoritative bucket (see team-logo.ts); null when missing, so the placeholder renders. */
+export async function loadTeamLogo(team: { team_id: string }): Promise<string | null> {
+  const url = getTeamLogoUrl(team.team_id);
+  if (!url) return null;
 
-/** Uploaded team logo first, then the bundled public/images/teams file; null if neither exists. */
-export async function loadTeamLogo(team: { team_id: string; logo_url: string | null }): Promise<string | null> {
-  let input: Buffer | null = null;
+  const res = await fetch(url, { signal: AbortSignal.timeout(8000) }).catch(() => null);
+  if (!res?.ok) return null;
 
-  if (team.logo_url) {
-    const res = await fetch(team.logo_url, { signal: AbortSignal.timeout(8000) }).catch(() => null);
-    if (res?.ok) input = Buffer.from(await res.arrayBuffer());
-  }
-  input ??= findLocalTeamLogo(team.team_id);
-
-  return input ? prepareLogo(input).catch(() => null) : null;
+  return prepareLogo(Buffer.from(await res.arrayBuffer())).catch(() => null);
 }

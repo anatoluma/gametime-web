@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { getTeamLogoUrl } from "@/lib/team-logo";
+import { resolveTeamLogoUrl } from "@/lib/team-logo";
 
 type CrestProps = {
   teamId?: string | null;
   teamName?: string | null;
+  /** @deprecated Ignored; logos resolve from teamId via resolveTeamLogoUrl(). */
   logoUrl?: string | null;
   size?: number;
   className?: string;
@@ -25,9 +26,9 @@ function getInitials(name?: string | null, fallback?: string | null): string {
   return source.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "TM";
 }
 
-export default function Crest({ teamId, teamName, logoUrl, size = 26, className = "", imageClassName = "h-[70%] w-[70%] object-contain", fallbackClassName = "text-[10px]" }: CrestProps) {
+export default function Crest({ teamId, teamName, size = 26, className = "", imageClassName = "h-[70%] w-[70%] object-contain", fallbackClassName = "text-[10px]" }: CrestProps) {
   const [hasError, setHasError] = useState(false);
-  const src = useMemo(() => getTeamLogoUrl(teamId) || logoUrl || "/images/teams/default.svg", [logoUrl, teamId]);
+  const src = useMemo(() => resolveTeamLogoUrl(teamId), [teamId]);
   const initials = useMemo(() => getInitials(teamName, teamId), [teamName, teamId]);
 
   return (

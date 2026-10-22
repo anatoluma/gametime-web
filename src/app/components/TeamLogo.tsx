@@ -2,18 +2,19 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { getTeamLogoUrl } from "@/lib/team-logo";
+import { DEFAULT_TEAM_LOGO, resolveTeamLogoUrl } from "@/lib/team-logo";
 
 type TeamLogoProps = {
   teamId: string;
   teamName?: string;
+  /** @deprecated Ignored; logos resolve from teamId via resolveTeamLogoUrl(). */
   logoUrl?: string | null;
   className?: string;
   size?: number;
 };
 
-export default function TeamLogo({ teamId, teamName, logoUrl, className = "", size = 48 }: TeamLogoProps) {
-  const primarySrc = getTeamLogoUrl(teamId) || logoUrl || "/images/teams/default.svg";
+export default function TeamLogo({ teamId, teamName, className = "", size = 48 }: TeamLogoProps) {
+  const primarySrc = resolveTeamLogoUrl(teamId);
   const [src, setSrc] = useState(primarySrc);
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function TeamLogo({ teamId, teamName, logoUrl, className = "", si
       width={size}
       height={size}
       className={className}
-      onError={() => setSrc("/images/teams/default.svg")}
+      onError={() => setSrc(DEFAULT_TEAM_LOGO)}
       unoptimized
     />
   );

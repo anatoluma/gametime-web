@@ -49,6 +49,7 @@ const gameId = option("game") ?? "g_2026_09_20_WOL_GTM";
 const out = path.resolve(root, option("out") ?? path.join("tmp", "banner-previews", `${gameId}.png`));
 
 const env = loadEnv();
+process.env.NEXT_PUBLIC_SUPABASE_URL ??= env.NEXT_PUBLIC_SUPABASE_URL;
 const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 const { data: game, error: gameError } = await supabase
