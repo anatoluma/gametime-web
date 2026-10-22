@@ -4,11 +4,11 @@ import sharp from "sharp";
 
 const dataUri = (mime: string, buf: Buffer) => `data:${mime};base64,${buf.toString("base64")}`;
 
-/** Cover-crops to the banner size and recompresses; keeps embedded images small. */
+/** Scales proportionally to cover the banner, crops only the centred overflow, and recompresses. */
 export async function preparePhoto(input: Buffer | string): Promise<string> {
   const jpeg = await sharp(input)
     .rotate()
-    .resize(1600, 600, { fit: "cover", position: "attention" })
+    .resize(1600, 600, { fit: "cover", position: "centre" })
     .jpeg({ quality: 82 })
     .toBuffer();
   return dataUri("image/jpeg", jpeg);
