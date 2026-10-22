@@ -8,7 +8,7 @@ import { LanguageProvider } from "./components/LanguageProvider";
 import FooterCta from "./components/FooterCta";
 import { cookies } from "next/headers";
 import type { Locale } from "@/lib/i18n";
-import { LOCALE_COOKIE } from "@/lib/i18n";
+import { getT, LOCALE_COOKIE } from "@/lib/i18n";
 
 const structuredData = {
   '@context': 'https://schema.org',
@@ -58,6 +58,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const cookieStore = await cookies();
   const raw = cookieStore.get(LOCALE_COOKIE)?.value;
   const locale: Locale = raw === 'ro' || raw === 'ru' ? raw : 'en';
+  const t = getT(locale);
 
   return (
     <html lang={locale}>
@@ -78,6 +79,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <GoogleAnalytics />
           <AuthHashHandler />
           <Nav />
+          <aside
+            role="note"
+            className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm font-medium text-amber-950"
+          >
+            {t("site_data_notice")}
+          </aside>
 
           {/* CONTENT CONTAINER */}
           <div className="max-w-5xl mx-auto bg-[var(--surface)] min-h-screen border-x border-[var(--border)]">

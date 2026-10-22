@@ -13,6 +13,7 @@ export const translations = {
 
     // Footer
     footer_cta: 'Want to play? Find pickup games at',
+    site_data_notice: 'Not all games have been processed yet. We are still waiting for game data from Drochia, Sucleia, Ribnita, and Comrat.',
 
     // Shared status
     status_final: 'Final',
@@ -151,6 +152,7 @@ export const translations = {
 
     // Footer
     footer_cta: 'Vrei să joci? Găsești meciuri la',
+    site_data_notice: 'Nu toate meciurile au fost procesate încă. Așteptăm în continuare datele meciurilor din Drochia, Sucleia, Rîbnița și Comrat.',
 
     // Shared status
     status_final: 'Final',
@@ -289,6 +291,7 @@ export const translations = {
 
     // Footer
     footer_cta: 'Хочешь играть? Найди игры на',
+    site_data_notice: 'Обработаны ещё не все матчи. Мы всё ещё ожидаем данные матчей из Дрокии, Суклеи, Рыбницы и Комрата.',
 
     // Shared status
     status_final: 'Финал',
