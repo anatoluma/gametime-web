@@ -34,6 +34,7 @@ type Props = {
   resolutionResults: NameResolutionResult[];
   playersByTeam: Record<string, NameResolutionCandidate[]>;
   hasHardFailure: boolean;
+  season: string | null;
   currentStatus: string;
   errorMessage?: string | null;
 };
@@ -46,6 +47,7 @@ export default function JobActions({
   resolutionResults,
   playersByTeam,
   hasHardFailure,
+  season,
   currentStatus,
   errorMessage,
 }: Props) {
@@ -194,6 +196,7 @@ export default function JobActions({
             jersey_number: draft.jersey_number.trim() ? Number(draft.jersey_number) : null,
             // 'a' = clear existing player's jersey number first
             clear_existing_jersey: choice === "a",
+            season,
           }),
         });
         if (!res.ok) {
@@ -469,7 +472,7 @@ export default function JobActions({
       {!isTerminal && (
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-5 sticky bottom-4 shadow-sm">
           {actionError && (
-            <p className="mb-4 rounded bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:border-red-800 dark:text-red-400">
+            <p className="mb-4 whitespace-pre-line rounded bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:border-red-800 dark:text-red-400">
               {actionError}
             </p>
           )}

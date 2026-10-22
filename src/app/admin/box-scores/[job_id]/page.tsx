@@ -7,6 +7,8 @@ import TeamConfirmation from "./TeamConfirmation";
 import BannerResult from "./BannerResult";
 import { resolveTeamId } from "@/lib/team-codes";
 import { getCurrentSeason } from "@/lib/league";
+import { seasonFromDate } from "@/lib/roster-utils";
+import { evaluateCommitReadiness, loadSeasonRoster, type CommitReadiness } from "@/lib/commit-readiness";
 import type { ValidationCheck } from "@/lib/validation";
 import type { NameResolutionCandidate, NameResolutionResult } from "@/lib/name-resolution";
 
@@ -73,22 +75,16 @@ export default async function BoxScoreJobDetailPage({
   const playersByTeam: Record<string, NameResolutionCandidate[]> = Object.fromEntries(
     rosterTeamIds.map((teamId) => [teamId, []])
   );
+  const extractionDate = (job.extraction_json as { meta?: { date?: string | null } } | null)?.meta?.date ?? null;
+  const rosterSeason = seasonFromDate(extractionDate) ?? (await getCurrentSeason());
   if (rosterTeamIds.length > 0) {
-    const season = await getCurrentSeason();
-    const { data: rosterPlayers } = await supabaseAdmin
-      .from("player_seasons")
-      .select("player_id, team_id, jersey_number, players(first_name, last_name)")
-      .eq("season", season)
-      .eq("is_active", true)
-      .in("team_id", rosterTeamIds);
+    const rosterPlayers = await loadSeasonRoster(rosterSeason, rosterTeamIds);
 
-    for (const player of rosterPlayers ?? []) {
-      const playerDetails = Array.isArray(player.players) ? player.players[0] : player.players;
-      if (!playerDetails) continue;
+    for (const player of rosterPlayers) {
       const teamRoster = playersByTeam[player.team_id] ?? [];
       teamRoster.push({
         player_id: player.player_id,
-        name: `${playerDetails.first_name ?? ""} ${playerDetails.last_name ?? ""}`.trim(),
+        name: `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim(),
         confidence: 0,
         jersey_number: player.jersey_number,
       });
@@ -109,6 +105,17 @@ export default async function BoxScoreJobDetailPage({
   }
   const home = extraction?.home_team;
   const away = extraction?.away_team;
+
+  // Commit-readiness (post-resolution) is separate from the extraction validation shown below.
+  let readiness: CommitReadiness | null = null;
+  let readinessFailure: string | null = null;
+  if (!["committed", "rejected"].includes(job.status as string) && job.extraction_json) {
+    try {
+      readiness = await evaluateCommitReadiness(job);
+    } catch (err) {
+      readinessFailure = err instanceof Error ? err.message : "Commit-readiness check failed";
+    }
+  }
   const hasHardFailure = validationChecks.some((c) => c.severity === "hard" && !c.passed);
   const badgeClass = STATUS_BADGE[job.status as string] ?? "bg-gray-100 text-gray-600";
 
@@ -210,7 +217,7 @@ export default async function BoxScoreJobDetailPage({
         </dl>
 
         {job.error_message && (
-          <p className="mt-4 rounded bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:border-red-800 dark:text-red-400">
+          <p className="mt-4 whitespace-pre-line rounded bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:border-red-800 dark:text-red-400">
             {job.error_message as string}
           </p>
         )}
@@ -234,6 +241,49 @@ export default async function BoxScoreJobDetailPage({
         isPdf={(job.raw_file_path as string | null)?.toLowerCase().endsWith(".pdf") ?? false}
         resolutionResults={resolutionResults}
       />
+
+      {(readiness || readinessFailure) && (
+        <section
+          className={`rounded-lg border px-6 py-5 mb-6 ${
+            readiness?.result.ok
+              ? "border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950/30"
+              : "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30"
+          }`}
+        >
+          <h2 className="text-lg font-semibold mb-2">Commit readiness{readiness?.season ? ` (${readiness.season} rosters)` : ""}</h2>
+          {readinessFailure && <p className="text-sm text-red-700 dark:text-red-400">{readinessFailure}</p>}
+          {readiness?.result.ok && (
+            <p className="text-sm text-green-700 dark:text-green-400">
+              ✓ All {readiness.result.rows.length} non-DNP players are resolved to the season roster and team points match the final score.
+            </p>
+          )}
+          {readiness && !readiness.result.ok && (
+            <>
+              <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2">
+                ✗ Cannot be committed with the saved resolutions. Fix these below (the Approve action re-checks your selections and will refuse to store anything that does not reconcile):
+              </p>
+              <ul className="space-y-1">
+                {readiness.result.errors.map((issue, index) => (
+                  <li key={`${issue.code}-${index}`} className="text-xs text-red-700 dark:text-red-400">
+                    <span className="font-mono mr-2">{issue.code}</span>
+                    {issue.message}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {readiness && readiness.result.warnings.length > 0 && (
+            <ul className="mt-3 space-y-1">
+              {readiness.result.warnings.map((issue, index) => (
+                <li key={`${issue.code}-w-${index}`} className="text-xs text-amber-700 dark:text-amber-400">
+                  <span className="mr-2">⚠</span>
+                  {issue.message}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {/* Validation checks */}
       {validationChecks.length > 0 && (
@@ -283,6 +333,7 @@ export default async function BoxScoreJobDetailPage({
         resolutionResults={resolutionResults}
         playersByTeam={playersByTeam}
         hasHardFailure={hasHardFailure}
+        season={readiness?.season ?? rosterSeason}
         currentStatus={job.status as string}
         errorMessage={job.error_message as string | null}
       />

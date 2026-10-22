@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { commitJob } from "@/lib/commit";
 import { requireAdmin } from "@/lib/admin-auth";
+import { evaluateCommitReadiness } from "@/lib/commit-readiness";
+import { formatIntegrityErrors } from "@/lib/commit-integrity";
+import type { ResolutionItemLike } from "@/lib/roster-utils";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,7 +46,7 @@ export async function POST(
 
   const { data: job, error: fetchError } = await supabaseAdmin
     .from("processing_jobs")
-    .select("id, status, validation_json, resolution_json")
+    .select("id, status, validation_json, resolution_json, extraction_json")
     .eq("id", job_id)
     .single();
 
@@ -76,6 +79,27 @@ export async function POST(
         confidence: 1.0,
       };
     });
+  }
+
+  // Commit-readiness check (post-resolution). Unlike extraction validation this cannot be overridden:
+  // storing stats that do not reconcile would silently corrupt player and team totals.
+  try {
+    const readiness = await evaluateCommitReadiness(
+      { id: job.id as string, extraction_json: job.extraction_json, resolution_json: resolutionJson },
+      { resolutions: resolutionJson as ResolutionItemLike[] }
+    );
+    if (!readiness.result.ok) {
+      return NextResponse.json(
+        {
+          error: formatIntegrityErrors(readiness.result.errors),
+          integrity_errors: readiness.result.errors,
+        },
+        { status: 422 }
+      );
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Commit-readiness check failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
   const { error: updateError } = await supabaseAdmin

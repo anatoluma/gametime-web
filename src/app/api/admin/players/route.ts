@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { first_name, last_name, team_code, jersey_number, clear_existing_jersey } = body;
+  const { first_name, last_name, team_code, jersey_number, clear_existing_jersey, season } = body;
 
   if (!last_name || typeof last_name !== "string" || !last_name.trim()) {
     return NextResponse.json({ error: "last_name is required" }, { status: 400 });
@@ -139,6 +139,29 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // An admin explicitly creating a player from a box-score review registers them for that game's
+  // season; commit requires season-roster membership. Nothing is registered unless season is given.
+  const seasonLabel = typeof season === "string" && /^\d{4}\/\d{2}$/.test(season.trim()) ? season.trim() : null;
+  if (seasonLabel) {
+    const { error: seasonError } = await supabaseAdmin.from("player_seasons").upsert(
+      {
+        player_id: player.player_id,
+        season: seasonLabel,
+        team_id,
+        jersey_number: jerseyNum,
+        is_active: true,
+      },
+      { onConflict: "player_id,season" }
+    );
+    if (seasonError) {
+      await supabaseAdmin.from("players").delete().eq("player_id", player.player_id);
+      return NextResponse.json(
+        { error: `Failed to register player for ${seasonLabel}: ${seasonError.message}` },
+        { status: 500 }
+      );
+    }
   }
 
   return NextResponse.json({ player_id: player.player_id });

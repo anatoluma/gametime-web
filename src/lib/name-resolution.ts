@@ -1,5 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { resolveTeamId } from "@/lib/team-codes";
+import { normalizeJerseyNumber, seasonFromDate } from "@/lib/roster-utils";
+import { loadSeasonRoster } from "@/lib/commit-readiness";
+import { getCurrentSeason } from "@/lib/league";
 
 const supabaseAdmin = createClient(
 	process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +16,7 @@ const NUMBER_HINT_BOOST = 0.15;
 type ProcessingJob = {
 	id: string;
 	extraction_json: {
+		meta?: { date?: string | null } | null;
 		players?: ExtractedPlayer[] | null;
 	} | null;
 };
@@ -87,7 +91,7 @@ function toStringOrNull(value: unknown): string | null {
 }
 
 function toNumber(value: unknown): number | null {
-	return typeof value === "number" && Number.isFinite(value) ? value : null;
+	return normalizeJerseyNumber(value);
 }
 
 function normalizeName(value: string | null): string {
@@ -237,15 +241,10 @@ export async function resolvePlayerNames(jobId: string): Promise<NameResolutionR
 
 		const validTeamIds = new Set(((teamsData ?? []) as TeamRow[]).map((team) => team.team_id.toUpperCase()));
 
-		const { data: playersData, error: playersError } = await supabaseAdmin
-			.from("players")
-			.select("player_id, team_id, first_name, last_name, jersey_number");
-
-		if (playersError) {
-			throw new Error(`Failed to load players: ${playersError.message}`);
-		}
-
-		const players = (playersData ?? []) as PlayerRow[];
+		// Match against the roster of the season the game was played in (player_seasons),
+		// never the globally current season or the global players.team_id / jersey_number.
+		const season = seasonFromDate(job.extraction_json?.meta?.date) ?? (await getCurrentSeason());
+		const players = await loadSeasonRoster(season);
 		const rosterByTeam = new Map<string, PlayerRow[]>();
 		for (const player of players) {
 			const teamId = player.team_id.toUpperCase();
@@ -266,13 +265,20 @@ export async function resolvePlayerNames(jobId: string): Promise<NameResolutionR
 				.select("alias_name, player_id, confidence, resolution_method, confirmed_by, players(player_id, first_name, last_name)")
 				.eq("alias_name", extractedName)
 				.not("confirmed_by", "is", null)
-				.limit(1);
+				.limit(5);
 
 			if (aliasError) {
 				throw new Error(`Failed to check player aliases: ${aliasError.message}`);
 			}
 
-			const exactAlias = ((aliasData ?? []) as AliasRow[])[0];
+			const resolvedTeamId = resolveTeamId(teamCode);
+			const roster = resolvedTeamId ? rosterByTeam.get(resolvedTeamId) ?? [] : [];
+
+			// A confirmed alias is only trusted while that player is on this team's roster for the
+			// game's season; otherwise (e.g. a transfer) fall through to roster matching.
+			const exactAlias = ((aliasData ?? []) as AliasRow[]).find((alias) =>
+				roster.some((rosterPlayer) => rosterPlayer.player_id === alias.player_id)
+			);
 			if (exactAlias) {
 				const aliasPlayer = normalizeAliasPlayer(exactAlias.players);
 				results.push({
@@ -288,8 +294,6 @@ export async function resolvePlayerNames(jobId: string): Promise<NameResolutionR
 				continue;
 			}
 
-			const resolvedTeamId = resolveTeamId(teamCode);
-			const roster = resolvedTeamId ? rosterByTeam.get(resolvedTeamId) ?? [] : [];
 			const scoredCandidates = roster
 				.map((player) => {
 					const baseScore = bestScoreForPlayer(extractedName, player);

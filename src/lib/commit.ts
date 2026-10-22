@@ -1,6 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
-import { TEAM_CODE_MAP, resolveTeamId } from "@/lib/team-codes";
+import { resolveTeamId } from "@/lib/team-codes";
 import { generateBannerAfterCommit, type AutoBannerResult } from "@/lib/banner/auto";
+import { evaluateCommitReadiness } from "@/lib/commit-readiness";
+import { CommitIntegrityError } from "@/lib/commit-integrity";
+import { commitBoxScoreAtomic } from "@/lib/commit-rpc";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,62 +19,6 @@ type JobRow = {
   competition_id: number | null;
   extraction_json: JsonObject | null;
   resolution_json: unknown;
-};
-
-type ResolutionItem = {
-  team_code?: string;
-  number?: number;
-  extracted_name?: string;
-  resolved_player_id?: number | string;
-};
-
-type ExistingPlayer = {
-  player_id: string;
-  team_id: string;
-  first_name: string | null;
-  last_name: string | null;
-  jersey_number: number | null;
-};
-
-type PlayerGameStatInsert = {
-  game_id: string;
-  source_job_id: string;
-  player_id: string;
-  team_id: string;
-  is_starter: boolean;
-  is_captain: boolean;
-  dnp: boolean;
-  minutes: string | null;
-  fg_made: number | null;
-  fg_att: number | null;
-  two_made: number | null;
-  two_att: number | null;
-  three_made: number | null;
-  three_att: number | null;
-  ft_made: number | null;
-  ft_att: number | null;
-  reb_off: number | null;
-  reb_def: number | null;
-  reb_tot: number | null;
-  assists: number | null;
-  turnovers: number | null;
-  steals: number | null;
-  blocks: number | null;
-  fouls_personal: number | null;
-  fouls_drawn: number | null;
-  plus_minus: number | null;
-  efficiency: number | null;
-  points: number | null;
-};
-
-type PlayerLike = {
-  team_code?: string | null;
-  number?: number | null;
-  name?: string | null;
-  starter?: boolean | null;
-  captain?: boolean | null;
-  dnp?: boolean | null;
-  stats?: Record<string, unknown> | null;
 };
 
 type TeamSummaryLike = {
@@ -113,7 +60,6 @@ type ExtractionPayload = {
     home?: { intervals?: number[] | null } | null;
     away?: { intervals?: number[] | null } | null;
   } | null;
-  players?: PlayerLike[] | null;
   team_summary?: TeamSummaryLike[] | null;
 };
 
@@ -191,63 +137,6 @@ function getVenueFromHomeTeam(homeTeamId: string): string {
   }
 }
 
-function resolutionKey(teamCode: string | null, number: number | null, name: string | null): string {
-  return `${teamCode ?? ""}|${number ?? ""}|${(name ?? "").trim().toLowerCase()}`;
-}
-
-
-
-function normalizeName(value: string | null): string {
-  if (!value) {
-    return "";
-  }
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]/g, "")
-    .toLowerCase();
-}
-
-function buildNameCandidates(player: ExistingPlayer): string[] {
-  const first = normalizeName(player.first_name);
-  const last = normalizeName(player.last_name);
-  const full = normalizeName(`${player.first_name ?? ""}${player.last_name ?? ""}`);
-  const initialLast = first.length > 0 ? `${first[0]}${last}` : "";
-  return [full, `${first}${last}`, initialLast, last].filter((v) => v.length > 0);
-}
-
-function findPlayerId(
-  player: PlayerLike,
-  teamId: string,
-  teamPlayers: ExistingPlayer[],
-  resolvedPlayerId: string | null
-): string | null {
-  if (resolvedPlayerId) {
-    const exists = teamPlayers.some((p) => p.player_id === resolvedPlayerId);
-    if (exists) {
-      return resolvedPlayerId;
-    }
-  }
-
-  const number = toNumber(player.number);
-  if (number !== null) {
-    const byNumber = teamPlayers.find((p) => p.team_id === teamId && p.jersey_number === number);
-    if (byNumber) {
-      return byNumber.player_id;
-    }
-  }
-
-  const extracted = normalizeName(toStringOrNull(player.name));
-  if (extracted) {
-    const byName = teamPlayers.find((p) => buildNameCandidates(p).some((n) => n === extracted));
-    if (byName) {
-      return byName.player_id;
-    }
-  }
-
-  return null;
-}
-
 async function setCommitError(jobId: string, message: string): Promise<void> {
   await supabaseAdmin
     .from("processing_jobs")
@@ -259,7 +148,6 @@ async function setCommitError(jobId: string, message: string): Promise<void> {
 }
 
 export async function commitJob(jobId: string): Promise<{ game_id: string; banner: AutoBannerResult }> {
-  console.log("TEAM_CODE_MAP keys:", Object.keys(TEAM_CODE_MAP));
   try {
     const { data: job, error: jobError } = await supabaseAdmin
       .from("processing_jobs")
@@ -269,6 +157,21 @@ export async function commitJob(jobId: string): Promise<{ game_id: string; banne
 
     if (jobError || !job) {
       throw new Error(jobError?.message ?? `Processing job ${jobId} not found`);
+    }
+
+    if (job.status === "committed") {
+      // Repeated request: the transaction already succeeded. Report the stored game; banner generation
+      // is idempotent, so retrying it here also recovers from an earlier banner failure.
+      const { data: detail } = await supabaseAdmin
+        .from("game_details")
+        .select("game_id")
+        .eq("source_job_id", job.id)
+        .limit(1)
+        .maybeSingle<{ game_id: string }>();
+      if (!detail?.game_id) {
+        throw new Error(`Job ${jobId} is committed but no game references it`);
+      }
+      return { game_id: detail.game_id, banner: await generateBannerAfterCommit(job.id, detail.game_id) };
     }
 
     if (job.status !== "approved") {
@@ -318,206 +221,22 @@ export async function commitJob(jobId: string): Promise<{ game_id: string; banne
     const season = computeSeasonFromTipoff(playedAt) ?? (fallbackSeason.length > 0 ? fallbackSeason : null);
     const venue = getVenueFromHomeTeam(homeTeamId);
 
-    // Core fields — always present in the original schema
-    const { data: game, error: gameUpsertError } = await supabaseAdmin
-      .from("games")
-      .upsert({
-        game_id: gameId,
-        tipoff: playedAt,
-        season,
-        venue,
-        home_team_id: homeTeamId,
-        away_team_id: awayTeamId,
-        home_score: toNumber(extraction.home_team?.score),
-        away_score: toNumber(extraction.away_team?.score),
-      }, { onConflict: "game_id" })
-      .select("game_id")
-      .single<{ game_id: string }>();
-
-    if (gameUpsertError || !game) {
-      throw new Error(gameUpsertError?.message ?? "Failed to upsert game");
+    // Validate everything BEFORE any write: nothing below runs unless every non-DNP player is
+    // uniquely resolved to this game's season roster and team points reconcile with the score.
+    const readiness = await evaluateCommitReadiness(job, {
+      season: computeSeasonFromTipoff(playedAt),
+      gameId,
+    });
+    if (!readiness.result.ok) {
+      throw new CommitIntegrityError(readiness.result.errors);
     }
-
-    const { error: gameDetailsError } = await supabaseAdmin
-      .from("game_details")
-      .upsert({
-        game_id: game.game_id,
-        game_number: toNumber(extraction.meta?.game_number),
-        duration_minutes: toNumber(extraction.meta?.duration_minutes),
-        crew_chief: toStringOrNull(extraction.meta?.crew_chief),
-        umpires: Array.isArray(extraction.meta?.umpires) ? extraction.meta.umpires : [],
-        score_intervals: {
-          home: extraction.score_by_periods?.home?.intervals ?? [],
-          away: extraction.score_by_periods?.away?.intervals ?? [],
-        },
-        source_job_id: job.id,
-      }, { onConflict: "game_id" });
-
-    if (gameDetailsError) {
-      throw new Error(`Failed to upsert game_details: ${gameDetailsError.message}`);
-    }
-
-    const { error: deleteOldStatsError } = await supabaseAdmin
-      .from("player_game_stats")
-      .delete()
-      .eq("game_id", game.game_id);
-
-    if (deleteOldStatsError) {
-      throw new Error(`Failed to clear existing player stats: ${deleteOldStatsError.message}`);
-    }
-
-    const { data: playersData, error: playersError } = await supabaseAdmin
-      .from("players")
-      .select("player_id, team_id, first_name, last_name, jersey_number");
-
-    if (playersError) {
-      throw new Error(`Failed to load players: ${playersError.message}`);
-    }
-
-    const existingPlayers = (playersData ?? []) as ExistingPlayer[];
-    const playersByTeam = new Map<string, ExistingPlayer[]>();
-    for (const p of existingPlayers) {
-      const arr = playersByTeam.get(p.team_id) ?? [];
-      arr.push(p);
-      playersByTeam.set(p.team_id, arr);
-    }
-
-    const resolutionItems = Array.isArray(job.resolution_json)
-      ? (job.resolution_json as ResolutionItem[])
-      : [];
-    const resolvedPlayerByKey = new Map<string, string>();
-    for (const item of resolutionItems) {
-      const key = resolutionKey(
-        normalizeCode(item.team_code),
-        toNumber(item.number),
-        toStringOrNull(item.extracted_name)
-      );
-      if (item.resolved_player_id !== undefined && item.resolved_player_id !== null) {
-        resolvedPlayerByKey.set(key, String(item.resolved_player_id));
-      }
-    }
-
-    const players = Array.isArray(extraction.players) ? extraction.players : [];
-    console.log(`[COMMIT] Processing ${players.length} extracted players for job ${jobId}`);
-    console.log(`[COMMIT] Resolution map has ${resolvedPlayerByKey.size} entries`);
-    const playerStatRows = players
-      .map((player) => {
-        // DNP players have no stats — skip them entirely rather than inserting null points
-        if (player.dnp === true) {
-          console.log(`[COMMIT] Skipping DNP player: ${player.name}`);
-          return null;
-        }
-
-        const teamCode = normalizeCode(player.team_code);
-        const teamId = resolveTeamId(teamCode);
-        if (!teamId) {
-          console.warn(`[COMMIT] Could not resolve team from code: ${player.team_code}`);
-          return null;
-        }
-
-        const playerNumber = toNumber(player.number);
-        const playerName = toStringOrNull(player.name);
-        const resolutionKey_ = resolutionKey(teamCode, playerNumber, playerName);
-        const resolutionId = resolvedPlayerByKey.get(resolutionKey_);
-        const teamRoster = playersByTeam.get(teamId) ?? [];
-        const playerId = findPlayerId(player, teamId, teamRoster, resolutionId ?? null);
-        if (!playerId) {
-          console.warn(`[COMMIT] Could not find player - Name: ${playerName}, Number: ${playerNumber}, Team: ${teamCode}, ResolutionId: ${resolutionId}, RosterSize: ${teamRoster.length}`);
-          return null;
-        }
-
-        const stats = player.stats ?? {};
-        const twoMade = toNumber(stats.two_made);
-        const threeMade = toNumber(stats.three_made);
-        const ftMade = toNumber(stats.ft_made);
-
-        // Compute points from components if the field itself is null
-        const extractedPoints = toNumber(stats.points);
-        const computedPoints =
-          twoMade !== null && threeMade !== null && ftMade !== null
-            ? twoMade * 2 + threeMade * 3 + ftMade
-            : null;
-        const points = extractedPoints ?? computedPoints;
-
-        // Cannot write a row without points — DB has NOT NULL constraint
-        if (points === null) {
-          console.warn(`[COMMIT] Skipping player with null points - Player: ${playerName}, Team: ${teamCode}`);
-          return null;
-        }
-
-        const row: PlayerGameStatInsert = {
-          game_id: game.game_id,
-          source_job_id: job.id,
-          player_id: playerId,
-          team_id: teamId,
-          is_starter: player.starter ?? false,
-          is_captain: player.captain ?? false,
-          dnp: false,
-          minutes: toStringOrNull(stats.min),
-          fg_made: toNumber(stats.fg_made),
-          fg_att: toNumber(stats.fg_att),
-          two_made: twoMade,
-          two_att: toNumber(stats.two_att),
-          three_made: threeMade,
-          three_att: toNumber(stats.three_att),
-          ft_made: ftMade,
-          ft_att: toNumber(stats.ft_att),
-          reb_off: toNumber(stats.reb_off),
-          reb_def: toNumber(stats.reb_def),
-          reb_tot: toNumber(stats.reb_tot),
-          assists: toNumber(stats.assists),
-          turnovers: toNumber(stats.turnovers),
-          steals: toNumber(stats.steals),
-          blocks: toNumber(stats.blocks),
-          fouls_personal: toNumber(stats.fouls_personal),
-          fouls_drawn: toNumber(stats.fouls_drawn),
-          plus_minus: toNumber(stats.plus_minus),
-          efficiency: toNumber(stats.efficiency),
-          points,
-        };
-        return row;
-      })
-      .filter((row): row is PlayerGameStatInsert => row !== null);
-
-    // Deduplicate by player_id — two extracted rows resolving to the same player would
-    // violate the (game_id, player_id) PK. Keep the last occurrence.
-    const seenPlayerIds = new Map<string, PlayerGameStatInsert>();
-    for (const row of playerStatRows) {
-      seenPlayerIds.set(row.player_id, row);
-    }
-    const dedupedRows = Array.from(seenPlayerIds.values());
-    console.log(`[COMMIT] After filtering & deduping: ${dedupedRows.length} rows to insert`);
-
-    if (dedupedRows.length > 0) {
-      const { error: playerStatsError } = await supabaseAdmin
-        .from("player_game_stats")
-        .insert(dedupedRows);
-
-      if (playerStatsError) {
-        // If extended columns don't exist yet (migration not run), fall back to core-only insert
-        if (playerStatsError.message.includes("column") && playerStatsError.message.includes("schema cache")) {
-          const coreRows = dedupedRows.map(({ game_id, player_id, team_id, points }) => ({
-            game_id,
-            player_id,
-            team_id,
-            points,
-          }));
-          const { error: fallbackError } = await supabaseAdmin
-            .from("player_game_stats")
-            .insert(coreRows);
-          if (fallbackError) {
-            throw new Error(`Failed to insert player_game_stats: ${fallbackError.message}`);
-          }
-        } else {
-          throw new Error(`Failed to insert player_game_stats: ${playerStatsError.message}`);
-        }
-      }
-    }
+    const statRows = readiness.result.rows;
+    console.log(`[COMMIT] ${statRows.length} validated player rows for job ${jobId} (${readiness.season})`);
 
     const teamSummary = Array.isArray(extraction.team_summary) ? extraction.team_summary : [];
-    const teamSummaryRows = teamSummary.map((summary) => {
-      return {
-        game_id: game.game_id,
+    const teamSummaryRows = teamSummary
+      .map((summary) => ({
+        game_id: gameId,
         source_job_id: job.id,
         team_id: resolveTeamId(normalizeCode(summary.team_code)),
         points_from_turnovers: toNumber(summary.points_from_turnovers),
@@ -534,41 +253,58 @@ export async function commitJob(jobId: string): Promise<{ game_id: string; banne
         lead_changes: toNumber(summary.lead_changes),
         times_tied: toNumber(summary.times_tied),
         time_with_lead: toStringOrNull(summary.time_with_lead),
-      };
+      }));
+
+    // Never drop a summary silently: unknown or non-participating team codes block the commit.
+    const badSummary = teamSummary.filter((summary, index) => {
+      const id = teamSummaryRows[index].team_id;
+      return id !== homeTeamId && id !== awayTeamId;
     });
+    if (badSummary.length > 0) {
+      throw new Error(
+        `team_summary contains team code(s) ${badSummary
+          .map((s) => `"${s.team_code ?? ""}"`)
+          .join(", ")} that are not participants of this game (${homeTeamId} vs ${awayTeamId}). Correct the extraction; nothing was changed.`
+      );
+    }
 
-    if (teamSummaryRows.length > 0) {
-      const { error: teamSummaryError } = await supabaseAdmin
-        .from("game_team_summary")
-        .insert(teamSummaryRows);
-
-      if (teamSummaryError) {
-        // Keep commit compatible with existing schema where this table may not exist yet.
-        if (!teamSummaryError.message.includes("Could not find the table")) {
-          throw new Error(`Failed to insert game_team_summary: ${teamSummaryError.message}`);
-        }
+    // Single database transaction: games, game_details, player_game_stats, game_team_summary and the
+    // job's committed status are written together or not at all (COMMIT_BOX_SCORE_RPC.sql).
+    const committed = await commitBoxScoreAtomic(
+      (fn, args) => supabaseAdmin.rpc(fn, args),
+      {
+        jobId: job.id,
+        game: {
+          game_id: gameId,
+          tipoff: playedAt,
+          season,
+          venue,
+          home_team_id: homeTeamId,
+          away_team_id: awayTeamId,
+          home_score: toNumber(extraction.home_team?.score),
+          away_score: toNumber(extraction.away_team?.score),
+        },
+        details: {
+          game_id: gameId,
+          game_number: toNumber(extraction.meta?.game_number),
+          duration_minutes: toNumber(extraction.meta?.duration_minutes),
+          crew_chief: toStringOrNull(extraction.meta?.crew_chief),
+          umpires: Array.isArray(extraction.meta?.umpires) ? extraction.meta.umpires : [],
+          score_intervals: {
+            home: extraction.score_by_periods?.home?.intervals ?? [],
+            away: extraction.score_by_periods?.away?.intervals ?? [],
+          },
+        },
+        stats: statRows,
+        teamSummary: teamSummaryRows,
       }
-    }
+    );
+    console.log(`[COMMIT] job ${jobId} committed atomically as ${committed.game_id} (${statRows.length} player rows)`);
 
-    const { error: jobUpdateError } = await supabaseAdmin
-      .from("processing_jobs")
-      .update({
-        status: "committed",
-        committed_at: new Date().toISOString(),
-        error_message: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", job.id);
-
-    if (jobUpdateError) {
-      throw new Error(`Failed to update job to committed: ${jobUpdateError.message}`);
-    }
-
-    // Scores and stats are persisted and the job is committed: only now generate the draft banner.
-    // generateBannerAfterCommit never throws, so a banner problem cannot invalidate this commit.
-    const banner = await generateBannerAfterCommit(job.id, game.game_id);
-
-    return { game_id: game.game_id, banner };
+    // Only after the transaction succeeded: banner generation. It never throws, so a banner problem
+    // cannot invalidate the committed box score.
+    const banner = await generateBannerAfterCommit(job.id, committed.game_id);
+    return { game_id: committed.game_id, banner };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown commit error";
     await setCommitError(jobId, message);
