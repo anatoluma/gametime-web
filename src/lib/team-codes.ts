@@ -25,6 +25,7 @@ export const TEAM_CODE_MAP: Record<string, string> = {
   HIT: "HAI",
   GTB: "GTM",
   GMT: "GTM",
+  GAM: "GTM",
   CAN: "CAS",
   DBC: "DRO",
   BRC: "BRI",
