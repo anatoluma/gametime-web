@@ -13,6 +13,8 @@ const supabaseAdmin = createClient(
 
 type Override = {
   extracted_name: string;
+  team_code?: string | null;
+  number?: unknown;
   player_id: string;
 };
 
@@ -67,9 +69,15 @@ export async function POST(
   // Apply name overrides to resolution_json
   let resolutionJson = (job.resolution_json ?? []) as Record<string, unknown>[];
   if (overrides.length > 0) {
-    const overrideMap = new Map(overrides.map((o) => [o.extracted_name, o.player_id]));
+    const overrideFor = (r: Record<string, unknown>) => {
+      const sameRow = (o: Override) =>
+        o.extracted_name === r.extracted_name &&
+        (o.team_code === undefined || (o.team_code ?? null) === (r.team_code ?? null)) &&
+        (o.number === undefined || (o.number ?? null) === (r.number ?? null));
+      return overrides.find(sameRow)?.player_id;
+    };
     resolutionJson = resolutionJson.map((r) => {
-      const override = overrideMap.get(r.extracted_name as string);
+      const override = overrideFor(r);
       if (!override) return r;
       return {
         ...r,

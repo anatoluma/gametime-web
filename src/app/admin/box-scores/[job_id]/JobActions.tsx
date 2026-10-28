@@ -8,8 +8,15 @@ import { adminFetch } from "@/lib/admin-fetch";
 
 type Override = {
   extracted_name: string;
+  team_code: string | null;
+  number: unknown;
   player_id: string;
 };
+
+// Two rows can share an extracted name (e.g. father and son), so row state is keyed by team + number + name.
+function rowKey(r: NameResolutionResult): string {
+  return `${r.team_code ?? ""}|${r.number ?? ""}|${r.extracted_name}`;
+}
 
 type NewPlayerDraft = {
   first_name: string;
@@ -141,7 +148,7 @@ export default function JobActions({
         }
       }
 
-      const resultByName = new Map(resolutionResults.map((r) => [r.extracted_name, r]));
+      const resultByName = new Map(resolutionResults.map((r) => [rowKey(r), r]));
 
       // Pre-flight: check jersey conflicts for all new player drafts before creating any
       const preflightConflicts: Record<string, ConflictInfo> = {};
@@ -209,7 +216,15 @@ export default function JobActions({
 
       const overrideList: Override[] = Object.entries(resolvedOverrides)
         .filter(([, player_id]) => player_id && player_id !== "new")
-        .map(([extracted_name, player_id]) => ({ extracted_name, player_id }));
+        .map(([key, player_id]) => {
+          const r = resultByName.get(key);
+          return {
+            extracted_name: r?.extracted_name ?? key,
+            team_code: r?.team_code ?? null,
+            number: r?.number ?? null,
+            player_id,
+          };
+        });
 
       const res = await adminFetch(`/api/admin/box-scores/jobs/${jobId}/approve`, {
         method: "POST",
@@ -297,12 +312,13 @@ export default function JobActions({
                 {(() => {
                   const playerIdCount = new Map<string, number>();
                   for (const r of resolutionResults) {
-                    const id = overrides[r.extracted_name] ?? r.resolved_player_id;
+                    const id = overrides[rowKey(r)] ?? r.resolved_player_id;
                     if (id && id !== "new") playerIdCount.set(id, (playerIdCount.get(id) ?? 0) + 1);
                   }
 
                   return resolutionResults.map((r) => {
-                    const effectivePlayerId = overrides[r.extracted_name] ?? r.resolved_player_id ?? "";
+                    const key = rowKey(r);
+                    const effectivePlayerId = overrides[key] ?? r.resolved_player_id ?? "";
                     const isDuplicate = !!effectivePlayerId && (playerIdCount.get(effectivePlayerId) ?? 0) > 1;
 
                     const isUnresolved = r.resolved_player_id === null;
@@ -320,9 +336,8 @@ export default function JobActions({
                       rowBg = "bg-amber-50 dark:bg-amber-950/20";
                     }
 
-                    const key = `${r.team_code}-${r.number}-${r.extracted_name}`;
-                    const conflict = jerseyConflicts[r.extracted_name];
-                    const conflictChoice = conflictChoices[r.extracted_name];
+                    const conflict = jerseyConflicts[key];
+                    const conflictChoice = conflictChoices[key];
                     const candidateScores = new Map((r.candidates ?? []).map((candidate) => [candidate.player_id, candidate.confidence]));
                     const teamId = resolveTeamId(r.team_code);
                     const roster = teamId ? playersByTeam[teamId] ?? [] : [];
@@ -341,7 +356,7 @@ export default function JobActions({
                               <select
                                 className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--accent)] min-w-[220px]"
                                 value={effectivePlayerId}
-                                onChange={(e) => setOverride(r.extracted_name, e.target.value)}
+                                onChange={(e) => setOverride(key, e.target.value)}
                               >
                                 <option value="">— pick player —</option>
                                 {roster.map((c) => (
@@ -360,22 +375,22 @@ export default function JobActions({
                                     <input
                                       type="text"
                                       placeholder="First name"
-                                      value={newPlayers[r.extracted_name]?.first_name ?? ""}
-                                      onChange={(e) => updateNewPlayer(r.extracted_name, "first_name", e.target.value)}
+                                      value={newPlayers[key]?.first_name ?? ""}
+                                      onChange={(e) => updateNewPlayer(key, "first_name", e.target.value)}
                                       className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs w-28 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                                     />
                                     <input
                                       type="text"
                                       placeholder="Last name *"
-                                      value={newPlayers[r.extracted_name]?.last_name ?? ""}
-                                      onChange={(e) => updateNewPlayer(r.extracted_name, "last_name", e.target.value)}
+                                      value={newPlayers[key]?.last_name ?? ""}
+                                      onChange={(e) => updateNewPlayer(key, "last_name", e.target.value)}
                                       className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs w-32 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                                     />
                                     <input
                                       type="number"
                                       placeholder="#"
-                                      value={newPlayers[r.extracted_name]?.jersey_number ?? ""}
-                                      onChange={(e) => updateNewPlayer(r.extracted_name, "jersey_number", e.target.value)}
+                                      value={newPlayers[key]?.jersey_number ?? ""}
+                                      onChange={(e) => updateNewPlayer(key, "jersey_number", e.target.value)}
                                       className={`rounded border px-2 py-1 text-xs w-14 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-[var(--surface)] ${
                                         conflict && !conflictChoice ? "border-orange-400" : "border-[var(--border)]"
                                       }`}
@@ -393,10 +408,10 @@ export default function JobActions({
                                         <label className="flex items-center gap-2 cursor-pointer">
                                           <input
                                             type="radio"
-                                            name={`conflict-${r.extracted_name}`}
+                                            name={`conflict-${key}`}
                                             value="a"
                                             checked={conflictChoice === "a"}
-                                            onChange={() => setConflictChoices((prev) => ({ ...prev, [r.extracted_name]: "a" }))}
+                                            onChange={() => setConflictChoices((prev) => ({ ...prev, [key]: "a" }))}
                                           />
                                           <span>Add new player, remove #{conflict.jersey_number} from{" "}
                                             {[conflict.first_name, conflict.last_name].filter(Boolean).join(" ")}
@@ -405,20 +420,20 @@ export default function JobActions({
                                         <label className="flex items-center gap-2 cursor-pointer">
                                           <input
                                             type="radio"
-                                            name={`conflict-${r.extracted_name}`}
+                                            name={`conflict-${key}`}
                                             value="b"
                                             checked={conflictChoice === "b"}
-                                            onChange={() => setConflictChoices((prev) => ({ ...prev, [r.extracted_name]: "b" }))}
+                                            onChange={() => setConflictChoices((prev) => ({ ...prev, [key]: "b" }))}
                                           />
                                           <span>Add new player with a different jersey number (edit # above)</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                           <input
                                             type="radio"
-                                            name={`conflict-${r.extracted_name}`}
+                                            name={`conflict-${key}`}
                                             value="c"
                                             checked={conflictChoice === "c"}
-                                            onChange={() => setConflictChoices((prev) => ({ ...prev, [r.extracted_name]: "c" }))}
+                                            onChange={() => setConflictChoices((prev) => ({ ...prev, [key]: "c" }))}
                                           />
                                           <span>
                                             Use existing player:{" "}
