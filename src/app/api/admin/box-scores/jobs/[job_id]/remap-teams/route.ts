@@ -78,6 +78,15 @@ export async function POST(
     });
   }
 
+  // Keep team_summary aligned with the corrected participant codes as well.
+  if (Array.isArray(updatedExtraction.team_summary)) {
+    updatedExtraction.team_summary = (updatedExtraction.team_summary as ExtractionPlayer[]).map((summary) => {
+      if (summary.team_code === oldHomeCode) return { ...summary, team_code: home_code.trim().toUpperCase() };
+      if (summary.team_code === oldAwayCode) return { ...summary, team_code: away_code.trim().toUpperCase() };
+      return summary;
+    });
+  }
+
   const { error: updateError } = await supabaseAdmin
     .from("processing_jobs")
     .update({
