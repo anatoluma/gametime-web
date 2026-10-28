@@ -238,7 +238,13 @@ export async function commitJob(jobId: string): Promise<{ game_id: string; banne
       .map((summary) => ({
         game_id: gameId,
         source_job_id: job.id,
-        team_id: resolveTeamId(normalizeCode(summary.team_code)),
+        // Older extractions omit team_code; with exactly two entries the order is home, away.
+        team_id:
+          normalizeCode(summary.team_code) === null && teamSummary.length === 2
+            ? teamSummary.indexOf(summary) === 0
+              ? homeTeamId
+              : awayTeamId
+            : resolveTeamId(normalizeCode(summary.team_code)),
         points_from_turnovers: toNumber(summary.points_from_turnovers),
         points_in_paint: toNumber(summary.points_in_paint),
         points_in_paint_att: toNumber(summary.points_in_paint_att),

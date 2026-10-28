@@ -21,8 +21,29 @@ Use this exact structure:
   },
   "players": [...],
   "team_totals": [...],
-  "team_summary": [...]
+  "team_summary": [
+    {
+      "team_code": "...",
+      "points_from_turnovers": 0,
+      "points_in_paint": 0,
+      "points_in_paint_att": 0,
+      "points_in_paint_pct": 0,
+      "second_chance_points": 0,
+      "fast_break_points": 0,
+      "bench_points": 0,
+      "biggest_lead": 0,
+      "biggest_lead_score": "...",
+      "biggest_scoring_run": 0,
+      "biggest_scoring_run_score": "...",
+      "lead_changes": 0,
+      "times_tied": 0,
+      "time_with_lead": "MM:SS"
+    }
+  ]
 }
+
+team_summary: one object per team (home first, then away). Every object MUST include team_code,
+set to that team's abbreviation exactly as in home_team.code / away_team.code.
 
 EXTRACTION RULES:
 
