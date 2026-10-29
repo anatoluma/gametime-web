@@ -76,12 +76,24 @@ export async function POST(
         (o.number === undefined || (o.number ?? null) === (r.number ?? null));
       return overrides.find(sameRow)?.player_id;
     };
+    const overrideIds = [...new Set(overrides.map((o) => o.player_id).filter((id) => id !== "new"))];
+    const nameById = new Map<string, string>();
+    if (overrideIds.length > 0) {
+      const { data: named } = await supabaseAdmin
+        .from("players")
+        .select("player_id, first_name, last_name")
+        .in("player_id", overrideIds);
+      for (const p of named ?? []) {
+        nameById.set(p.player_id as string, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim());
+      }
+    }
     resolutionJson = resolutionJson.map((r) => {
       const override = overrideFor(r);
       if (!override) return r;
       return {
         ...r,
         resolved_player_id: override === "new" ? null : override,
+        resolved_name: override === "new" ? null : nameById.get(override) ?? r.resolved_name ?? null,
         method: "manual",
         confirmed: true,
         confidence: 1.0,
