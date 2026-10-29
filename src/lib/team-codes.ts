@@ -17,6 +17,7 @@ export const TEAM_CODE_MAP: Record<string, string> = {
   VET: "VET",
   WOL: "WOL",
   // known box score variants
+  USMF: "USM",
   EDB: "EDI",
   EDN: "EDI",
   BCV: "VET",
