@@ -363,6 +363,32 @@ export default function AdminGameEntry({
     window.location.reload();
   };
 
+  const youtubePanel =
+    showEditDropdown && editingGameId ? (
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+        <label className="block text-xs font-semibold mb-1 text-[var(--text-muted)] tracking-wide">
+          YouTube link (leave empty to remove)
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="url"
+            placeholder="https://www.youtube.com/watch?v=..."
+            className="flex-1 rounded-lg border border-[var(--border)] p-3 font-medium bg-[var(--surface)] text-[var(--foreground)]"
+            value={youtubeUrl}
+            onChange={(e) => setYoutubeUrl(e.target.value)}
+          />
+          <button
+            type="button"
+            disabled={savingVideo}
+            onClick={saveYoutubeUrl}
+            className="px-4 py-3 rounded-lg bg-[var(--accent)] !text-white font-semibold hover:brightness-95 disabled:opacity-50"
+          >
+            {savingVideo ? "Saving…" : "Save link"}
+          </button>
+        </div>
+      </div>
+    ) : null;
+
   return (
     <main className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto min-h-screen text-[var(--foreground)] bg-[var(--surface)]">
       <h1 className="text-2xl sm:text-3xl font-semibold mb-8 pb-3 border-b border-[var(--border)]">
@@ -417,30 +443,7 @@ export default function AdminGameEntry({
             </div>
           ) : null}
 
-          {showEditDropdown && editingGameId && (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
-              <label className="block text-xs font-semibold mb-1 text-[var(--text-muted)] tracking-wide">
-                YouTube link (leave empty to remove)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  className="flex-1 rounded-lg border border-[var(--border)] p-3 font-medium bg-[var(--surface)] text-[var(--foreground)]"
-                  value={youtubeUrl}
-                  onChange={(e) => setYoutubeUrl(e.target.value)}
-                />
-                <button
-                  type="button"
-                  disabled={savingVideo}
-                  onClick={saveYoutubeUrl}
-                  className="px-4 py-3 rounded-lg bg-[var(--accent)] !text-white font-semibold hover:brightness-95 disabled:opacity-50"
-                >
-                  {savingVideo ? "Saving…" : "Save link"}
-                </button>
-              </div>
-            </div>
-          )}
+          {youtubePanel}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Date & Time Picker */}
@@ -523,6 +526,7 @@ export default function AdminGameEntry({
           </div>
 
           {/* Game Info Editing Section */}
+          {youtubePanel}
           {editingGameId && (
             <div className="border border-[var(--border)] bg-[var(--surface-muted)] p-4 rounded-xl">
               <h3 className="font-semibold mb-4 pb-2 border-b border-[var(--border)]">Game Information</h3>
