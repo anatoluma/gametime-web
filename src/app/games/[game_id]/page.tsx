@@ -8,8 +8,9 @@ import TeamLogo from "@/app/components/TeamLogo";
 import GameSharePanel from "@/app/components/GameSharePanel";
 import { useT } from "@/app/components/LanguageProvider";
 import { resolveTeamLogoUrl } from "@/lib/team-logo";
+import { parseYouTubeId } from "@/lib/youtube";
 
-type Game = { game_id: string; season: string | null; tipoff: string | null; venue: string | null; home_team_id: string; away_team_id: string; home_score: number | null; away_score: number | null; };
+type Game = { youtube_url?: string | null; game_id: string; season: string | null; tipoff: string | null; venue: string | null; home_team_id: string; away_team_id: string; home_score: number | null; away_score: number | null; };
 type Team = { team_id: string; team_name: string; logo_url: string | null; };
 type PlayerStat = {
   player_id: string;
@@ -665,6 +666,19 @@ export default function GamePage() {
           </div>
         )}
       </div>
+
+      {parseYouTubeId(game.youtube_url) && (
+        <div className="mt-8 aspect-video w-full overflow-hidden rounded-lg bg-black">
+          <iframe
+            className="h-full w-full"
+            loading="lazy"
+            src={`https://www.youtube-nocookie.com/embed/${parseYouTubeId(game.youtube_url)}`}
+            title="Game video"
+            allowFullScreen
+            allow="accelerometer; encrypted-media; picture-in-picture"
+          />
+        </div>
+      )}
 
       {/* ISSUES ALERT BOX */}
       {issues.length > 0 && (

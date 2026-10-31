@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { evaluateCommitReadiness } from "@/lib/commit-readiness";
 import { formatIntegrityErrors } from "@/lib/commit-integrity";
 import type { ResolutionItemLike } from "@/lib/roster-utils";
+import { normalizeYouTubeUrl } from "@/lib/youtube";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,11 +33,18 @@ export async function POST(
 
   const { job_id } = await params;
 
-  let body: { overrides?: unknown; override_validation?: boolean };
+  type ApproveBody = { overrides?: unknown; override_validation?: boolean; youtube_url?: unknown };
+  let body: ApproveBody;
   try {
-    body = (await request.json()) as { overrides?: unknown; override_validation?: boolean };
+    body = (await request.json()) as ApproveBody;
   } catch {
     body = {};
+  }
+
+  const rawYoutube = typeof body?.youtube_url === "string" ? body.youtube_url.trim() : "";
+  const youtubeUrl = rawYoutube ? normalizeYouTubeUrl(rawYoutube) : null;
+  if (rawYoutube && !youtubeUrl) {
+    return NextResponse.json({ error: "Invalid YouTube link" }, { status: 422 });
   }
 
   const overrides: Override[] = Array.isArray(body?.overrides)
@@ -148,5 +156,15 @@ export async function POST(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  return NextResponse.json({ job_id, status: "committed", game_id, banner });
+  // The box score is already committed, so a failed video save is reported rather than failing the request.
+  let videoWarning: string | null = null;
+  if (youtubeUrl) {
+    const { error: videoError } = await supabaseAdmin
+      .from("games")
+      .update({ youtube_url: youtubeUrl })
+      .eq("game_id", game_id);
+    if (videoError) videoWarning = videoError.message;
+  }
+
+  return NextResponse.json({ job_id, status: "committed", game_id, banner, video_warning: videoWarning });
 }

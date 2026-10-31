@@ -66,6 +66,7 @@ export default function JobActions({
   const [overrideValidation, setOverrideValidation] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -229,17 +230,20 @@ export default function JobActions({
       const res = await adminFetch(`/api/admin/box-scores/jobs/${jobId}/approve`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ overrides: overrideList, override_validation: overrideValidation }),
+        body: JSON.stringify({ overrides: overrideList,         override_validation: overrideValidation, youtube_url: youtubeUrl.trim() }),
       });
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
         throw new Error(body.error ?? "Approve failed");
       }
       // The API should return status "committed" if successful
-      const response = (await res.json()) as { status: string };
+              const response = (await res.json()) as { status: string; video_warning?: string | null };
       if (response.status !== "committed") {
         throw new Error(`Expected committed status but got: ${response.status}`);
       }
+              if (response.video_warning) {
+                alert(`Game committed, but the YouTube link was not saved: ${response.video_warning}`);
+              }
       router.refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Unknown error");
@@ -503,7 +507,15 @@ export default function JobActions({
               </button>
             )}
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <input
+                type="url"
+                placeholder="YouTube link (optional)"
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                disabled={loading}
+                className="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 w-64"
+              />
               <button
                 type="button"
                 disabled={hasHardFailure ? !overrideValidation : false || loading}
