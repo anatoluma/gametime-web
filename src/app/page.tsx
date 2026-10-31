@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
-import { Inter, Oswald } from "next/font/google";
 import { getServerT } from "@/lib/i18n/server";
 import Crest from "@/app/components/home/Crest";
 import RankBadge from "@/app/components/home/RankBadge";
@@ -12,8 +11,11 @@ import BannerCarousel from "@/app/components/home/BannerCarousel";
 import { getPublicBanners } from "@/lib/banner/public";
 import { getAvailableSeasons, getPublicSeason, getVisibleSeasonTeams } from "@/lib/league";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-body", weight: ["400", "500", "600", "700"] });
-const oswald = Oswald({ subsets: ["latin"], variable: "--font-display", weight: ["500", "600", "700"] });
+// Fonts load via the <link> in layout.tsx (next/font/google fails in Vercel's Turbopack build).
+const fontVars = {
+  "--font-body": "'Inter', system-ui, sans-serif",
+  "--font-display": "'Oswald', 'Bebas Neue', sans-serif",
+} as React.CSSProperties;
 
 export const revalidate = 0;
 
@@ -144,7 +146,7 @@ export default async function Home() {
   });
 
   return (
-    <main className={`${inter.variable} ${oswald.variable} min-h-screen`} style={{ background: "var(--navy-950)", color: "var(--text)", fontFamily: "var(--font-body)" }}>
+    <main className="min-h-screen" style={{ ...fontVars, background: "var(--navy-950)", color: "var(--text)", fontFamily: "var(--font-body)" }}>
       <BannerCarousel banners={carouselBanners} />
       <section className="lbm-hero-bg border-b px-3 pb-6 pt-6 sm:px-6 sm:pt-7" style={{ borderColor: "var(--line)" }}>
         <div className="mx-auto max-w-5xl">

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { normalizeSeasonLabel } from "@/lib/league";
 import { requireAdmin } from "@/lib/admin-auth";
+import { normalizeYouTubeUrl } from "@/lib/youtube";
 
 // Server-only admin client with service role key
 const supabaseAdmin = createClient(
@@ -44,6 +45,45 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({ game, stats });
+}
+
+// Updates only the YouTube link; an empty value clears it.
+export async function PATCH(request: Request) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
+  let body: { game_id?: unknown; youtube_url?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (typeof body.game_id !== "string" || !body.game_id) {
+    return NextResponse.json({ error: "game_id is required" }, { status: 400 });
+  }
+
+  const raw = typeof body.youtube_url === "string" ? body.youtube_url.trim() : "";
+  const youtubeUrl = raw ? normalizeYouTubeUrl(raw) : null;
+  if (raw && !youtubeUrl) {
+    return NextResponse.json({ error: "Invalid YouTube link" }, { status: 422 });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("games")
+    .update({ youtube_url: youtubeUrl })
+    .eq("game_id", body.game_id)
+    .select("game_id")
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  if (!data) {
+    return NextResponse.json({ error: "Game not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ game_id: data.game_id, youtube_url: youtubeUrl });
 }
 
 export async function DELETE(request: Request) {

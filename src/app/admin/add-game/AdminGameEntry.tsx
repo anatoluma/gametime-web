@@ -22,6 +22,8 @@ export default function AdminGameEntry({
   const [teams, setTeams] = useState<any[]>([]);
   const [existingGames, setExistingGames] = useState<any[]>([]);
   const [editingGameId, setEditingGameId] = useState<string | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [savingVideo, setSavingVideo] = useState(false);
   const [homePlayers, setHomePlayers] = useState<any[]>([]);
   const [awayPlayers, setAwayPlayers] = useState<any[]>([]);
 
@@ -50,7 +52,7 @@ export default function AdminGameEntry({
 
       const { data: gamesData } = await supabase
         .from("games")
-        .select("game_id, home_team_id, away_team_id, tipoff, season, venue")
+        .select("game_id, home_team_id, away_team_id, tipoff, season, venue, home_score, away_score")
         .order("tipoff", { ascending: false });
       if (gamesData) setExistingGames(gamesData);
 
@@ -73,8 +75,40 @@ export default function AdminGameEntry({
     return `${home} vs ${away} — ${date}${season}`;
   };
 
+  // Scheduled future fixtures would otherwise bury the games that were actually played.
+  const { recentGames, otherGames } = useMemo(() => {
+    const now = Date.now();
+    const recent = existingGames
+      .filter(g => g.tipoff && new Date(g.tipoff).getTime() <= now)
+      .slice(0, 10);
+    const recentIds = new Set(recent.map(g => g.game_id));
+    return { recentGames: recent, otherGames: existingGames.filter(g => !recentIds.has(g.game_id)) };
+  }, [existingGames]);
+
+  const saveYoutubeUrl = async () => {
+    if (!editingGameId) return;
+    setSavingVideo(true);
+    try {
+      const resp = await adminFetch("/api/admin/game", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ game_id: editingGameId, youtube_url: youtubeUrl }),
+      });
+      const result = await resp.json();
+      if (!resp.ok || result.error) {
+        alert(`YouTube link error: ${result?.error || resp.statusText}`);
+        return;
+      }
+      setYoutubeUrl(result.youtube_url ?? "");
+      alert(result.youtube_url ? "YouTube link saved." : "YouTube link removed.");
+    } finally {
+      setSavingVideo(false);
+    }
+  };
+
   const resetToNewGame = () => {
     setEditingGameId(null);
+    setYoutubeUrl("");
     setGameData({
       home_team_id: "",
       away_team_id: "",
@@ -102,6 +136,7 @@ export default function AdminGameEntry({
     }
 
     const { game, stats } = data;
+    setYoutubeUrl(game.youtube_url ?? "");
 
     setGameData({
       home_team_id: game.home_team_id,
@@ -349,9 +384,16 @@ export default function AdminGameEntry({
                   onChange={(e) => loadExistingGame(e.target.value)}
                 >
                   <option value="">Select game</option>
-                  {existingGames.map(g => (
-                    <option key={g.game_id} value={g.game_id}>{getGameLabel(g)}</option>
-                  ))}
+                  <optgroup label="Last 10 games">
+                    {recentGames.map(g => (
+                      <option key={g.game_id} value={g.game_id}>{getGameLabel(g)}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="All other games">
+                    {otherGames.map(g => (
+                      <option key={g.game_id} value={g.game_id}>{getGameLabel(g)}</option>
+                    ))}
+                  </optgroup>
                 </select>
                 {editingGameId && (
                   <>
@@ -374,6 +416,31 @@ export default function AdminGameEntry({
               </div>
             </div>
           ) : null}
+
+          {showEditDropdown && editingGameId && (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+              <label className="block text-xs font-semibold mb-1 text-[var(--text-muted)] tracking-wide">
+                YouTube link (leave empty to remove)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="flex-1 rounded-lg border border-[var(--border)] p-3 font-medium bg-[var(--surface)] text-[var(--foreground)]"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                />
+                <button
+                  type="button"
+                  disabled={savingVideo}
+                  onClick={saveYoutubeUrl}
+                  className="px-4 py-3 rounded-lg bg-[var(--accent)] !text-white font-semibold hover:brightness-95 disabled:opacity-50"
+                >
+                  {savingVideo ? "Saving…" : "Save link"}
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Date & Time Picker */}
