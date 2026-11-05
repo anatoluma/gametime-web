@@ -25,6 +25,8 @@ export default function AdminPlayersPage() {
   const [rows, setRows] = useState<PlayerSeasonRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [jerseyDrafts, setJerseyDrafts] = useState<Record<string, string>>({});
+  const [savingJerseyFor, setSavingJerseyFor] = useState<string | null>(null);
   const [addPlayerForm, setAddPlayerForm] = useState({
     first_name: "",
     last_name: "",
@@ -189,6 +191,53 @@ export default function AdminPlayersPage() {
     }
   };
 
+  const handleSaveJerseyNumber = async (row: PlayerSeasonRow) => {
+    const draftKey = `${row.season}:${row.player_id}`;
+    const draft = jerseyDrafts[draftKey] ?? String(row.jersey_number ?? "");
+    const jersey_number = draft.trim() === "" ? null : Number(draft);
+
+    if (
+      jersey_number !== null &&
+      (!Number.isInteger(jersey_number) || jersey_number < 0 || jersey_number > 32767)
+    ) {
+      setMessage("Jersey number must be a whole number between 0 and 32767.");
+      return;
+    }
+
+    setSavingJerseyFor(row.player_id);
+    try {
+      const res = await adminFetch("/api/admin/players/seasons", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ player_id: row.player_id, season: row.season, jersey_number }),
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        setMessage(`Error: ${json.error ?? "Unable to update jersey number"}`);
+        return;
+      }
+
+      setRows((prev) =>
+        prev.map((r) =>
+          r.player_id === row.player_id && r.season === row.season ? { ...r, jersey_number } : r
+        )
+      );
+      setJerseyDrafts((prev) => {
+        const next = { ...prev };
+        delete next[draftKey];
+        return next;
+      });
+      setMessage(
+        `✓ Updated jersey number for ${row.players?.first_name ?? ""} ${row.players?.last_name ?? "Player"} in ${row.season}`
+      );
+    } catch (error) {
+      setMessage(`Error: ${error instanceof Error ? error.message : "Unable to update jersey number"}`);
+    } finally {
+      setSavingJerseyFor(null);
+    }
+  };
+
   const handleAddPlayer = async (event: FormEvent) => {
     event.preventDefault();
 
@@ -270,7 +319,7 @@ export default function AdminPlayersPage() {
 
       {!isCurrentSeason && (
         <div className="mb-6 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Older seasons are read-only. Switch to the current season to edit team rosters.
+          Older season rosters are read-only except for player numbers.
         </div>
       )}
 
@@ -401,41 +450,67 @@ export default function AdminPlayersPage() {
                   className={`flex items-center justify-between gap-3 rounded border px-3 py-2 ${player.is_active ? "border-[var(--border)]" : "border-gray-300 bg-gray-100/40 opacity-60"}`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-xs text-gray-400 w-6 text-right shrink-0">
-                      #{player.jersey_number ?? "—"}
-                    </span>
+                    <label className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
+                      #
+                      <input
+                        type="number"
+                        min="0"
+                        max="32767"
+                        step="1"
+                        aria-label={`Jersey number for ${player.players?.first_name ?? ""} ${player.players?.last_name ?? "player"} in ${player.season}`}
+                        value={jerseyDrafts[`${player.season}:${player.player_id}`] ?? String(player.jersey_number ?? "")}
+                        onChange={(e) =>
+                          setJerseyDrafts((prev) => ({
+                            ...prev,
+                            [`${player.season}:${player.player_id}`]: e.target.value,
+                          }))
+                        }
+                        className="w-16 rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 text-sm text-[var(--foreground)]"
+                      />
+                    </label>
                     <span className="text-sm font-medium truncate">
                       {player.players?.first_name ?? ""} {player.players?.last_name ?? "Unknown player"}
                     </span>
                   </div>
 
-                  {isCurrentSeason && (
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={player.team_id}
-                        onChange={(e) => handleMovePlayer(player, e.target.value)}
-                        className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs"
-                      >
-                        {teams.map((team) => (
-                          <option key={team.team_id} value={team.team_id}>
-                            {team.team_name ?? team.team_id}
-                          </option>
-                        ))}
-                      </select>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleSaveJerseyNumber(player)}
+                      disabled={savingJerseyFor === player.player_id}
+                      className="text-xs px-2.5 py-1 rounded border border-[var(--border)] hover:bg-[var(--surface-muted)] disabled:opacity-50"
+                    >
+                      {savingJerseyFor === player.player_id ? "Saving..." : "Save #"}
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(player)}
-                        className={`text-xs px-2.5 py-1 rounded border ${
-                          player.is_active
-                            ? "border-gray-300 text-gray-500 hover:border-red-300 hover:text-red-500"
-                            : "border-green-300 text-green-600 hover:bg-green-50"
-                        }`}
-                      >
-                        {player.is_active ? "Inactive" : "Active"}
-                      </button>
-                    </div>
-                  )}
+                    {isCurrentSeason && (
+                      <>
+                        <select
+                          value={player.team_id}
+                          onChange={(e) => handleMovePlayer(player, e.target.value)}
+                          className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs"
+                        >
+                          {teams.map((team) => (
+                            <option key={team.team_id} value={team.team_id}>
+                              {team.team_name ?? team.team_id}
+                            </option>
+                          ))}
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(player)}
+                          className={`text-xs px-2.5 py-1 rounded border ${
+                            player.is_active
+                              ? "border-gray-300 text-gray-500 hover:border-red-300 hover:text-red-500"
+                              : "border-green-300 text-green-600 hover:bg-green-50"
+                          }`}
+                        >
+                          {player.is_active ? "Inactive" : "Active"}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

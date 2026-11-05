@@ -118,7 +118,19 @@ export async function PATCH(request: Request) {
 
   const allowed: Record<string, unknown> = {};
   if ("team_id" in updates) allowed.team_id = updates.team_id;
-  if ("jersey_number" in updates) allowed.jersey_number = updates.jersey_number;
+  if ("jersey_number" in updates) {
+    const jerseyNumber = updates.jersey_number;
+    if (
+      jerseyNumber !== null &&
+      (typeof jerseyNumber !== "number" ||
+        !Number.isInteger(jerseyNumber) ||
+        jerseyNumber < 0 ||
+        jerseyNumber > 32767)
+    ) {
+      return NextResponse.json({ error: "jersey_number must be an integer between 0 and 32767" }, { status: 400 });
+    }
+    allowed.jersey_number = jerseyNumber;
+  }
   if ("is_active" in updates) allowed.is_active = updates.is_active;
 
   const { data, error } = await supabaseAdmin
@@ -129,6 +141,12 @@ export async function PATCH(request: Request) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    const status = error.code === "23505" ? 409 : 500;
+    return NextResponse.json(
+      { error: status === 409 ? "That jersey number is already assigned to an active player on this team." : error.message },
+      { status }
+    );
+  }
   return NextResponse.json({ player_season: data });
 }
