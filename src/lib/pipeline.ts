@@ -51,7 +51,7 @@ export async function runPipeline(jobId: string): Promise<void> {
 			const finalAwayCode = resolvedAway?.resolved_id ?? awayCode;
 
 			if (finalHomeCode !== homeCode || finalAwayCode !== awayCode) {
-				// Patch home_team, away_team, and every player/team_total row
+				// Patch home_team, away_team, and every player/team_total/team_summary row
 				extractionJson = {
 					...extractionJson,
 					home_team: { ...(extractionJson.home_team as object), code: finalHomeCode },
@@ -74,6 +74,15 @@ export async function runPipeline(jobId: string): Promise<void> {
 									: t.team_code,
 						  }))
 						: extractionJson.team_totals,
+					team_summary: Array.isArray(extractionJson.team_summary)
+						? (extractionJson.team_summary as Record<string, unknown>[]).map((ts) => ({
+								...ts,
+								team_code:
+									ts.team_code === homeCode ? finalHomeCode
+									: ts.team_code === awayCode ? finalAwayCode
+									: ts.team_code,
+						  }))
+						: extractionJson.team_summary,
 				};
 			}
 		} else if (job.home_team_id || job.away_team_id) {
@@ -100,6 +109,15 @@ export async function runPipeline(jobId: string): Promise<void> {
 								: t.team_code,
 					  }))
 					: extractionJson.team_totals,
+				team_summary: Array.isArray(extractionJson.team_summary)
+					? (extractionJson.team_summary as Record<string, unknown>[]).map((ts) => ({
+							...ts,
+							team_code:
+								ts.team_code === homeCode ? newHomeCode
+								: ts.team_code === awayCode ? newAwayCode
+								: ts.team_code,
+						  }))
+					: extractionJson.team_summary,
 			};
 		}
 
