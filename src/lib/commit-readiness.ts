@@ -25,13 +25,12 @@ type PlayerSeasonRow = {
     | null;
 };
 
-/** Active roster for one season (player_seasons) with canonical names from players. */
+/** All roster players for one season (player_seasons) with canonical names from players, including recently added. */
 export async function loadSeasonRoster(season: string, teamIds?: string[]): Promise<RosterEntry[]> {
   let query = supabaseAdmin
     .from("player_seasons")
     .select("player_id, team_id, jersey_number, players(first_name, last_name)")
-    .eq("season", season)
-    .eq("is_active", true);
+    .eq("season", season);
   if (teamIds && teamIds.length > 0) query = query.in("team_id", teamIds);
 
   const { data, error } = await query;
