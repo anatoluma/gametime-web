@@ -8,7 +8,7 @@ import BannerResult from "./BannerResult";
 import { resolveTeamId } from "@/lib/team-codes";
 import { getCurrentSeason } from "@/lib/league";
 import { seasonFromDate } from "@/lib/roster-utils";
-import { evaluateCommitReadiness, loadSeasonRoster, type CommitReadiness } from "@/lib/commit-readiness";
+import { evaluateCommitReadiness, loadSeasonRoster, loadUnregisteredReviewPlayers, type CommitReadiness } from "@/lib/commit-readiness";
 import type { ValidationCheck } from "@/lib/validation";
 import type { NameResolutionCandidate, NameResolutionResult } from "@/lib/name-resolution";
 
@@ -75,10 +75,16 @@ export default async function BoxScoreJobDetailPage({
   const playersByTeam: Record<string, NameResolutionCandidate[]> = Object.fromEntries(
     rosterTeamIds.map((teamId) => [teamId, []])
   );
+  const unregisteredByTeam: Record<string, NameResolutionCandidate[]> = Object.fromEntries(
+    rosterTeamIds.map((teamId) => [teamId, []])
+  );
   const extractionDate = (job.extraction_json as { meta?: { date?: string | null } } | null)?.meta?.date ?? null;
   const rosterSeason = seasonFromDate(extractionDate) ?? (await getCurrentSeason());
   if (rosterTeamIds.length > 0) {
-    const rosterPlayers = await loadSeasonRoster(rosterSeason, rosterTeamIds);
+    const [rosterPlayers, unregisteredPlayers] = await Promise.all([
+      loadSeasonRoster(rosterSeason, rosterTeamIds),
+      loadUnregisteredReviewPlayers(rosterSeason, rosterTeamIds),
+    ]);
 
     for (const player of rosterPlayers) {
       const teamRoster = playersByTeam[player.team_id] ?? [];
@@ -91,7 +97,16 @@ export default async function BoxScoreJobDetailPage({
       playersByTeam[player.team_id] = teamRoster;
     }
 
-    for (const teamRoster of Object.values(playersByTeam)) {
+    for (const player of unregisteredPlayers) {
+      unregisteredByTeam[player.team_id].push({
+        player_id: player.player_id,
+        name: `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim(),
+        confidence: 0,
+        jersey_number: player.jersey_number,
+      });
+    }
+
+    for (const teamRoster of [...Object.values(playersByTeam), ...Object.values(unregisteredByTeam)]) {
       teamRoster.sort((left, right) => {
         const leftHasNumber = Number.isInteger(left.jersey_number) && (left.jersey_number as number) >= 0;
         const rightHasNumber = Number.isInteger(right.jersey_number) && (right.jersey_number as number) >= 0;
@@ -332,8 +347,9 @@ export default async function BoxScoreJobDetailPage({
         jobId={job_id as string}
         resolutionResults={resolutionResults}
         playersByTeam={playersByTeam}
+        unregisteredByTeam={unregisteredByTeam}
         hasHardFailure={hasHardFailure}
-        season={readiness?.season ?? rosterSeason}
+        season={seasonFromDate(extractionDate)}
         currentStatus={job.status as string}
         errorMessage={job.error_message as string | null}
       />

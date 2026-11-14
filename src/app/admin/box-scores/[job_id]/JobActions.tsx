@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { NameResolutionCandidate, NameResolutionResult } from "@/lib/name-resolution";
 import { resolveTeamId } from "@/lib/team-codes";
@@ -40,6 +40,7 @@ type Props = {
   jobId: string;
   resolutionResults: NameResolutionResult[];
   playersByTeam: Record<string, NameResolutionCandidate[]>;
+  unregisteredByTeam: Record<string, NameResolutionCandidate[]>;
   hasHardFailure: boolean;
   season: string | null;
   currentStatus: string;
@@ -53,6 +54,7 @@ export default function JobActions({
   jobId,
   resolutionResults,
   playersByTeam,
+  unregisteredByTeam,
   hasHardFailure,
   season,
   currentStatus,
@@ -69,6 +71,7 @@ export default function JobActions({
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [refreshingRoster, startRosterRefresh] = useTransition();
 
   const isTerminal = TERMINAL_STATUSES.has(currentStatus);
 
@@ -142,6 +145,9 @@ export default function JobActions({
     setLoading(true);
     setActionError(null);
     try {
+      if (!season) {
+        throw new Error("The game date is missing or invalid. Correct it before approving or registering players.");
+      }
       // Validate all "new" rows have at least a last name
       for (const [extractedName, draft] of Object.entries(newPlayers)) {
         if (overrides[extractedName] === "new" && !draft.last_name.trim()) {
@@ -163,7 +169,8 @@ export default function JobActions({
         const res = await adminFetch(
           `/api/admin/players?team_code=${encodeURIComponent(r?.team_code ?? "")}&jersey_number=${encodeURIComponent(draft.jersey_number.trim())}`
         );
-        const body = (await res.json()) as { existing: ConflictInfo | null };
+        const body = (await res.json()) as { existing?: ConflictInfo | null; error?: string };
+        if (!res.ok) throw new Error(body.error ?? "Failed to check jersey number");
         if (body.existing) {
           preflightConflicts[extractedName] = body.existing;
         }
@@ -179,7 +186,7 @@ export default function JobActions({
       }
       setJerseyConflicts(preflightConflicts);
 
-      // Create new players, all or nothing approach — conflicts are pre-resolved above
+      // Keep successful creations in the form if a later request fails.
       const resolvedOverrides = { ...overrides };
       for (const [extractedName, draft] of Object.entries(newPlayers)) {
         if (overrides[extractedName] !== "new") continue;
@@ -208,11 +215,38 @@ export default function JobActions({
           }),
         });
         if (!res.ok) {
-          const body = (await res.json()) as { error?: string };
+          const body = (await res.json()) as { error?: string; existing?: ConflictInfo };
+          if (body.existing) {
+            setJerseyConflicts((prev) => ({ ...prev, [extractedName]: body.existing! }));
+            setConflictChoices((prev) => {
+              const next = { ...prev };
+              delete next[extractedName];
+              return next;
+            });
+            throw new Error(`Jersey conflict for "${extractedName}" — choose how to resolve it before approving.`);
+          }
           throw new Error(`Failed to create player "${extractedName}": ${body.error ?? "unknown error"}`);
         }
         const { player_id } = (await res.json()) as { player_id: string };
         resolvedOverrides[extractedName] = player_id;
+        setOverride(extractedName, player_id);
+        router.refresh();
+      }
+
+      for (const [key, playerId] of Object.entries(resolvedOverrides)) {
+        const result = resultByName.get(key);
+        const teamId = resolveTeamId(result?.team_code ?? null);
+        if (!teamId || !unregisteredByTeam[teamId]?.some((player) => player.player_id === playerId)) continue;
+        const res = await adminFetch("/api/admin/players/register-for-review", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ player_id: playerId, season, team_code: teamId }),
+        });
+        if (!res.ok) {
+          const body = (await res.json()) as { error?: string };
+          throw new Error(body.error ?? "Failed to register existing player");
+        }
+        router.refresh();
       }
 
       const overrideList: Override[] = Object.entries(resolvedOverrides)
@@ -299,7 +333,26 @@ export default function JobActions({
       {/* Name resolution table */}
       {resolutionResults.length > 0 && (
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-5">
-          <h2 className="text-lg font-semibold mb-4">Name Resolution</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <h2 className="text-lg font-semibold">Name Resolution</h2>
+            {!isTerminal && (
+              <button
+                type="button"
+                disabled={loading || refreshingRoster}
+                onClick={() => startRosterRefresh(() => router.refresh())}
+                className="rounded border border-[var(--border)] px-3 py-1 text-xs hover:bg-[var(--surface-muted)] disabled:opacity-40"
+              >
+                {refreshingRoster ? "Refreshing…" : "Refresh roster"}
+              </button>
+            )}
+          </div>
+          {!isTerminal && (
+            <p className="text-xs text-[var(--text-muted)] mb-4">
+              Showing active {season ?? "current season (game date missing)"} roster players. Existing team players without a season registration
+              are listed separately; selecting one registers them on approval without assigning a season jersey number.
+              Inactive players can be managed on the admin players page.
+            </p>
+          )}
           <div className="overflow-x-auto -mx-6 px-6">
             <table className="w-full text-sm">
               <thead>
@@ -324,17 +377,23 @@ export default function JobActions({
                     const key = rowKey(r);
                     const effectivePlayerId = overrides[key] ?? r.resolved_player_id ?? "";
                     const isDuplicate = !!effectivePlayerId && (playerIdCount.get(effectivePlayerId) ?? 0) > 1;
+                    const teamId = resolveTeamId(r.team_code);
+                    const roster = teamId ? playersByTeam[teamId] ?? [] : [];
+                    const unregistered = teamId ? unregisteredByTeam[teamId] ?? [] : [];
+                    const isUnavailable = !!effectivePlayerId && effectivePlayerId !== "new" &&
+                      !roster.some((player) => player.player_id === effectivePlayerId) &&
+                      !unregistered.some((player) => player.player_id === effectivePlayerId);
 
                     const isUnresolved = r.resolved_player_id === null;
                     const isAmbiguous = r.method === "manual" || r.method === "number_hint";
                     const needsInput =
                       !isTerminal &&
-                      (isUnresolved || isAmbiguous || r.method === "unresolved" || isDuplicate);
+                      (isUnresolved || isAmbiguous || r.method === "unresolved" || isDuplicate || isUnavailable);
 
                     let rowBg = "";
                     if (isDuplicate) {
                       rowBg = "bg-orange-50 dark:bg-orange-950/20";
-                    } else if (isUnresolved) {
+                    } else if (isUnresolved || isUnavailable) {
                       rowBg = "bg-red-50 dark:bg-red-950/20";
                     } else if (isAmbiguous) {
                       rowBg = "bg-amber-50 dark:bg-amber-950/20";
@@ -343,8 +402,6 @@ export default function JobActions({
                     const conflict = jerseyConflicts[key];
                     const conflictChoice = conflictChoices[key];
                     const candidateScores = new Map((r.candidates ?? []).map((candidate) => [candidate.player_id, candidate.confidence]));
-                    const teamId = resolveTeamId(r.team_code);
-                    const roster = teamId ? playersByTeam[teamId] ?? [] : [];
 
                     return (
                       <tr
@@ -360,17 +417,29 @@ export default function JobActions({
                               <select
                                 className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--accent)] min-w-[220px]"
                                 value={effectivePlayerId}
+                                disabled={loading}
                                 onChange={(e) => setOverride(key, e.target.value)}
                               >
                                 <option value="">— pick player —</option>
-                                {roster.map((c) => (
-                                  <option key={c.player_id} value={c.player_id}>
-                                    {c.player_id === r.resolved_player_id ? "✓ " : ""}
-                                    {c.name}
-                                    {c.jersey_number != null ? ` #${c.jersey_number}` : ""}
-                                    {candidateScores.has(c.player_id) ? ` (${Math.round(candidateScores.get(c.player_id)! * 100)}%)` : ""}
-                                  </option>
-                                ))}
+                                <optgroup label="Active season roster">
+                                  {roster.map((c) => (
+                                    <option key={c.player_id} value={c.player_id}>
+                                      {c.player_id === r.resolved_player_id ? "✓ " : ""}
+                                      {c.name}
+                                      {c.jersey_number != null ? ` #${c.jersey_number}` : ""}
+                                      {candidateScores.has(c.player_id) ? ` (${Math.round(candidateScores.get(c.player_id)! * 100)}%)` : ""}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                                {unregistered.length > 0 && (
+                                  <optgroup label="Existing players — not registered this season">
+                                    {unregistered.map((c) => (
+                                      <option key={c.player_id} value={c.player_id}>
+                                        {c.name}{c.jersey_number != null ? ` #${c.jersey_number} (previous)` : ""}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
                                 <option value="new">➕ New player</option>
                               </select>
                               {effectivePlayerId === "new" && (
@@ -454,6 +523,11 @@ export default function JobActions({
                                   ⚠ Same player as another row — confirm or correct
                                 </span>
                               )}
+                              {isUnavailable && (
+                                <span className="text-xs text-red-600 dark:text-red-400">
+                                  Previously resolved player is not available on this roster. Refresh or select another player.
+                                </span>
+                              )}
                             </div>
                           ) : (
                             <span className="text-sm">{r.resolved_name ?? r.resolved_player_id ?? "—"}</span>
@@ -518,7 +592,7 @@ export default function JobActions({
               />
               <button
                 type="button"
-                disabled={hasHardFailure ? !overrideValidation : false || loading}
+                disabled={loading || (hasHardFailure && !overrideValidation)}
                 onClick={handleApprove}
                 className="rounded-lg px-5 py-2 text-sm font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >

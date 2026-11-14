@@ -20,6 +20,14 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Box score player review
+
+The name-resolution dropdown uses the active roster for the game date's season. Use **Refresh roster**
+to reload it without reprocessing the box score. Existing players listed for the team who have no
+registration for that season appear separately; selecting one registers them on approval, without
+assigning a season jersey number. Inactive registrations and transfers must be managed on the admin
+players page. A registration or new player created before a later approval error remains saved.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

@@ -32,13 +32,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ existing: null });
   }
 
-  const { data: player } = await supabaseAdmin
+  const { data: player, error } = await supabaseAdmin
     .from("players")
     .select("player_id, first_name, last_name, jersey_number")
     .eq("team_id", team_id)
     .eq("jersey_number", jerseyNum)
     .maybeSingle<{ player_id: string; first_name: string | null; last_name: string; jersey_number: number }>();
 
+  if (error) return NextResponse.json({ error: `Failed to check jersey: ${error.message}` }, { status: 500 });
   if (!player) {
     return NextResponse.json({ existing: null });
   }
@@ -66,6 +67,10 @@ export async function POST(request: Request) {
 
   const { first_name, last_name, team_code, jersey_number, clear_existing_jersey, season } = body;
 
+  if (season != null && (typeof season !== "string" || !/^\d{4}\/\d{2}$/.test(season.trim()))) {
+    return NextResponse.json({ error: "Invalid season" }, { status: 400 });
+  }
+
   if (!last_name || typeof last_name !== "string" || !last_name.trim()) {
     return NextResponse.json({ error: "last_name is required" }, { status: 400 });
   }
@@ -89,13 +94,16 @@ export async function POST(request: Request) {
   }
 
   if (jerseyNum !== null) {
-    const { data: conflictPlayer } = await supabaseAdmin
+    const { data: conflictPlayer, error: conflictError } = await supabaseAdmin
       .from("players")
       .select("player_id, first_name, last_name")
       .eq("team_id", team_id)
       .eq("jersey_number", jerseyNum)
       .maybeSingle<{ player_id: string; first_name: string | null; last_name: string }>();
 
+    if (conflictError) {
+      return NextResponse.json({ error: `Failed to check jersey: ${conflictError.message}` }, { status: 500 });
+    }
     if (conflictPlayer) {
       if (clear_existing_jersey === true) {
         const { error: clearError } = await supabaseAdmin

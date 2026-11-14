@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { resolveTeamId } from "@/lib/team-codes";
 import { seasonFromDate, type ResolutionItemLike } from "@/lib/roster-utils";
+import { fetchSeasonRoster, fetchUnregisteredReviewPlayers } from "@/lib/season-roster";
 import {
   prepareCommit,
   type ExtractedPlayerLike,
@@ -15,37 +16,12 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-type PlayerSeasonRow = {
-  player_id: string;
-  team_id: string;
-  jersey_number: number | null;
-  players:
-    | { first_name: string | null; last_name: string | null }
-    | { first_name: string | null; last_name: string | null }[]
-    | null;
-};
-
-/** All roster players for one season (player_seasons) with canonical names from players, including recently added. */
 export async function loadSeasonRoster(season: string, teamIds?: string[]): Promise<RosterEntry[]> {
-  let query = supabaseAdmin
-    .from("player_seasons")
-    .select("player_id, team_id, jersey_number, players(first_name, last_name)")
-    .eq("season", season);
-  if (teamIds && teamIds.length > 0) query = query.in("team_id", teamIds);
+  return fetchSeasonRoster(supabaseAdmin, season, teamIds);
+}
 
-  const { data, error } = await query;
-  if (error) throw new Error(`Failed to load ${season} roster: ${error.message}`);
-
-  return ((data ?? []) as PlayerSeasonRow[]).map((row) => {
-    const details = Array.isArray(row.players) ? row.players[0] : row.players;
-    return {
-      player_id: row.player_id,
-      team_id: row.team_id,
-      jersey_number: row.jersey_number,
-      first_name: details?.first_name ?? null,
-      last_name: details?.last_name ?? null,
-    };
-  });
+export async function loadUnregisteredReviewPlayers(season: string, teamIds: string[]) {
+  return fetchUnregisteredReviewPlayers(supabaseAdmin, season, teamIds);
 }
 
 type ExtractionShape = {

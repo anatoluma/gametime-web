@@ -44,10 +44,30 @@ export default function BoxScoreUpload() {
     async function loadTeams() {
       setTeamsLoading(true);
       try {
-        const res = await adminFetch("/api/admin/teams");
-        if (res.ok) {
-          const data = await res.json();
-          setTeams(data.teams || []);
+        // Get seasons to find current one
+        const seasonsRes = await adminFetch("/api/admin/seasons");
+        if (!seasonsRes.ok) {
+          console.error("Failed to load seasons");
+          setTeamsLoading(false);
+          return;
+        }
+
+        const seasonsData = await seasonsRes.json();
+        const currentSeason = (seasonsData.seasons as any[])?.find((s: any) => s.is_current)?.season 
+          || (seasonsData.seasons as any[])?.[0]?.season;
+
+        if (!currentSeason) {
+          console.error("No season found");
+          setTeamsLoading(false);
+          return;
+        }
+
+        const teamsRes = await adminFetch(`/api/admin/teams?season=${encodeURIComponent(currentSeason)}`);
+        if (teamsRes.ok) {
+          const data = await teamsRes.json();
+          // Filter to only active teams for the season
+          const activeTeams = (data.teams || []).filter((t: any) => t.is_active !== false);
+          setTeams(activeTeams);
         }
       } catch (err) {
         console.error("Failed to load teams:", err);
