@@ -25,6 +25,8 @@ function mockDb(players, registrations, calls = []) {
           if (!filter) continue;
           if (filter.startsWith("eq.")) {
             rows = rows.filter((row) => String(row[field]) === filter.slice(3));
+          } else if (filter.startsWith("lt.")) {
+            rows = rows.filter((row) => String(row[field]) < filter.slice(3));
           } else if (filter.startsWith("in.(")) {
             const values = filter.slice(4, -1).split(",");
             rows = rows.filter((row) => values.includes(String(row[field])));
@@ -32,7 +34,12 @@ function mockDb(players, registrations, calls = []) {
             throw new Error(`Unexpected filter: ${filter}`);
           }
         }
-        rows.sort((a, b) => a.player_id.localeCompare(b.player_id));
+        rows.sort((a, b) => {
+          if (url.searchParams.get("order")?.startsWith("season.desc")) {
+            return b.season.localeCompare(a.season) || a.player_id.localeCompare(b.player_id);
+          }
+          return a.player_id.localeCompare(b.player_id);
+        });
         const offset = Number(url.searchParams.get("offset") ?? 0);
         const limit = Number(url.searchParams.get("limit") ?? rows.length);
         return new Response(JSON.stringify(rows.slice(offset, offset + limit)), {
@@ -64,6 +71,19 @@ test("review loads active game-season roster and separates only unregistered tea
     (await fetchUnregisteredReviewPlayers(db, season, ["HAI"])).map((row) => row.player_id),
     ["wrong-season"]
   );
+});
+
+test("older team roster players are found even when their legacy team differs, without reactivating current registrations", async () => {
+  const players = [player("historical", "DRO"), player("registered", "DRO"), player("future", "DRO")];
+  const registrations = [
+    registration("historical", "HAI", true, "2024/25"),
+    registration("historical", "HAI", false, "2025/26"),
+    registration("registered", "HAI", true, "2025/26"),
+    registration("registered", "DRO", false),
+    registration("future", "HAI", true, "2027/28"),
+  ];
+  const candidates = await fetchUnregisteredReviewPlayers(mockDb(players, registrations), season, ["HAI"]);
+  assert.deepEqual(candidates.map((row) => [row.player_id, row.source_season]), [["historical", "2025/26"]]);
 });
 
 test("roster requests page beyond 1000 and check registrations in batches", async () => {

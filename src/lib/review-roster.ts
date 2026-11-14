@@ -4,6 +4,7 @@ export type ReviewPlayer = {
   first_name: string | null;
   last_name: string | null;
   jersey_number: number | null;
+  source_season?: string | null;
 };
 
 /** Existing team players with no registration at all for the game season. */

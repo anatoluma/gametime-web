@@ -40,7 +40,7 @@ type Props = {
   jobId: string;
   resolutionResults: NameResolutionResult[];
   playersByTeam: Record<string, NameResolutionCandidate[]>;
-  unregisteredByTeam: Record<string, NameResolutionCandidate[]>;
+  unregisteredByTeam: Record<string, (NameResolutionCandidate & { source_season?: string | null })[]>;
   hasHardFailure: boolean;
   season: string | null;
   currentStatus: string;
@@ -348,8 +348,9 @@ export default function JobActions({
           </div>
           {!isTerminal && (
             <p className="text-xs text-[var(--text-muted)] mb-4">
-              Showing active {season ?? "current season (game date missing)"} roster players. Existing team players without a season registration
-              are listed separately; selecting one registers them on approval without assigning a season jersey number.
+              Showing active {season ?? "current season (game date missing)"} roster players. Existing players from older rosters
+              or the legacy team list who have no game-season registration are listed separately; selecting one registers them
+              on approval without assigning a season jersey number.
               Inactive players can be managed on the admin players page.
             </p>
           )}
@@ -435,7 +436,8 @@ export default function JobActions({
                                   <optgroup label="Existing players — not registered this season">
                                     {unregistered.map((c) => (
                                       <option key={c.player_id} value={c.player_id}>
-                                        {c.name}{c.jersey_number != null ? ` #${c.jersey_number} (previous)` : ""}
+                                        {c.name}{c.source_season ? ` (${c.source_season})` : " (legacy team list)"}
+                                        {c.jersey_number != null ? ` #${c.jersey_number} (previous)` : ""}
                                       </option>
                                     ))}
                                   </optgroup>

@@ -21,9 +21,10 @@ function mockDb(players, registrations) {
           return new Response(null, { status: 201 });
         }
         let rows = [...(table === "players" ? players : registrations)];
-        for (const field of ["player_id", "season"]) {
+        for (const field of ["player_id", "season", "team_id"]) {
           const filter = url.searchParams.get(field);
-          if (filter) rows = rows.filter((row) => row[field] === filter.slice(3));
+          if (filter?.startsWith("eq.")) rows = rows.filter((row) => row[field] === filter.slice(3));
+          if (filter?.startsWith("lt.")) rows = rows.filter((row) => row[field] < filter.slice(3));
         }
         return json(rows);
       },
@@ -40,6 +41,16 @@ test("selecting a missing existing player registers them once without overwritin
   }]);
   assert.deepEqual(await registerReviewPlayer(db, "existing", "2026/27", "HAI"), { ok: true });
   assert.equal(registrations.length, 1);
+});
+
+test("an older roster registration permits explicit registration on that team without changing history", async () => {
+  const old = { player_id: "existing", season: "2025/26", team_id: "HAI", is_active: true, jersey_number: 7 };
+  const registrations = [old];
+  const db = mockDb([{ player_id: "existing", team_id: "DRO" }], registrations);
+  assert.deepEqual(await registerReviewPlayer(db, "existing", "2026/27", "HAI"), { ok: true });
+  assert.deepEqual(registrations, [old, {
+    player_id: "existing", season: "2026/27", team_id: "HAI", jersey_number: null, is_active: true,
+  }]);
 });
 
 test("registration never reactivates or transfers an existing season row", async () => {

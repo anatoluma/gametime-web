@@ -263,10 +263,14 @@ export default function AdminGameEntry({
     payload: NewPlayerInput,
     setPlayers: React.Dispatch<React.SetStateAction<any[]>>
   ) => {
+    const season = normalizeSeasonLabel(gameData.season || computeSeasonFromTipoff(gameData.tipoff));
+    if (!/^\d{4}\/\d{2}$/.test(season)) {
+      throw new Error("Set a valid game date and season before adding a player.");
+    }
     const response = await adminFetch("/api/admin/player", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ team_id: teamId, ...payload }),
+      body: JSON.stringify({ team_id: teamId, season, ...payload }),
     });
 
     const result = await response.json();

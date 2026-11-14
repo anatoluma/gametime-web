@@ -75,7 +75,7 @@ export default async function BoxScoreJobDetailPage({
   const playersByTeam: Record<string, NameResolutionCandidate[]> = Object.fromEntries(
     rosterTeamIds.map((teamId) => [teamId, []])
   );
-  const unregisteredByTeam: Record<string, NameResolutionCandidate[]> = Object.fromEntries(
+  const unregisteredByTeam: Record<string, (NameResolutionCandidate & { source_season?: string | null })[]> = Object.fromEntries(
     rosterTeamIds.map((teamId) => [teamId, []])
   );
   const extractionDate = (job.extraction_json as { meta?: { date?: string | null } } | null)?.meta?.date ?? null;
@@ -103,6 +103,7 @@ export default async function BoxScoreJobDetailPage({
         name: `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim(),
         confidence: 0,
         jersey_number: player.jersey_number,
+        source_season: player.source_season,
       });
     }
 

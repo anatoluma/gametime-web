@@ -3,11 +3,33 @@ import { createClient } from "@supabase/supabase-js";
 import { requireAdmin } from "@/lib/admin-auth";
 import { resolveTeamId } from "@/lib/team-codes";
 import { registerReviewPlayer } from "@/lib/review-registration";
+import { fetchUnregisteredReviewPlayers } from "@/lib/season-roster";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+export async function GET(request: Request) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
+
+  const params = new URL(request.url).searchParams;
+  const season = params.get("season")?.trim() ?? "";
+  const teamId = resolveTeamId(params.get("team_code"));
+  if (!/^\d{4}\/\d{2}$/.test(season) || !teamId) {
+    return NextResponse.json({ error: "A valid season and team are required." }, { status: 400 });
+  }
+  try {
+    const players = await fetchUnregisteredReviewPlayers(supabaseAdmin, season, [teamId]);
+    return NextResponse.json({ players });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to load existing players." },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: Request) {
   const auth = await requireAdmin(request);

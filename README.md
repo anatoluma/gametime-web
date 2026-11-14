@@ -28,6 +28,11 @@ registration for that season appear separately; selecting one registers them on 
 assigning a season jersey number. Inactive registrations and transfers must be managed on the admin
 players page. A registration or new player created before a later approval error remains saved.
 
+On the admin players page, select the current season and a team to find existing players from older
+team rosters or the legacy team list who have no current-season registration. Review and add players
+individually; old roster entries are preserved and jersey numbers are not copied automatically.
+Players created during manual game entry are registered for the game's season.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

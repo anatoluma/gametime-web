@@ -149,8 +149,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // An admin explicitly creating a player from a box-score review registers them for that game's
-  // season; commit requires season-roster membership. Nothing is registered unless season is given.
+  // When a season is provided, register the newly created player on that roster.
   const seasonLabel = typeof season === "string" && /^\d{4}\/\d{2}$/.test(season.trim()) ? season.trim() : null;
   if (seasonLabel) {
     const { error: seasonError } = await supabaseAdmin.from("player_seasons").upsert(
@@ -164,9 +163,13 @@ export async function POST(request: Request) {
       { onConflict: "player_id,season" }
     );
     if (seasonError) {
-      await supabaseAdmin.from("players").delete().eq("player_id", player.player_id);
+      const { error: rollbackError } = await supabaseAdmin.from("players").delete().eq("player_id", player.player_id);
       return NextResponse.json(
-        { error: `Failed to register player for ${seasonLabel}: ${seasonError.message}` },
+        {
+          error: `Failed to register player for ${seasonLabel}: ${seasonError.message}${
+            rollbackError ? `. Player ${player.player_id} could not be removed: ${rollbackError.message}` : ""
+          }`,
+        },
         { status: 500 }
       );
     }

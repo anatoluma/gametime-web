@@ -16,8 +16,21 @@ export async function registerReviewPlayer(
     .eq("player_id", playerId)
     .maybeSingle();
   if (playerError) return { ok: false, status: 500, error: playerError.message };
-  if (!player || player.team_id !== teamId) {
-    return { ok: false, status: 409, error: "This player is no longer listed for the selected team. Refresh the roster." };
+  if (!player) {
+    return { ok: false, status: 409, error: "This player no longer exists. Refresh the roster." };
+  }
+  if (player.team_id !== teamId) {
+    const { data: history, error: historyError } = await db
+      .from("player_seasons")
+      .select("player_id")
+      .eq("player_id", playerId)
+      .eq("team_id", teamId)
+      .lt("season", season)
+      .limit(1);
+    if (historyError) return { ok: false, status: 500, error: historyError.message };
+    if (!history?.length) {
+      return { ok: false, status: 409, error: "This player is no longer listed for the selected team. Refresh the roster." };
+    }
   }
 
   const { error: insertError } = await db.from("player_seasons").insert({

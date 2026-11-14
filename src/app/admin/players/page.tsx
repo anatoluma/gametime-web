@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { adminFetch } from "@/lib/admin-fetch";
+import type { ReviewPlayer } from "@/lib/review-roster";
 
 type Season = { season: string; is_current: boolean };
 
@@ -27,6 +28,11 @@ export default function AdminPlayersPage() {
   const [message, setMessage] = useState("");
   const [jerseyDrafts, setJerseyDrafts] = useState<Record<string, string>>({});
   const [savingJerseyFor, setSavingJerseyFor] = useState<string | null>(null);
+  const [rosterCandidates, setRosterCandidates] = useState<ReviewPlayer[]>([]);
+  const [candidateSearch, setCandidateSearch] = useState("");
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
+  const [candidateError, setCandidateError] = useState("");
+  const [registeringPlayer, setRegisteringPlayer] = useState<string | null>(null);
   const [addPlayerForm, setAddPlayerForm] = useState({
     first_name: "",
     last_name: "",
@@ -88,6 +94,30 @@ export default function AdminPlayersPage() {
     () => !!seasons.find((season) => season.season === selectedSeason)?.is_current,
     [seasons, selectedSeason]
   );
+
+  useEffect(() => {
+    if (!isCurrentSeason || !selectedTeamId) return;
+    let cancelled = false;
+    async function loadCandidates() {
+      setCandidatesLoading(true);
+      setCandidateError("");
+      setRosterCandidates([]);
+      try {
+        const response = await adminFetch(
+          `/api/admin/players/register-for-review?season=${encodeURIComponent(selectedSeason)}&team_code=${encodeURIComponent(selectedTeamId)}`
+        );
+        const json = (await response.json()) as { players?: ReviewPlayer[]; error?: string };
+        if (!response.ok) throw new Error(json.error ?? "Unable to load existing players.");
+        if (!cancelled) setRosterCandidates(json.players ?? []);
+      } catch (error) {
+        if (!cancelled) setCandidateError(error instanceof Error ? error.message : "Unable to load existing players.");
+      } finally {
+        if (!cancelled) setCandidatesLoading(false);
+      }
+    }
+    void loadCandidates();
+    return () => { cancelled = true; };
+  }, [selectedSeason, selectedTeamId, isCurrentSeason]);
 
   const teamRoster = useMemo(
     () => rows.filter((row) => row.team_id === selectedTeamId),
@@ -262,6 +292,7 @@ export default function AdminPlayersPage() {
       team_code: teamCode,
       jersey_number: jersey_number === "" ? null : Number(jersey_number),
       clear_existing_jersey: true,
+      season: selectedSeason,
     };
 
     const createPlayerRes = await adminFetch("/api/admin/players", {
@@ -277,32 +308,36 @@ export default function AdminPlayersPage() {
       return;
     }
 
-    const player_id = createPlayerJson.player_id;
-    const seasonRowRes = await adminFetch("/api/admin/players/seasons", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        player_id,
-        season: selectedSeason,
-        team_id: selectedTeamId,
-        jersey_number: jersey_number === "" ? null : Number(jersey_number),
-        is_active: true,
-      }),
-    });
-
-    const seasonRowJson = await seasonRowRes.json();
-
-    if (!seasonRowRes.ok) {
-      setMessage(`Error: ${seasonRowJson.error ?? "Unable to add player to roster"}`);
-      return;
-    }
-
     setAddPlayerForm({ first_name: "", last_name: "", jersey_number: "" });
     setMessage(`✓ Added ${first_name ? `${first_name} ` : ""}${last_name} to ${selectedTeamId}`);
 
     const refreshed = await adminFetch(`/api/admin/players/seasons?season=${encodeURIComponent(selectedSeason)}`);
     const refreshedJson = await refreshed.json();
     setRows(refreshedJson.player_seasons ?? []);
+  };
+
+  const handleRegisterExisting = async (player: ReviewPlayer) => {
+    setRegisteringPlayer(player.player_id);
+    setCandidateError("");
+    try {
+      const response = await adminFetch("/api/admin/players/register-for-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ player_id: player.player_id, season: selectedSeason, team_code: selectedTeamId }),
+      });
+      const json = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(json.error ?? "Unable to register player.");
+      const refreshed = await adminFetch(`/api/admin/players/seasons?season=${encodeURIComponent(selectedSeason)}`);
+      const roster = (await refreshed.json()) as { player_seasons?: PlayerSeasonRow[]; error?: string };
+      if (!refreshed.ok) throw new Error(`Player registered, but roster refresh failed: ${roster.error ?? "Unknown error"}`);
+      setRows(roster.player_seasons ?? []);
+      setRosterCandidates((prev) => prev.filter((candidate) => candidate.player_id !== player.player_id));
+      setMessage(`✓ Added ${[player.first_name, player.last_name].filter(Boolean).join(" ")} to ${selectedTeamId} for ${selectedSeason}.`);
+    } catch (error) {
+      setCandidateError(error instanceof Error ? error.message : "Unable to register player.");
+    } finally {
+      setRegisteringPlayer(null);
+    }
   };
 
   return (
@@ -328,6 +363,7 @@ export default function AdminPlayersPage() {
           <select
             value={selectedSeason}
             onChange={(e) => setSelectedSeason(e.target.value)}
+            disabled={registeringPlayer !== null}
             className="border border-[var(--border)] rounded px-3 py-2 text-sm bg-[var(--surface)]"
           >
             {seasons.map((season) => (
@@ -362,6 +398,7 @@ export default function AdminPlayersPage() {
             <select
               value={selectedTeamId}
               onChange={(e) => setSelectedTeamId(e.target.value)}
+              disabled={registeringPlayer !== null}
               className="ml-2 border border-[var(--border)] rounded px-3 py-2 text-sm bg-[var(--surface)]"
             >
               <option value="">Select team</option>
@@ -382,8 +419,57 @@ export default function AdminPlayersPage() {
       )}
 
       {selectedTeamId && isCurrentSeason && (
+        <section className="mb-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-3">
+          <h2 className="text-lg font-semibold">Add existing player to {selectedSeason}</h2>
+          <p className="text-sm text-[var(--text-muted)]">
+            Players on older {selectedTeamId} rosters or its legacy team list who have no {selectedSeason} registration.
+            Check the player and team before adding. Previous jerseys are not copied.
+          </p>
+          <input
+            type="search"
+            aria-label="Search existing players"
+            placeholder="Search existing players"
+            value={candidateSearch}
+            onChange={(e) => setCandidateSearch(e.target.value)}
+            className="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
+          />
+          {candidateError && <p role="alert" className="text-sm text-red-600">{candidateError}</p>}
+          {candidatesLoading ? (
+            <p className="text-sm text-[var(--text-muted)]">Loading existing players...</p>
+          ) : (
+            <div className="max-h-64 space-y-2 overflow-y-auto">
+              {rosterCandidates.filter((player) =>
+                `${player.first_name ?? ""} ${player.last_name ?? ""}`.toLowerCase().includes(candidateSearch.trim().toLowerCase())
+              ).map((player) => (
+                <div key={player.player_id} className="flex items-center justify-between gap-3 rounded border border-[var(--border)] px-3 py-2">
+                  <span className="text-sm">
+                    {[player.first_name, player.last_name].filter(Boolean).join(" ") || player.player_id}
+                    <span className="ml-2 text-xs text-[var(--text-muted)]">
+                      {player.source_season ? `${player.source_season} roster` : "Legacy team list"}
+                      {player.jersey_number != null ? `, previous #${player.jersey_number}` : ""}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    disabled={registeringPlayer !== null}
+                    onClick={() => handleRegisterExisting(player)}
+                    className="shrink-0 rounded border border-[var(--border)] px-3 py-1 text-xs hover:bg-[var(--surface-muted)] disabled:opacity-50"
+                  >
+                    {registeringPlayer === player.player_id ? "Adding..." : `Add to ${selectedSeason}`}
+                  </button>
+                </div>
+              ))}
+              {rosterCandidates.length === 0 && !candidateError && (
+                <p className="text-sm text-[var(--text-muted)]">No unregistered existing players found for this team.</p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {selectedTeamId && isCurrentSeason && (
         <form onSubmit={handleAddPlayer} className="mb-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
-          <h2 className="text-lg font-semibold">Add player to {selectedTeamId}</h2>
+          <h2 className="text-lg font-semibold">Create new player for {selectedTeamId} ({selectedSeason})</h2>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <label className="text-sm font-medium">
