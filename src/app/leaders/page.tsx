@@ -192,13 +192,13 @@ export default function LeadersPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // When seasons load and there's no URL param, set the default in the URL
+  // When public season is loaded and there's no URL param, redirect to add the season param
   useEffect(() => {
     if (seasonParam || !publicSeason) return;
     const params = new URLSearchParams(searchParams.toString());
     params.set("season", publicSeason);
     router.replace(`${pathname}?${params.toString()}`);
-  }, [seasonParam, pathname, router, searchParams, publicSeason]);
+  }, [publicSeason, seasonParam, pathname, router, searchParams]);
 
   useEffect(() => {
     if (!currentSeason) return;
