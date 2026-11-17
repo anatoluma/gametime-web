@@ -64,6 +64,13 @@ export default function AdminPage() {
         </Link>
 
         <Link
+          href="/manager"
+          className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-4 text-lg font-medium hover:bg-[var(--surface-muted)]"
+        >
+          Edit rosters & player photos
+        </Link>
+
+        <Link
           href="/admin/teams"
           className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-4 text-lg font-medium hover:bg-[var(--surface-muted)]"
         >

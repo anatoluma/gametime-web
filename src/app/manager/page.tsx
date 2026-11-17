@@ -32,15 +32,24 @@ export default function ManagerPage() {
   useEffect(() => {
     adminFetch("/api/manager/me")
       .then(async (r) => ({ ok: r.ok, body: await r.json() }))
-      .then(({ ok, body }: { ok: boolean; body: { teams?: Team[]; error?: string } }) => {
-        if (!ok) {
-          setMessage(`Error: ${body.error ?? "Manager access required"}`);
-          return;
+      .then(async ({ ok, body }: { ok: boolean; body: { teams?: Team[]; error?: string } }) => {
+        if (ok) {
+          const t = body.teams;
+          const list = t ?? [];
+          setTeams(list);
+          if (list.length > 0) setSelectedTeamId(list[0].team_id);
+        } else {
+          // If not a team manager, try to get all teams (admin access)
+          const adminRes = await adminFetch("/api/admin/teams");
+          const adminBody = await adminRes.json();
+          if (adminRes.ok) {
+            const list = adminBody.teams ?? [];
+            setTeams(list);
+            if (list.length > 0) setSelectedTeamId(list[0].team_id);
+          } else {
+            setMessage(`Error: ${body.error ?? "Manager access required"}`);
+          }
         }
-        const t = body.teams;
-        const list = t ?? [];
-        setTeams(list);
-        if (list.length > 0) setSelectedTeamId(list[0].team_id);
       });
   }, []);
 

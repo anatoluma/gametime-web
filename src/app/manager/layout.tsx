@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import { adminFetch } from "@/lib/admin-fetch";
 
@@ -11,6 +12,7 @@ type Status = "checking" | "ok" | "forbidden";
 export default function ManagerLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>("checking");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -30,7 +32,20 @@ export default function ManagerLayout({ children }: { children: ReactNode }) {
       const res = await adminFetch("/api/manager/me");
       if (!active) return;
 
-      setStatus(res.ok ? "ok" : "forbidden");
+      if (res.ok) {
+        setStatus("ok");
+      } else {
+        // Check if user is an admin
+        const adminRes = await adminFetch("/api/admin/teams");
+        if (!active) return;
+        
+        if (adminRes.ok) {
+          setIsAdmin(true);
+          setStatus("ok");
+        } else {
+          setStatus("forbidden");
+        }
+      }
     };
 
     void check();
@@ -67,5 +82,19 @@ export default function ManagerLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {isAdmin && (
+        <div className="bg-[var(--surface)] border-b border-[var(--border)]">
+          <div className="mx-auto max-w-3xl px-4 py-3 flex items-center justify-between gap-4">
+            <p className="text-sm text-[var(--text-muted)]">Admin roster access</p>
+            <Link href="/admin" className="text-sm text-[var(--accent)] hover:underline">
+              Back to admin
+            </Link>
+          </div>
+        </div>
+      )}
+      {children}
+    </>
+  );
 }
