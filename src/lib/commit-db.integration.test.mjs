@@ -8,6 +8,8 @@ import { commitBoxScoreAtomic } from "./commit-rpc.ts";
 // mirrors the production tables, so rollback behaviour is tested for real, not simulated.
 
 const MIGRATION = fs.readFileSync(new URL("../../COMMIT_BOX_SCORE_RPC.sql", import.meta.url), "utf8");
+const PROVENANCE_MIGRATION = fs.readFileSync(new URL("../../GAME_DATA_PROVENANCE.sql", import.meta.url), "utf8");
+const MANUAL_MIGRATION = fs.readFileSync(new URL("../../MANUAL_GAME_RPC.sql", import.meta.url), "utf8");
 const JOB = "11111111-1111-1111-1111-111111111111";
 const OLD_JOB = "00000000-0000-0000-0000-000000000000";
 const GAME = "g_2026_10_18_AAA_BBB";
@@ -24,15 +26,16 @@ const BASE_SCHEMA = `
     CREATE TABLE player_seasons (player_id text, season text, team_id text, jersey_number int, is_active boolean DEFAULT true,
       PRIMARY KEY (player_id, season));
     CREATE TABLE games (game_id text PRIMARY KEY, season text NOT NULL, tipoff timestamptz NOT NULL, venue text,
-      home_team_id text NOT NULL, away_team_id text NOT NULL, home_score int, away_score int, scheduled_date date, round_number int);
+      home_team_id text NOT NULL, away_team_id text NOT NULL, home_score int, away_score int, scheduled_date date, round_number int,
+      source_job_id uuid);
     CREATE TABLE game_details (game_id text PRIMARY KEY REFERENCES games(game_id), game_number int, duration_minutes int,
       crew_chief text, umpires text[], score_intervals jsonb, source_job_id uuid);
-    CREATE TABLE player_game_stats (game_id text NOT NULL, player_id text NOT NULL, team_id text NOT NULL, points int NOT NULL, source_job_id uuid,
+    CREATE TABLE player_game_stats (id bigserial PRIMARY KEY, game_id text NOT NULL, player_id text NOT NULL, team_id text NOT NULL, points int NOT NULL, source_job_id uuid,
       is_starter boolean, is_captain boolean, dnp boolean, minutes varchar(6),
       fg_made smallint, fg_att smallint, two_made smallint, two_att smallint, three_made smallint, three_att smallint,
       ft_made smallint, ft_att smallint, reb_off smallint, reb_def smallint, reb_tot smallint, assists smallint,
       turnovers smallint, steals smallint, blocks smallint, fouls_personal smallint, fouls_drawn smallint,
-      plus_minus smallint, efficiency smallint);
+      plus_minus smallint, efficiency smallint, extra_metadata text);
     CREATE TABLE game_team_summary (id bigserial PRIMARY KEY, game_id text NOT NULL REFERENCES games(game_id) ON DELETE CASCADE,
       source_job_id uuid, team_id text NOT NULL, points_from_turnovers smallint, points_in_paint smallint,
       points_in_paint_att smallint, points_in_paint_pct decimal(4,1), second_chance_points smallint, fast_break_points smallint,
@@ -47,7 +50,9 @@ const NO_SUMMARY_SCHEMA = BASE_SCHEMA.replace(/CREATE TABLE game_team_summary[\s
 before(async () => {
   db = new PGlite();
   await db.exec(BASE_SCHEMA);
+  await db.exec(PROVENANCE_MIGRATION);
   await db.exec(MIGRATION);
+  await db.exec(MANUAL_MIGRATION);
 });
 
 after(async () => {
@@ -85,6 +90,9 @@ const caller = async (fn, args) => {
   }
 };
 const commit = (over) => commitBoxScoreAtomic(caller, rpc(over));
+const manual = async (edit = false, gameInput = game(), stats = NEW_STATS) =>
+  (await db.query("SELECT public.save_manual_game($1::jsonb, $2::jsonb, $3::boolean) AS r",
+    [JSON.stringify(gameInput), JSON.stringify(stats), edit])).rows[0].r;
 
 async function snapshot() {
   const q = async (sql) => (await db.query(sql)).rows;
@@ -127,6 +135,8 @@ test("success writes games, details, stats, team summaries and job status togeth
   assert.deepEqual(result, { game_id: GAME, already_committed: false });
   const s = await snapshot();
   assert.equal(s.games[0].venue, "Edilitate");
+  assert.equal(s.games[0].data_source, "box_score");
+  assert.equal(s.games[0].source_job_id, JOB);
   assert.equal(s.games[0].round_number, 4, "schedule columns not owned by the import are preserved");
   assert.equal(String(s.games[0].scheduled_date).slice(0, 10) === "2026-10-18" || s.games[0].scheduled_date instanceof Date, true);
   assert.deepEqual(s.details[0].umpires, ["U1", "U2"]);
@@ -223,7 +233,189 @@ test("a new game is created in the same transaction (no pre-existing rows)", asy
   await commit();
   const s = await snapshot();
   assert.equal(s.games.length, 1);
+  assert.equal(s.games[0].data_source, "box_score");
+  assert.equal(s.games[0].source_job_id, JOB);
   assert.equal(s.stats.length, 3);
+});
+
+test("the provenance migration classifies existing games as unknown without guessing", async () => {
+  await db.exec(PROVENANCE_MIGRATION);
+  const legacy = (await db.query("SELECT data_source, source_job_id FROM games WHERE game_id = $1", [GAME])).rows[0];
+  assert.deepEqual(legacy, { data_source: "unknown", source_job_id: null });
+});
+
+test("the provenance migration adds a missing games source_job_id column", async () => {
+  const bare = new PGlite();
+  try {
+    await bare.exec(`
+      CREATE TABLE processing_jobs (id uuid PRIMARY KEY);
+      CREATE TABLE games (game_id text PRIMARY KEY);
+      INSERT INTO games VALUES ('legacy');
+    `);
+    await bare.exec(PROVENANCE_MIGRATION);
+    await bare.exec(PROVENANCE_MIGRATION);
+    assert.deepEqual((await bare.query("SELECT data_source, source_job_id FROM games")).rows,
+      [{ data_source: "unknown", source_job_id: null }]);
+  } finally {
+    await bare.close();
+  }
+});
+
+test("new-game submissions reject completed and processed games without changing any data", async () => {
+  for (const source of ["unknown", "manual", "box_score"]) {
+    await db.query("UPDATE games SET data_source = $1 WHERE game_id = $2", [source, GAME]);
+    const before = await snapshot();
+    assert.equal((await manual()).status, "conflict");
+    assert.deepEqual(await snapshot(), before);
+  }
+});
+
+test("scheduled game completion is atomic, preserves schedule fields and cannot be submitted twice", async () => {
+  await db.exec(`DELETE FROM game_team_summary; DELETE FROM player_game_stats; DELETE FROM game_details;
+    UPDATE games SET home_score = NULL, away_score = NULL, source_job_id = NULL, data_source = 'unknown';`);
+  assert.equal((await manual()).status, "ok");
+  const saved = await snapshot();
+  assert.equal(saved.games[0].data_source, "manual");
+  assert.equal(saved.games[0].round_number, 4);
+  assert.equal(saved.stats.length, 3);
+  assert.equal((await manual()).status, "conflict");
+  assert.deepEqual(await snapshot(), saved);
+});
+
+test("new mode requires both scores and does not change a scheduled game on failure", async () => {
+  await db.exec(`DELETE FROM game_team_summary; DELETE FROM player_game_stats; DELETE FROM game_details;
+    UPDATE games SET home_score = NULL, away_score = NULL, source_job_id = NULL, data_source = 'unknown';`);
+  const before = await snapshot();
+  await assert.rejects(() => manual(false, game({ away_score: null })), /both scores are required/);
+  assert.deepEqual(await snapshot(), before);
+});
+
+test("new mode does not treat partially scored or previously sourced games as scheduled", async () => {
+  await db.exec(`DELETE FROM game_team_summary; DELETE FROM player_game_stats; DELETE FROM game_details;
+    UPDATE games SET home_score = NULL, away_score = NULL, data_source = 'unknown';`);
+  for (const sql of [
+    `UPDATE games SET home_score = 0`,
+    `UPDATE games SET home_score = NULL, source_job_id = '${OLD_JOB}'`,
+    `UPDATE games SET source_job_id = NULL, data_source = 'box_score'`,
+    `UPDATE games SET data_source = 'unknown'; INSERT INTO game_details (game_id, source_job_id) VALUES ('${GAME}', '${OLD_JOB}')`,
+    `DELETE FROM game_details; INSERT INTO player_game_stats (game_id, player_id, team_id, points) VALUES ('${GAME}', 'a', 'AAA', 1)`,
+  ]) {
+    await db.exec(sql);
+    const before = await snapshot();
+    assert.equal((await manual()).status, "conflict");
+    assert.deepEqual(await snapshot(), before);
+  }
+});
+
+test("edit requires an existing game and preserves box-score provenance and detailed stats", async () => {
+  await db.exec(`UPDATE games SET data_source = 'box_score', source_job_id = '${OLD_JOB}';
+    UPDATE player_game_stats SET assists = 7, is_captain = true, dnp = true, fg_made = 3, fg_att = 5,
+      fouls_drawn = 4, extra_metadata = 'keep this' WHERE player_id = 'a';`);
+  const missingBefore = await snapshot();
+  assert.equal((await manual(true, game({ game_id: "missing" }))).status, "not_found");
+  assert.deepEqual(await snapshot(), missingBefore);
+  assert.equal((await manual(true, game({ data_source: "manual", source_job_id: null }), [
+    { player_id: "a", team_id: "AAA", points: 11, assists: 9, source_job_id: JOB, extra_metadata: "overwrite" },
+    { player_id: "z", team_id: "BBB", points: 10, source_job_id: JOB },
+  ])).status, "ok");
+  const saved = await snapshot();
+  assert.equal(saved.games[0].data_source, "box_score");
+  assert.equal(saved.games[0].source_job_id, OLD_JOB);
+  const a = saved.stats.find((row) => row.player_id === "a");
+  const oldA = missingBefore.stats.find((row) => row.player_id === "a");
+  assert.equal(a.id, oldA.id);
+  assert.equal(a.source_job_id, OLD_JOB);
+  assert.equal(a.points, 11);
+  assert.equal(a.assists, 9);
+  assert.equal(a.is_captain, true);
+  assert.equal(a.dnp, true);
+  assert.equal(a.fg_made, 3);
+  assert.equal(a.fg_att, 5);
+  assert.equal(a.fouls_drawn, 4);
+  assert.equal(a.extra_metadata, "keep this");
+  assert.deepEqual(saved.stats.map((row) => row.player_id), ["a", "z"]);
+  assert.equal(saved.stats.find((row) => row.player_id === "z").source_job_id, null);
+});
+
+test("editing an untouched scheduled game marks it manual only when both scores are present", async () => {
+  await db.exec(`DELETE FROM game_team_summary; DELETE FROM player_game_stats; DELETE FROM game_details;
+    UPDATE games SET home_score = NULL, away_score = NULL, source_job_id = NULL, data_source = 'unknown';`);
+  assert.equal((await manual(true, game({ home_score: null, away_score: null }), [])).game.data_source, "unknown");
+  assert.equal((await manual(true)).game.data_source, "manual");
+  const saved = await snapshot();
+  assert.equal(saved.games[0].source_job_id, null);
+  assert.equal(saved.games[0].round_number, 4);
+  assert.equal(saved.stats.length, 3);
+});
+
+test("editing an already completed unknown game keeps its unknown source", async () => {
+  await db.exec(`UPDATE games SET source_job_id = NULL, data_source = 'unknown'`);
+  assert.equal((await manual(true)).game.data_source, "unknown");
+});
+
+test("editing an unknown scoreless game with prior stats or a processing job keeps its source", async () => {
+  await db.exec(`UPDATE games SET home_score = NULL, away_score = NULL, source_job_id = NULL, data_source = 'unknown'`);
+  assert.equal((await manual(true)).game.data_source, "unknown");
+  await db.exec(`DELETE FROM player_game_stats; UPDATE games SET home_score = NULL, away_score = NULL`);
+  assert.equal((await manual(true)).game.data_source, "unknown");
+});
+
+test("manual creation rolls back game and stats on failure; retry is safe", async () => {
+  await db.exec(`DELETE FROM game_team_summary; DELETE FROM player_game_stats; DELETE FROM game_details;
+    UPDATE games SET home_score = NULL, away_score = NULL, data_source = 'unknown';
+    CREATE TRIGGER fail_stats BEFORE INSERT ON player_game_stats FOR EACH ROW EXECUTE FUNCTION boom();`);
+  const before = await snapshot();
+  await assert.rejects(() => manual(), /simulated failure/);
+  assert.deepEqual(await snapshot(), before);
+  await db.exec(`DROP TRIGGER fail_stats ON player_game_stats`);
+  assert.equal((await manual()).status, "ok");
+});
+
+test("competing new-game submissions produce one game and one set of stats", async () => {
+  await db.exec(`DELETE FROM game_team_summary; DELETE FROM player_game_stats; DELETE FROM game_details; DELETE FROM games;`);
+  const results = await Promise.all([manual(), manual()]);
+  assert.deepEqual(results.map((result) => result.status).sort(), ["conflict", "ok"]);
+  const saved = await snapshot();
+  assert.equal(saved.games.length, 1);
+  assert.equal(saved.stats.length, 3);
+});
+
+test("manual and processed commits serialize and leave exactly one processed set of stats", async () => {
+  for (const processedFirst of [false, true]) {
+    await db.exec(`DELETE FROM game_team_summary; DELETE FROM player_game_stats; DELETE FROM game_details;
+      UPDATE processing_jobs SET status = 'approved' WHERE id = '${JOB}';
+      UPDATE games SET home_score = NULL, away_score = NULL, data_source = 'unknown', source_job_id = NULL;`);
+    const results = processedFirst
+      ? await Promise.all([commit(), manual()])
+      : await Promise.all([manual(), commit()]);
+    assert.equal(results[processedFirst ? 1 : 0].status, processedFirst ? "conflict" : "ok");
+    const saved = await snapshot();
+    assert.equal(saved.games[0].data_source, "box_score");
+    assert.equal(saved.games[0].source_job_id, JOB);
+    assert.deepEqual(saved.stats.map((row) => row.source_job_id), [JOB, JOB, JOB]);
+  }
+});
+
+test("manual edit rolls back both game and original stats when an update fails", async () => {
+  await db.exec(`CREATE TRIGGER fail_stats BEFORE UPDATE ON player_game_stats FOR EACH ROW EXECUTE FUNCTION boom()`);
+  const before = await snapshot();
+  await assert.rejects(() => manual(true, game({ venue: "NEW VENUE" })), /simulated failure/);
+  assert.deepEqual(await snapshot(), before);
+});
+
+test("manual game function is service-role only", async () => {
+  const check = async (role) => (await db.query(
+    `SELECT has_function_privilege($1, 'public.save_manual_game(jsonb,jsonb,boolean)', 'EXECUTE') AS ok`, [role]
+  )).rows[0].ok;
+  assert.equal(await check("anon"), false);
+  assert.equal(await check("authenticated"), false);
+  assert.equal(await check("service_role"), true);
+});
+
+test("manual game migration can be reapplied safely", async () => {
+  await db.exec(MANUAL_MIGRATION);
+  await db.exec(MANUAL_MIGRATION);
+  assert.equal((await manual()).status, "conflict");
 });
 
 test("only service_role may execute the function; clients cannot call it directly", async () => {
@@ -257,6 +449,7 @@ test("team-summary codes: unknown or non-participating codes are rejected with a
 test("game_team_summary table ABSENT (as in production): commit succeeds, summaries are skipped, codes still validated", async () => {
   const bare = new PGlite();
   await bare.exec(NO_SUMMARY_SCHEMA);
+  await bare.exec(PROVENANCE_MIGRATION);
   await bare.exec(MIGRATION);
   assert.equal((await bare.query("SELECT to_regclass('public.game_team_summary') AS t")).rows[0].t, null);
   await bare.exec(`

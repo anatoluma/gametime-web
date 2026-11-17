@@ -33,6 +33,20 @@ team rosters or the legacy team list who have no current-season registration. Re
 individually; old roster entries are preserved and jersey numbers are not copied automatically.
 Players created during manual game entry are registered for the game's season.
 
+## Manual game entry and provenance
+
+New manual games load active rosters for the game season through an authenticated admin endpoint
+and require points only. An empty roster means no active registrations exist for that team and season.
+To add other statistics, open the game in the edit form. If a new player's jersey is already assigned, choose
+the existing player, change the number, or explicitly reassign it. Reassignment clears the old
+season number and, when it matches, the old legacy player number; other seasons are unchanged.
+
+Before deploying, apply `GAME_DATA_PROVENANCE.sql`, then reapply `COMMIT_BOX_SCORE_RPC.sql`, and
+apply `MANUAL_GAME_RPC.sql` and `MANUAL_PLAYER_JERSEY_RPC.sql` in Supabase. The latter requires the active-season jersey
+uniqueness index from `TEMPORARY_TEAM_LINKS.sql`. These migrations are not applied by the app.
+`games.data_source` distinguishes `manual`, `box_score`, and `unknown`; pre-existing games remain
+`unknown` unless subsequently processed by a job. Box-score games also retain `source_job_id`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

@@ -4,11 +4,22 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { normalizeSeasonLabel } from "@/lib/league";
 import { adminFetch } from "@/lib/admin-fetch";
+import type { RosterEntry } from "@/lib/commit-integrity";
+import type { JerseyConflict } from "@/lib/manual-player";
 
 type NewPlayerInput = {
   first_name: string;
   last_name: string;
   jersey_number: number | null;
+  replace_jersey_for?: string;
+  use_existing_player?: string;
+};
+
+type PlayerCreationResult = { conflict: JerseyConflict } | { conflict: null };
+
+type Team = {
+  team_id: string;
+  team_name: string | null;
 };
 
 export default function AdminGameEntry({
@@ -19,7 +30,10 @@ export default function AdminGameEntry({
   initialEditId?: string;
 }) {
   const [step, setStep] = useState(1);
-  const [teams, setTeams] = useState<any[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [activeTeams, setActiveTeams] = useState<Team[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(true);
+  const [teamsError, setTeamsError] = useState<string | null>(null);
   const [existingGames, setExistingGames] = useState<any[]>([]);
   const [editingGameId, setEditingGameId] = useState<string | null>(null);
   const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -62,6 +76,33 @@ export default function AdminGameEntry({
     }
     init();
   }, [initialEditId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadActiveTeams() {
+      try {
+        const seasonsRes = await adminFetch("/api/admin/seasons");
+        if (!seasonsRes.ok) throw new Error("Could not load seasons.");
+        const seasonsData: { seasons: { season: string; is_current: boolean }[] } = await seasonsRes.json();
+        const currentSeason = seasonsData.seasons.find((season) => season.is_current)?.season
+          || seasonsData.seasons[0]?.season;
+        if (!currentSeason) throw new Error("No season found.");
+
+        const teamsRes = await adminFetch(`/api/admin/teams?season=${encodeURIComponent(currentSeason)}`);
+        if (!teamsRes.ok) throw new Error("Could not load teams for the current season.");
+        const teamsData: { teams: (Team & { is_active: boolean })[] } = await teamsRes.json();
+        if (!cancelled) setActiveTeams(teamsData.teams.filter((team) => team.is_active !== false));
+      } catch (error) {
+        if (!cancelled) setTeamsError(error instanceof Error ? error.message : "Could not load teams.");
+      } finally {
+        if (!cancelled) setTeamsLoading(false);
+      }
+    }
+
+    loadActiveTeams();
+    return () => { cancelled = true; };
+  }, []);
 
   const teamsById = useMemo(() => {
     return Object.fromEntries(teams.map(t => [t.team_id, t.team_name]));
@@ -150,83 +191,113 @@ export default function AdminGameEntry({
 
     const statsMap = Object.fromEntries((stats ?? []).map((s: any) => [s.player_id, s]));
 
-    await loadRosters(game.home_team_id, game.away_team_id, statsMap);
+    await loadRosters(game.home_team_id, game.away_team_id, statsMap, game.season);
   };
 
   const loadRosters = async (
     homeTeamId?: string,
     awayTeamId?: string,
-    statsByPlayerId?: Record<string, any>
+    statsByPlayerId?: Record<string, any>,
+    gameSeason?: string
   ) => {
     const homeId = homeTeamId ?? gameData.home_team_id;
     const awayId = awayTeamId ?? gameData.away_team_id;
+    const season = normalizeSeasonLabel(gameSeason || gameData.season || computeSeasonFromTipoff(gameData.tipoff));
+    const mapStat = statsByPlayerId ?? (editingGameId
+      ? Object.fromEntries([...homePlayers, ...awayPlayers].filter((p) => p.played).map((p) => [p.player_id, p]))
+      : {});
+    try {
+      const params = new URLSearchParams({ season });
+      params.append("team_id", homeId);
+      params.append("team_id", awayId);
+      const response = await adminFetch(`/api/admin/rosters?${params}`, { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not load rosters.");
+      if (!Array.isArray(result.roster)) throw new Error("The roster response was invalid.");
+      const roster: RosterEntry[] = result.roster;
+      for (let i = roster.length - 1; i >= 0; i--) {
+        const stat = mapStat[roster[i].player_id];
+        if (stat && stat.team_id !== roster[i].team_id) roster.splice(i, 1);
+      }
+      const missingIds = Object.keys(mapStat).filter((id) => !roster.some((p) => p.player_id === id));
+      if (missingIds.length) {
+        const { data, error } = await supabase.from("players")
+          .select("player_id, first_name, last_name, jersey_number").in("player_id", missingIds);
+        if (error) throw new Error(`Could not load game participants: ${error.message}`);
+        if ((data ?? []).length !== missingIds.length) throw new Error("Some existing game participants could not be loaded.");
+        for (const player of data ?? []) {
+          const teamId = mapStat[player.player_id].team_id;
+          if (teamId !== homeId && teamId !== awayId) throw new Error("An existing game participant belongs to another team.");
+          roster.push({ ...player, team_id: teamId });
+        }
+      }
+      const home = roster.filter((player) => player.team_id === homeId);
+      const away = roster.filter((player) => player.team_id === awayId);
 
-    const { data: home } = await supabase.from("players").select("*").eq("team_id", homeId);
-    const { data: away } = await supabase.from("players").select("*").eq("team_id", awayId);
+      setHomePlayers(
+        sortRoster(
+          (home
+            ?.map(p => ({
+              ...p,
+              played: Boolean(mapStat[p.player_id]),
+              points: mapStat[p.player_id]?.points ?? 0,
+              is_starter: mapStat[p.player_id]?.is_starter ?? null,
+              minutes: mapStat[p.player_id]?.minutes ?? null,
+              two_made: mapStat[p.player_id]?.two_made ?? null,
+              two_att: mapStat[p.player_id]?.two_att ?? null,
+              three_made: mapStat[p.player_id]?.three_made ?? null,
+              three_att: mapStat[p.player_id]?.three_att ?? null,
+              ft_made: mapStat[p.player_id]?.ft_made ?? null,
+              ft_att: mapStat[p.player_id]?.ft_att ?? null,
+              reb_off: mapStat[p.player_id]?.reb_off ?? null,
+              reb_def: mapStat[p.player_id]?.reb_def ?? null,
+              reb_tot: mapStat[p.player_id]?.reb_tot ?? null,
+              assists: mapStat[p.player_id]?.assists ?? null,
+              turnovers: mapStat[p.player_id]?.turnovers ?? null,
+              steals: mapStat[p.player_id]?.steals ?? null,
+              blocks: mapStat[p.player_id]?.blocks ?? null,
+              fouls_personal: mapStat[p.player_id]?.fouls_personal ?? null,
+              plus_minus: mapStat[p.player_id]?.plus_minus ?? null,
+              efficiency: mapStat[p.player_id]?.efficiency ?? null,
+            }))
+          ) || []
+        )
+      );
 
-    const mapStat = statsByPlayerId ?? {};
+      setAwayPlayers(
+        sortRoster(
+          (away
+            ?.map(p => ({
+              ...p,
+              played: Boolean(mapStat[p.player_id]),
+              points: mapStat[p.player_id]?.points ?? 0,
+              is_starter: mapStat[p.player_id]?.is_starter ?? null,
+              minutes: mapStat[p.player_id]?.minutes ?? null,
+              two_made: mapStat[p.player_id]?.two_made ?? null,
+              two_att: mapStat[p.player_id]?.two_att ?? null,
+              three_made: mapStat[p.player_id]?.three_made ?? null,
+              three_att: mapStat[p.player_id]?.three_att ?? null,
+              ft_made: mapStat[p.player_id]?.ft_made ?? null,
+              ft_att: mapStat[p.player_id]?.ft_att ?? null,
+              reb_off: mapStat[p.player_id]?.reb_off ?? null,
+              reb_def: mapStat[p.player_id]?.reb_def ?? null,
+              reb_tot: mapStat[p.player_id]?.reb_tot ?? null,
+              assists: mapStat[p.player_id]?.assists ?? null,
+              turnovers: mapStat[p.player_id]?.turnovers ?? null,
+              steals: mapStat[p.player_id]?.steals ?? null,
+              blocks: mapStat[p.player_id]?.blocks ?? null,
+              fouls_personal: mapStat[p.player_id]?.fouls_personal ?? null,
+              plus_minus: mapStat[p.player_id]?.plus_minus ?? null,
+              efficiency: mapStat[p.player_id]?.efficiency ?? null,
+            }))
+          ) || []
+        )
+      );
 
-    setHomePlayers(
-      sortRoster(
-        (home
-          ?.map(p => ({
-            ...p,
-            played: Boolean(mapStat[p.player_id]),
-            points: mapStat[p.player_id]?.points ?? 0,
-            is_starter: mapStat[p.player_id]?.is_starter ?? null,
-            minutes: mapStat[p.player_id]?.minutes ?? null,
-            two_made: mapStat[p.player_id]?.two_made ?? null,
-            two_att: mapStat[p.player_id]?.two_att ?? null,
-            three_made: mapStat[p.player_id]?.three_made ?? null,
-            three_att: mapStat[p.player_id]?.three_att ?? null,
-            ft_made: mapStat[p.player_id]?.ft_made ?? null,
-            ft_att: mapStat[p.player_id]?.ft_att ?? null,
-            reb_off: mapStat[p.player_id]?.reb_off ?? null,
-            reb_def: mapStat[p.player_id]?.reb_def ?? null,
-            reb_tot: mapStat[p.player_id]?.reb_tot ?? null,
-            assists: mapStat[p.player_id]?.assists ?? null,
-            turnovers: mapStat[p.player_id]?.turnovers ?? null,
-            steals: mapStat[p.player_id]?.steals ?? null,
-            blocks: mapStat[p.player_id]?.blocks ?? null,
-            fouls_personal: mapStat[p.player_id]?.fouls_personal ?? null,
-            plus_minus: mapStat[p.player_id]?.plus_minus ?? null,
-            efficiency: mapStat[p.player_id]?.efficiency ?? null,
-          }))
-        ) || []
-      )
-    );
-
-    setAwayPlayers(
-      sortRoster(
-        (away
-          ?.map(p => ({
-            ...p,
-            played: Boolean(mapStat[p.player_id]),
-            points: mapStat[p.player_id]?.points ?? 0,
-            is_starter: mapStat[p.player_id]?.is_starter ?? null,
-            minutes: mapStat[p.player_id]?.minutes ?? null,
-            two_made: mapStat[p.player_id]?.two_made ?? null,
-            two_att: mapStat[p.player_id]?.two_att ?? null,
-            three_made: mapStat[p.player_id]?.three_made ?? null,
-            three_att: mapStat[p.player_id]?.three_att ?? null,
-            ft_made: mapStat[p.player_id]?.ft_made ?? null,
-            ft_att: mapStat[p.player_id]?.ft_att ?? null,
-            reb_off: mapStat[p.player_id]?.reb_off ?? null,
-            reb_def: mapStat[p.player_id]?.reb_def ?? null,
-            reb_tot: mapStat[p.player_id]?.reb_tot ?? null,
-            assists: mapStat[p.player_id]?.assists ?? null,
-            turnovers: mapStat[p.player_id]?.turnovers ?? null,
-            steals: mapStat[p.player_id]?.steals ?? null,
-            blocks: mapStat[p.player_id]?.blocks ?? null,
-            fouls_personal: mapStat[p.player_id]?.fouls_personal ?? null,
-            plus_minus: mapStat[p.player_id]?.plus_minus ?? null,
-            efficiency: mapStat[p.player_id]?.efficiency ?? null,
-          }))
-        ) || []
-      )
-    );
-
-    setStep(2);
+      setStep(2);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Could not load rosters.");
+    }
   };
 
   const computeSeasonFromTipoff = (tipoffIso: string) => {
@@ -262,7 +333,7 @@ export default function AdminGameEntry({
     teamId: string,
     payload: NewPlayerInput,
     setPlayers: React.Dispatch<React.SetStateAction<any[]>>
-  ) => {
+  ): Promise<PlayerCreationResult> => {
     const season = normalizeSeasonLabel(gameData.season || computeSeasonFromTipoff(gameData.tipoff));
     if (!/^\d{4}\/\d{2}$/.test(season)) {
       throw new Error("Set a valid game date and season before adding a player.");
@@ -275,6 +346,7 @@ export default function AdminGameEntry({
 
     const result = await response.json();
 
+    if (response.status === 409 && result.conflict) return { conflict: result.conflict as JerseyConflict };
     if (!response.ok || result.error) {
       throw new Error(result?.error || response.statusText || "Failed to create player");
     }
@@ -283,14 +355,15 @@ export default function AdminGameEntry({
 
     setPlayers((prev: any[]) =>
       sortRoster([
-        ...prev,
-        {
+        ...prev.map((p) => p.player_id === payload.replace_jersey_for ? { ...p, jersey_number: null } : p),
+        ...(!payload.use_existing_player || !prev.some((p) => p.player_id === player.player_id) ? [{
           ...player,
           played: true,
           points: 0,
-        },
-      ])
+        }] : []),
+      ].map((p) => p.player_id === payload.use_existing_player ? { ...p, played: true } : p))
     );
+    return { conflict: null };
   };
 
   const handleSaveGame = async () => {
@@ -471,10 +544,12 @@ export default function AdminGameEntry({
               <label className="block text-xs font-semibold mb-1 text-[var(--text-muted)] tracking-wide">Home Team</label>
               <select 
                 className="w-full rounded-lg border border-[var(--border)] p-3 font-medium bg-[var(--surface)] text-[var(--foreground)]"
+                value={gameData.home_team_id}
+                disabled={!editingGameId && (teamsLoading || !!teamsError)}
                 onChange={(e) => setGameData({...gameData, home_team_id: e.target.value})}
               >
                 <option value="">Select Home</option>
-                {teams.map(t => <option key={t.team_id} value={t.team_id}>{t.team_name}</option>)}
+                {(editingGameId ? teams : activeTeams).map(t => <option key={t.team_id} value={t.team_id}>{t.team_name}</option>)}
               </select>
             </div>
 
@@ -482,18 +557,24 @@ export default function AdminGameEntry({
               <label className="block text-xs font-semibold mb-1 text-[var(--text-muted)] tracking-wide">Away Team</label>
               <select 
                 className="w-full rounded-lg border border-[var(--border)] p-3 font-medium bg-[var(--surface)] text-[var(--foreground)]"
+                value={gameData.away_team_id}
+                disabled={!editingGameId && (teamsLoading || !!teamsError)}
                 onChange={(e) => setGameData({...gameData, away_team_id: e.target.value})}
               >
                 <option value="">Select Away</option>
-                {teams.map(t => <option key={t.team_id} value={t.team_id}>{t.team_name}</option>)}
+                {(editingGameId ? teams : activeTeams).map(t => <option key={t.team_id} value={t.team_id}>{t.team_name}</option>)}
               </select>
             </div>
 
           </div>
 
+          {!editingGameId && teamsError && (
+            <p role="alert" className="text-sm text-red-600 dark:text-red-400">{teamsError}</p>
+          )}
+
           <button 
             onClick={() => loadRosters()}
-            disabled={!gameData.home_team_id || !gameData.away_team_id || !gameData.tipoff}
+            disabled={!gameData.home_team_id || !gameData.away_team_id || !gameData.tipoff || (!editingGameId && (teamsLoading || !!teamsError))}
             className="w-full rounded-lg bg-[var(--accent)] !text-white font-semibold py-3.5 text-base hover:brightness-95 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:text-slate-500 transition-colors"
           >
             Load Rosters & Continue
@@ -586,6 +667,8 @@ export default function AdminGameEntry({
               teamId={gameData.home_team_id}
               players={homePlayers}
               setPlayers={setHomePlayers}
+              season={normalizeSeasonLabel(gameData.season || computeSeasonFromTipoff(gameData.tipoff))}
+              pointsOnly={!editingGameId}
               onCreatePlayer={(payload: NewPlayerInput) =>
                 handleCreatePlayer(gameData.home_team_id, payload, setHomePlayers)
               }
@@ -596,6 +679,8 @@ export default function AdminGameEntry({
               teamId={gameData.away_team_id}
               players={awayPlayers}
               setPlayers={setAwayPlayers}
+              season={normalizeSeasonLabel(gameData.season || computeSeasonFromTipoff(gameData.tipoff))}
+              pointsOnly={!editingGameId}
               onCreatePlayer={(payload: NewPlayerInput) =>
                 handleCreatePlayer(gameData.away_team_id, payload, setAwayPlayers)
               }
@@ -615,7 +700,7 @@ export default function AdminGameEntry({
 }
 
 // Sub-component for Team Stats
-function TeamStatEntry({ title, teamId, players, setPlayers, onCreatePlayer }: any) {
+function TeamStatEntry({ title, teamId, players, setPlayers, onCreatePlayer, pointsOnly, season }: any) {
   const [isAdding, setIsAdding] = useState(false);
   const [isSavingPlayer, setIsSavingPlayer] = useState(false);
   const [newPlayer, setNewPlayer] = useState({
@@ -623,6 +708,8 @@ function TeamStatEntry({ title, teamId, players, setPlayers, onCreatePlayer }: a
     last_name: "",
     jersey_number: "",
   });
+  const [conflict, setConflict] = useState<JerseyConflict | null>(null);
+  const [conflictChoice, setConflictChoice] = useState<"existing" | "replace" | "different" | "">("");
 
   const updatePlayer = (id: string, field: string, value: any) => {
     setPlayers((prev: any[]) =>
@@ -654,12 +741,29 @@ function TeamStatEntry({ title, teamId, players, setPlayers, onCreatePlayer }: a
 
     setIsSavingPlayer(true);
     try {
-      await onCreatePlayer({
+      if (conflict && !conflictChoice) {
+        alert("Choose how to resolve the jersey conflict.");
+        return;
+      }
+      if (conflict && conflictChoice === "different") {
+        alert("Change the jersey number above before adding the player.");
+        return;
+      }
+      const result: PlayerCreationResult = await onCreatePlayer({
         first_name: firstName,
         last_name: lastName,
         jersey_number: parsedJersey,
+        ...(conflict && conflictChoice === "replace" ? { replace_jersey_for: conflict.player_id } : {}),
+        ...(conflict && conflictChoice === "existing" ? { use_existing_player: conflict.player_id } : {}),
       });
+      if (result.conflict) {
+        setConflict(result.conflict);
+        setConflictChoice("");
+        return;
+      }
       setIsAdding(false);
+      setConflict(null);
+      setConflictChoice("");
       setNewPlayer({ first_name: "", last_name: "", jersey_number: "" });
     } catch (error: any) {
       alert(`Could not create player: ${error?.message || "Unknown error"}`);
@@ -679,7 +783,7 @@ function TeamStatEntry({ title, teamId, players, setPlayers, onCreatePlayer }: a
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => setIsAdding((prev) => !prev)}
+            onClick={() => { setIsAdding((prev) => !prev); setConflict(null); setConflictChoice(""); }}
             className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-semibold bg-[var(--surface)] hover:bg-slate-100 dark:hover:bg-slate-700"
           >
             {isAdding ? "Cancel" : "+ Add Player"}
@@ -713,10 +817,18 @@ function TeamStatEntry({ title, teamId, players, setPlayers, onCreatePlayer }: a
               type="number"
               placeholder="Jersey # (optional)"
               value={newPlayer.jersey_number}
-              onChange={(e) => setNewPlayer((prev) => ({ ...prev, jersey_number: e.target.value }))}
+              onChange={(e) => { setNewPlayer((prev) => ({ ...prev, jersey_number: e.target.value })); setConflict(null); setConflictChoice(""); }}
               className="rounded-md border border-[var(--border)] p-2 bg-[var(--surface)] text-[var(--foreground)]"
             />
           </div>
+          {conflict && (
+            <fieldset className="rounded border border-orange-300 bg-orange-50 dark:bg-orange-950/20 px-3 py-2 text-sm space-y-2">
+              <legend className="font-semibold">Jersey #{conflict.jersey_number} is assigned to {[conflict.first_name, conflict.last_name].filter(Boolean).join(" ")}</legend>
+              <label className="flex items-center gap-2"><input type="radio" name={`jersey-conflict-${teamId}`} checked={conflictChoice === "existing"} onChange={() => setConflictChoice("existing")} />Use existing player</label>
+              <label className="flex items-center gap-2"><input type="radio" name={`jersey-conflict-${teamId}`} checked={conflictChoice === "replace"} onChange={() => setConflictChoice("replace")} />Add new player and remove the number from the existing player for this season and matching legacy record</label>
+              <label className="flex items-center gap-2"><input type="radio" name={`jersey-conflict-${teamId}`} checked={conflictChoice === "different"} onChange={() => setConflictChoice("different")} />Use a different jersey number (edit the field above)</label>
+            </fieldset>
+          )}
           <button
             type="button"
             onClick={handleCreatePlayerSubmit}
@@ -729,6 +841,9 @@ function TeamStatEntry({ title, teamId, players, setPlayers, onCreatePlayer }: a
       )}
 
       <div className="space-y-2">
+        {players.length === 0 && (
+          <p className="text-sm text-[var(--text-muted)]">No active players are registered for this team in {season}.</p>
+        )}
         {players.map((p: any) => (
           <div key={p.player_id}>
             <div className="flex items-center gap-3 mb-2">
@@ -758,7 +873,7 @@ function TeamStatEntry({ title, teamId, players, setPlayers, onCreatePlayer }: a
                   />
                 </div>
                 
-                <div className="flex flex-col">
+                {!pointsOnly && <><div className="flex flex-col">
                   <label className="text-xs text-[var(--text-muted)]">AST</label>
                   <input
                     type="number"
@@ -812,6 +927,7 @@ function TeamStatEntry({ title, teamId, players, setPlayers, onCreatePlayer }: a
                     onChange={(e) => updatePlayer(p.player_id, 'turnovers', parseInt(e.target.value) || 0)}
                   />
                 </div>
+                </>}
               </div>
             )}
           </div>

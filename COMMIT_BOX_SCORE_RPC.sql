@@ -160,13 +160,14 @@ BEGIN
   END IF;
 
   -- 1. games
-  INSERT INTO public.games (game_id, tipoff, season, venue, home_team_id, away_team_id, home_score, away_score)
-  SELECT g.game_id, g.tipoff, g.season, g.venue, g.home_team_id, g.away_team_id, g.home_score, g.away_score
+  INSERT INTO public.games (game_id, tipoff, season, venue, home_team_id, away_team_id, home_score, away_score, source_job_id, data_source)
+  SELECT g.game_id, g.tipoff, g.season, g.venue, g.home_team_id, g.away_team_id, g.home_score, g.away_score, p_job_id, 'box_score'
   FROM jsonb_populate_record(NULL::public.games, p_game) AS g
   ON CONFLICT (game_id) DO UPDATE SET
     tipoff = EXCLUDED.tipoff, season = EXCLUDED.season, venue = EXCLUDED.venue,
     home_team_id = EXCLUDED.home_team_id, away_team_id = EXCLUDED.away_team_id,
-    home_score = EXCLUDED.home_score, away_score = EXCLUDED.away_score;
+    home_score = EXCLUDED.home_score, away_score = EXCLUDED.away_score,
+    source_job_id = EXCLUDED.source_job_id, data_source = EXCLUDED.data_source;
 
   -- 2. game_details
   INSERT INTO public.game_details (game_id, game_number, duration_minutes, crew_chief, umpires, score_intervals, source_job_id)

@@ -140,6 +140,18 @@ export default function GamePage() {
       if (cancelled) return;
       if (statsError) { setError(statsError); setLoading(false); return; }
 
+      // Jersey numbers are per season; players.jersey_number may be null for the current roster.
+      const seasonJerseys = new Map<string, number | null>();
+      if ((gameData as Game).season) {
+        const { data: psData } = await supabase
+          .from("player_seasons")
+          .select("player_id, team_id, jersey_number")
+          .eq("season", (gameData as Game).season as string);
+        (psData ?? []).forEach((r: { player_id: string; team_id: string; jersey_number: number | null }) => {
+          if (r.jersey_number != null) seasonJerseys.set(`${r.player_id}|${r.team_id}`, r.jersey_number);
+        });
+      }
+
       const normalized: PlayerStat[] = ((statsData ?? []) as unknown as RawPlayerGameStat[]).map((s) => {
         const player = Array.isArray(s.players) ? (s.players[0] ?? null) : s.players;
         return {
@@ -166,7 +178,7 @@ export default function GamePage() {
           efficiency: s.efficiency,
           first_name: player?.first_name ?? null,
           last_name: player?.last_name ?? null,
-          jersey_number: player?.jersey_number ?? null,
+          jersey_number: seasonJerseys.get(`${s.player_id}|${s.team_id}`) ?? player?.jersey_number ?? null,
         };
       });
 

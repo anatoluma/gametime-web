@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { normalizeSeasonLabel } from "@/lib/league";
 import { requireAdmin } from "@/lib/admin-auth";
 import { normalizeYouTubeUrl } from "@/lib/youtube";
+import { prepareManualGameUpsert } from "@/lib/game-provenance";
 
 // Server-only admin client with service role key
 const supabaseAdmin = createClient(
@@ -127,161 +128,45 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { gamePayload, homePlayers, awayPlayers, editingGameId } = body;
 
-  if (!gamePayload || !homePlayers || !awayPlayers) {
+  if (!gamePayload || typeof gamePayload !== "object" || !Array.isArray(homePlayers) || !Array.isArray(awayPlayers)) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
   const gameId = editingGameId || gamePayload.game_id;
-  if (!gameId) {
+  if (typeof gameId !== "string" || !gameId) {
     return NextResponse.json({ error: "game_id is required" }, { status: 400 });
+  }
+  if (!editingGameId && (gamePayload.home_score == null || gamePayload.away_score == null)) {
+    return NextResponse.json({ error: "Both scores are required for a new game." }, { status: 400 });
   }
 
   const normalizedGamePayload = {
     ...gamePayload,
     ...(typeof gamePayload.season === "string" ? { season: normalizeSeasonLabel(gamePayload.season) } : {}),
   };
+  const gameWritePayload = prepareManualGameUpsert(normalizedGamePayload, gameId, Boolean(editingGameId));
 
-  const { data: game, error: gameError } = await supabaseAdmin
-    .from("games")
-    .upsert({ ...normalizedGamePayload, game_id: gameId }, { onConflict: "game_id" })
-    .select()
-    .maybeSingle();
+  const stats = [...homePlayers, ...awayPlayers].filter(
+    (player: { played?: boolean }) => player.played
+  );
+  const { data: result, error } = await supabaseAdmin.rpc("save_manual_game", {
+    p_game: gameWritePayload,
+    p_stats: stats,
+    p_edit: Boolean(editingGameId),
+  });
 
-  if (gameError) {
-    return NextResponse.json({ error: gameError.message }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  if (!game) {
+  if (result?.status === "not_found") {
+    return NextResponse.json({ error: "Game not found; reload and select an existing game to edit." }, { status: 404 });
+  }
+  if (result?.status === "conflict") {
+    return NextResponse.json({ error: "This game already exists and is not an unplayed scheduled game. Select it in edit mode instead." }, { status: 409 });
+  }
+  if (result?.status !== "ok" || !result.game) {
     return NextResponse.json({ error: "Failed to create/update game" }, { status: 500 });
   }
 
-  if (editingGameId) {
-    // For editing, preserve existing detailed stats and only update points
-    const { data: existingStats, error: fetchError } = await supabaseAdmin
-      .from("player_game_stats")
-      .select("*")
-      .eq("game_id", gameId);
-
-    if (fetchError) {
-      return NextResponse.json({ error: fetchError.message }, { status: 500 });
-    }
-
-    // Create a map of existing stats by player_id for quick lookup
-    const existingStatsMap = new Map(
-      (existingStats ?? []).map((stat: any) => [stat.player_id, stat])
-    );
-
-    // Merge existing stats with updated comprehensive stats
-    const allStats = [...homePlayers, ...awayPlayers]
-      .filter((p: any) => p.played)
-      .map((p: any) => {
-        const existing = existingStatsMap.get(p.player_id);
-        return {
-          game_id: gameId,
-          player_id: p.player_id,
-          points: p.points,
-          team_id: p.team_id,
-          // Use updated stats if provided, otherwise preserve existing ones
-          is_starter: p.is_starter ?? existing?.is_starter ?? null,
-          minutes: p.minutes ?? existing?.minutes ?? null,
-          two_made: p.two_made ?? existing?.two_made ?? null,
-          two_att: p.two_att ?? existing?.two_att ?? null,
-          three_made: p.three_made ?? existing?.three_made ?? null,
-          three_att: p.three_att ?? existing?.three_att ?? null,
-          ft_made: p.ft_made ?? existing?.ft_made ?? null,
-          ft_att: p.ft_att ?? existing?.ft_att ?? null,
-          reb_off: p.reb_off ?? existing?.reb_off ?? null,
-          reb_def: p.reb_def ?? existing?.reb_def ?? null,
-          reb_tot: p.reb_tot ?? existing?.reb_tot ?? null,
-          assists: p.assists ?? existing?.assists ?? null,
-          turnovers: p.turnovers ?? existing?.turnovers ?? null,
-          steals: p.steals ?? existing?.steals ?? null,
-          blocks: p.blocks ?? existing?.blocks ?? null,
-          fouls_personal: p.fouls_personal ?? existing?.fouls_personal ?? null,
-          plus_minus: p.plus_minus ?? existing?.plus_minus ?? null,
-          efficiency: p.efficiency ?? existing?.efficiency ?? null,
-        };
-      });
-
-    // Delete existing stats and insert merged ones
-    const { error: deleteError } = await supabaseAdmin
-      .from("player_game_stats")
-      .delete()
-      .eq("game_id", gameId);
-
-    if (deleteError) {
-      return NextResponse.json({ error: deleteError.message }, { status: 500 });
-    }
-
-    const { error: statsError2 } = await supabaseAdmin
-      .from("player_game_stats")
-      .insert(allStats);
-
-    if (statsError2) {
-      return NextResponse.json({ error: statsError2.message }, { status: 500 });
-    }
-  } else {
-    // For new games, save the full stat line entered in the form (not just points)
-    type PlayerStatInput = {
-      player_id: string;
-      team_id: string;
-      played: boolean;
-      points: number | null;
-      is_starter: boolean | null;
-      minutes: string | null;
-      two_made: number | null;
-      two_att: number | null;
-      three_made: number | null;
-      three_att: number | null;
-      ft_made: number | null;
-      ft_att: number | null;
-      reb_off: number | null;
-      reb_def: number | null;
-      reb_tot: number | null;
-      assists: number | null;
-      turnovers: number | null;
-      steals: number | null;
-      blocks: number | null;
-      fouls_personal: number | null;
-      plus_minus: number | null;
-      efficiency: number | null;
-    };
-
-    const allStats = ([...homePlayers, ...awayPlayers] as PlayerStatInput[])
-      .filter((p) => p.played)
-      .map((p) => ({
-        game_id: gameId,
-        player_id: p.player_id,
-        points: p.points,
-        team_id: p.team_id,
-        is_starter: p.is_starter ?? null,
-        minutes: p.minutes ?? null,
-        two_made: p.two_made ?? null,
-        two_att: p.two_att ?? null,
-        three_made: p.three_made ?? null,
-        three_att: p.three_att ?? null,
-        ft_made: p.ft_made ?? null,
-        ft_att: p.ft_att ?? null,
-        reb_off: p.reb_off ?? null,
-        reb_def: p.reb_def ?? null,
-        reb_tot: p.reb_tot ?? null,
-        assists: p.assists ?? null,
-        turnovers: p.turnovers ?? null,
-        steals: p.steals ?? null,
-        blocks: p.blocks ?? null,
-        fouls_personal: p.fouls_personal ?? null,
-        plus_minus: p.plus_minus ?? null,
-        efficiency: p.efficiency ?? null,
-      }));
-
-    const { error: statsError2 } = await supabaseAdmin
-      .from("player_game_stats")
-      .insert(allStats);
-
-    if (statsError2) {
-      return NextResponse.json({ error: statsError2.message }, { status: 500 });
-    }
-  }
-
-  return NextResponse.json({ game });
+  return NextResponse.json({ game: result.game });
 }
