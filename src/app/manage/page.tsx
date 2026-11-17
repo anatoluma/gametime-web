@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ManagerPage from "@/app/manager/page";
+import TeamRosterEditor from "@/app/components/TeamRosterEditor";
 
 export default function ManagePage() {
   const [ready, setReady] = useState(false);
@@ -32,5 +32,5 @@ export default function ManagePage() {
   if (error) {
     return <main className="mx-auto max-w-3xl px-4 py-12 text-[var(--foreground)]"><p className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p></main>;
   }
-  return ready ? <ManagerPage /> : <main className="mx-auto max-w-3xl px-4 py-12 text-[var(--foreground)]"><p className="text-sm text-[var(--text-muted)]">Opening team roster...</p></main>;
+  return ready ? <TeamRosterEditor /> : <main className="mx-auto max-w-3xl px-4 py-12 text-[var(--foreground)]"><p className="text-sm text-[var(--text-muted)]">Opening team roster...</p></main>;
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, type User } from "@supabase/supabase-js";
 import { createHash } from "crypto";
-import { verifySupabaseUser } from "@/lib/admin-auth";
+import { requireAdmin, verifySupabaseUser } from "@/lib/admin-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,7 +9,7 @@ const supabaseAdmin = createClient(
 );
 
 export type ManagerAuthResult =
-  | { ok: true; user: User | null; teamIds: string[] }
+  | { ok: true; user: User | null; teamIds: string[]; isAdmin?: boolean }
   | { ok: false; response: NextResponse };
 
 const LINK_COOKIE = "team_manager_token";
@@ -43,11 +43,22 @@ async function findLinkTeam(token: string): Promise<string[] | null> {
 }
 
 /**
- * Verifies the caller holds a valid Supabase session and manages at least one
- * team (via the `team_managers` table). Use `adminFetch` on the client — it's
- * a generic Bearer-attaching fetch wrapper, not admin-specific.
+ * Authorizes an explicit admin request, a temporary team link, or an assigned
+ * team manager. Admin requests must carry a verified admin bearer session.
  */
 export async function requireTeamManager(request: Request): Promise<ManagerAuthResult> {
+  if (request.headers.get("x-roster-admin") === "1") {
+    const admin = await requireAdmin(request);
+    if (!admin.ok) return admin;
+
+    const { data, error } = await supabaseAdmin.from("teams").select("team_id");
+    if (error) {
+      return { ok: false, response: NextResponse.json({ error: error.message }, { status: 500 }) };
+    }
+
+    return { ok: true, user: admin.user, teamIds: (data ?? []).map((row) => row.team_id), isAdmin: true };
+  }
+
   const token = readCookie(request, LINK_COOKIE);
   const linkedTeamIds = token ? await findLinkTeam(token) : null;
   if (linkedTeamIds) {

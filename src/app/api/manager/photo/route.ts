@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (playerError) return NextResponse.json({ error: playerError.message }, { status: 500 });
-  if (!player || !auth.teamIds.includes(player.team_id)) {
+  if (!player || (!auth.isAdmin && !auth.teamIds.includes(player.team_id))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
