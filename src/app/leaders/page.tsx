@@ -171,9 +171,8 @@ export default function LeadersPage() {
   const pathname = usePathname();
 
   const seasonParam = searchParams.get("season");
-  const currentSeason = seasonParam ?? publicSeason ?? "";
 
-  // Load available seasons once
+  // Load available seasons once and get public season
   useEffect(() => {
     let cancelled = false;
 
@@ -193,6 +192,7 @@ export default function LeadersPage() {
   }, []);
 
   // When public season is loaded and there's no URL param, redirect to add the season param
+  // This runs BEFORE data fetch and ensures the URL always contains the season
   useEffect(() => {
     if (seasonParam || !publicSeason) return;
     const params = new URLSearchParams(searchParams.toString());
@@ -200,8 +200,14 @@ export default function LeadersPage() {
     router.replace(`${pathname}?${params.toString()}`);
   }, [publicSeason, seasonParam, pathname, router, searchParams]);
 
+  // Data fetch only runs when we have a season param in the URL (after redirect completes)
+  // This prevents showing cached/stale data from previous season loads
   useEffect(() => {
-    if (!currentSeason) return;
+    if (!seasonParam) {
+      // No season param yet (waiting for redirect to add it)
+      return;
+    }
+
     let cancelled = false;
 
     async function load() {
@@ -211,7 +217,7 @@ export default function LeadersPage() {
       const { data: statRows, error: statsError } = await supabase
         .from("player_season_stats")
         .select("*")
-        .eq("season", currentSeason);
+        .eq("season", seasonParam);
 
       if (cancelled) return;
       if (statsError) {
@@ -255,7 +261,7 @@ export default function LeadersPage() {
 
     load();
     return () => { cancelled = true; };
-  }, [currentSeason]);
+  }, [seasonParam]);
 
   const sorted = useMemo(() => sortRows(rows, category, ptsSortMode), [rows, category, ptsSortMode]);
   const top = useMemo(() => sorted.slice(0, 50), [sorted]);
@@ -269,8 +275,8 @@ export default function LeadersPage() {
       <div className="mx-auto max-w-5xl">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-3xl uppercase leading-none" style={{ fontFamily: "var(--font-display)", fontWeight: 700 }}>{t("leaders_title")}</h1>
-        {seasons.length > 0 && currentSeason && (
-          <SeasonSelector seasons={seasons} currentSeason={currentSeason} />
+        {seasons.length > 0 && seasonParam && (
+          <SeasonSelector seasons={seasons} currentSeason={seasonParam} />
         )}
       </div>
 

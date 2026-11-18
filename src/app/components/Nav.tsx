@@ -65,8 +65,8 @@ export default function Nav() {
   const navLinks = [
     { href: "/teams", label: t("nav_teams") },
     { href: "/games", label: t("nav_games") },
-    { href: "/leaders", label: t("nav_leaders") },
-    { href: "/standings", label: t("nav_standings") },
+    { href: "/leaders?season=2026/27", label: t("nav_leaders") },
+    { href: "/standings?season=2026/27", label: t("nav_standings") },
   ];
 
   const handleLocaleChange = (next: Locale) => {
